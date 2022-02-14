@@ -1,0 +1,1217 @@
+Rails Notes (rails command and rake)
+===============================================================================
+
+- https://github.com/rohandaxini/rails-concepts-topics
+
+
+1. What are all naming conventions I need to be aware of?
+
+	db table is plural, 
+	model is singular, 
+	controller is plural. 
+	so you have the User model that is backed by the users table, and visible through the UsersController.
+
+
+	files should be named as the wide_cased version of the class name. 
+	so the FooBar class needs to be in a file called foo_bar.rb. 
+	
+	If you are namespacing with modules, the namespaces need to be represented by folders. 
+	so if we are talking about Foo::Bar class, it should be in foo/bar.rb.
+
+2. How should controller actions be structured and named?
+
+	Controller actions should be RESTful. 
+	That means that you should think of your controllers as exposing a resource, not as just enabling RPCs. 
+	
+	Rails has a concept of member actions vs collection actions for resources. 
+	
+		- A member action is something that operates on a specific instance, for example /users/1/edit would be an edit member action for users. 
+		- A collection action is something that operates on all the resources. So /users/search?name=foo would be a collection action.
+
+	The tutorials above describe how to actually implement these ideas in your routes file.
+
+3. What are the best ways to render information in a view (via :content_for or render a partial) and what are ways I shouldn't use?
+
+	content_for should be used when you want to be able to append html from an inner template to an outer template 
+	-- for example, being able to append something from your view template into your layout template. 
+	
+	A good example would be to add a page specific javascript.
+
+		# app/views/layout/application.rb
+		<html>
+		  <head>
+			<%= yield :head %>
+		...
+
+		# app/views/foobars/index.html.erb
+
+		<% content_for :head do %>
+		  <script type='text/javascript'>
+			alert('zomg content_for!');
+		  </script>
+		<% end %>
+
+	partials are either for breaking up large files, or for rendering the same bit of information multiple times. For example
+
+		<table>
+		  <%= render :partial => 'foo_row', :collection => @foobars %>
+		</table>
+
+	# _foo_row.html.erb
+
+		<tr>
+		 <td>
+		  <%= foobar.name %>
+		 </td>
+		</tr>
+
+
+4.What should go into a helper and what shouldn't?
+
+	your templates should only have basic branching logic in them. 
+	If you need to do anything more intense, it should be in a helper. 
+	local variables in views are an abomination against all that is good and right in the world, so that is a great sign that you should make a helper.
+
+	Another reason is just pure code reuse. 
+	If you are doing the same thing with only slight variation over and over again, pull it into a helper (if it is the exact same thing, it should be in a partial).
+
+5. What are common pitfalls or something I need to do correctly from the very beginning?
+
+	partials should never refer directly to instance (@) variables, since it will prevent re-use down the line. 
+	Always pass data in via the :locals => { :var_name => value } param to the render function.
+
+	Keep logic out of your views that is not directly related to rendering your views. 
+	If you have the option to do something in the view, and do it somewhere else, 9 times out of 10 doing it somewhere else is the better option.
+
+	We have a mantra in rails that is "fat models, skinny controllers". 
+	
+	- One reason is that models are object oriented, controllers are inherantly procedural. 
+	- Another is that models can cross controllers, but controllers cant cross models. 
+	- A third is that models are more testable. Its just a good idea.
+
+6. How can you modularize code? Is that what the lib folder is for?
+
+	the lib folder is for code that crosses the concerns of models (i.e. something that isn't a model, but will be used by multiple models). 
+	When you need to put something in there, you will know, because you wont be able to figure out what model to put it in. Until that happens, you can just ignore lib.
+
+	Something to keep in mind is that as of rails 3, 
+	lib is not on the autoload path, meaning that you need to require anything you put in there (or add it back in)
+
+	A way to automatically require all modules in the lib directory:
+
+	#config/initializers/requires.rb
+	Dir[File.join(Rails.root, 'lib', '*.rb')].each do |f|
+	  require f
+	end
+
+
+Rails Temapltes (Bootstrapers)
+------------------------------------------------------------------------
+# https://guides.rubyonrails.org/rails_application_templates.html
+
+
+
+
+
+
+
+
+
+
+
+Middlewares
+------------------------------------------------------------------------
+# https://guides.rubyonrails.org/rails_on_rack.html
+
+> rake middleware
+
+use ActionDispatch::HostAuthorization
+use Rack::Sendfile
+use ActionDispatch::Static
+use ActionDispatch::Executor
+use ActionDispatch::ServerTiming
+use ActiveSupport::Cache::Strategy::LocalCache::Middleware
+use Rack::Runtime
+use Rack::MethodOverride
+use ActionDispatch::RequestId
+use ActionDispatch::RemoteIp
+use Sprockets::Rails::QuietAssets
+use Rails::Rack::Logger
+use ActionDispatch::ShowExceptions
+use WebConsole::Middleware
+use ActionDispatch::DebugExceptions
+use ActionDispatch::ActionableExceptions
+use ActionDispatch::Reloader
+use ActionDispatch::Callbacks
+use ActiveRecord::Migration::CheckPending
+use ActionDispatch::Cookies
+use ActionDispatch::Session::CookieStore
+use ActionDispatch::Flash
+use ActionDispatch::ContentSecurityPolicy::Middleware
+use ActionDispatch::PermissionsPolicy::Middleware
+use Rack::Head
+use Rack::ConditionalGet
+use Rack::ETag
+use Rack::TempfileReaper
+use Warden::Manager
+run Rails7e::Application.routes
+
+
+middleware/my_middleware.rb
+
+	class MyMiddleware
+	  def initialize app
+		@app = app
+	  end
+
+	  def call env
+		# do something...
+	  end
+	end
+
+- The register this middleware
+
+	module MyRailsApplication
+	  class Application < Rails::Application
+		*snip*
+
+		# config.middleware.use <class-name>, <first-argument>, <nth-argument>
+		config.middleware.use "MyMiddleware"
+
+		*snip*
+	  end
+	end
+
+
+There is this tiny caveat when mounting middleware - note that the class name is written as a string, not as a constant. If you mount a middleware class in the config/application.rb file the class name has to be a string. But, if you load the middleware class in the environment files (i.e. config/environment/development.rb) you can mount is as a constant:
+
+- To make files inside lin autoloaded
+
+	# config/initializers/extensions.rb
+	Dir["#{Rails.root}/lib/ruby_ext/*.rb"].each { |file| require file }
+	Dir["#{Rails.root}/lib/rails_ext/*.rb"].each { |file| require file }
+
+Or
+
+	application.rb:
+
+	config.autoload_paths << "#{Rails.root}/app/middlewares"
+	config.eager_load_paths << "#{Rails.root}/app/middlewares"
+
+But
+
+	require_relative '../lib/middleware/my_middleware'
+
+
+
+- You can insert yourm iddleware like:
+
+	config.middleware.insert_after ActionDispatch::Executor, Lifo::Cache, page_cache: false
+
+
+- Or swap:
+
+	# Replace ActionDispatch::ShowExceptions with Lifo::ShowExceptions
+	config.middleware.swap ActionDispatch::ShowExceptions, Lifo::ShowExceptions
+	
+- Or even delete:
+
+	config.middleware.delete Rack::Runtime
+
+
+- If you want to remove session related middleware, do the following:
+
+	# config/application.rb
+	config.middleware.delete ActionDispatch::Cookies
+	config.middleware.delete ActionDispatch::Session::CookieStore
+	config.middleware.delete ActionDispatch::Flash
+
+
+
+Much of Action Controller's functionality is implemented as Middlewares. The following list explains the purpose of each of them:
+
+	Rack::Sendfile
+
+	- Sets server specific X-Sendfile header. Configure this via config.action_dispatch.x_sendfile_header option.
+
+
+	ActionDispatch::Static
+
+	- Used to serve static files from the public directory. Disabled if config.public_file_server.enabled is false.
+
+
+Rack (middleware)
+------------------------------------------------------------------------
+
+	# Rack is the underlying technology behind nearly all of the web frameworks in the Ruby world. "Rack" is actually a few different things:
+
+	- An architecture - Rack defines a very simple interface, and any code that conforms to this interface can be used in a Rack application. This makes it very easy to build small, focused, and reusable bits of code and then use Rack to compose these bits into a larger application.
+	
+	- A Ruby gem - Rack is is distributed as a Ruby gem that provides the glue code needed to compose our code.
+
+	# https://thoughtbot.com/upcase/videos/rack
+
+	gem install rack thin
+	
+	rack1.rb:
+	
+		require "rack"
+		require "thin"
+
+		class Rack1
+		  def call(env)
+
+			puts env.inspect
+
+			[ 200, { "Content-Type" => "text/plain" }, ["Hello World"] ]
+		  end
+		end
+
+		Rack::Handler::Thin.run Rack1.new
+	
+	--> Using lambda
+	
+		require "rack"
+		require "thin"
+
+		app = -> (env) do
+		  [ 200, { "Content-Type" => "text/plain" }, env ]
+		end
+
+		Rack::Handler::Thin.run app
+
+- ANother example of Rack
+
+	config.ru:
+
+	class Application
+	 def call(env)
+		status  = 200
+		headers = { "Content-Type" => "text/html" }
+		body    = ["This is our small Rack app."]
+
+		[status, headers, body]
+	  end
+	end
+
+	run Application.new
+
+	> rackup config.ru
+
+Rack rewrite
+------------
+
+	config.middleware.insert_before(Rack::Runtime, Rack::Rewrite) do
+	 r301 %r{^/(.*)/$}, ‘/$1’
+	end
+
+
+# https://blog.engineyard.com/understanding-rack-apps-and-middleware
+
+
+
+
+
+Service Objects
+------------------------------------------------------------------------
+
+	# app/services/twitter_service.rb
+	module TwitterService
+	  def self.send_welcome_message(twitter_handle)
+		client.update("@#{twitter_handle} welcome to 'Oranges & Apples', we hope you enjoy our juicy fruit!")
+	  end
+	  def self.client
+		@client ||= Twitter::REST::Client.new do |config|
+		  config.consumer_key        = "..."
+		  config.consumer_secret     = "..."
+		  config.access_token        = "..."
+		  config.access_token_secret = "..."
+		end
+	  end
+	end
+
+	- your controller
+	
+	class UsersController
+	  def create
+		# ...
+		TwitterService.send_welcome_message(user.twitter_handle)
+	  end
+	end
+	
+------
+
+app/services/tweet_creator.rb
+
+	# app/services/tweet_creator.rb
+	class TweetCreator
+	  def initialize(message)
+		@message = message
+	  end
+
+	  def send_tweet
+		client = Twitter::REST::Client.new do |config|
+		  config.consumer_key        = ENV['TWITTER_CONSUMER_KEY']
+		  config.consumer_secret     = ENV['TWITTER_CONSUMER_SECRET']
+		  config.access_token        = ENV['TWITTER_ACCESS_TOKEN']
+		  config.access_token_secret = ENV['TWITTER_ACCESS_SECRET']
+		end
+		client.update(@message)
+	  end
+	end
+
+
+TweetCreator.new(params[:message]).send_tweet
+
+Proccall invokes the block, setting the block’s parameters to the values in params using something close to method calling semantics. It returns the value of the last expression evaluated in the block.
+
+	aproc = Proc.new {|scalar, values| values.map {|value| valuescalar } }
+	aproc.call(9, 1, 2, 3)    #=> [9, 18, 27]
+	aproc[9, 1, 2, 3]         #=> [9, 18, 27]
+	aproc.(9, 1, 2, 3)        #=> [9, 18, 27]
+	aproc.yield(9, 1, 2, 3)   #=> [9, 18, 27]
+
+So let’s make our service object behave more like a proc!
+
+	# app/services/application_service.rb
+	class ApplicationService
+	  def self.call(*args, &block)
+		new(*args, &block).call
+	  end
+	end
+
+.. then
+
+	# app/services/tweet_creator.rb
+	class TweetCreator < ApplicationService
+	  attr_reader :message
+	  
+	  def initialize(message)
+		@message = message
+	  end
+
+	  def call
+		client = Twitter::REST::Client.new do |config|
+		  config.consumer_key        = ENV['TWITTER_CONSUMER_KEY']
+		  config.consumer_secret     = ENV['TWITTER_CONSUMER_SECRET']
+		  config.access_token        = ENV['TWITTER_ACCESS_TOKEN']
+		  config.access_token_secret = ENV['TWITTER_ACCESS_SECRET']
+		end
+		client.update(@message)
+	  end
+	end
+
+	class TweetController < ApplicationController
+	  def create
+		TweetCreator.call(params[:message])
+	  end
+	end
+
+
+
+
+
+
+
+File Uploading
+--------------
+- activestorage
+
+Cocoon (nested forms)
+---------------------
+
+Tags & Categories
+-----------------
+
+HTML Editors
+------------
+
+Image Editors
+-------------
+
+Using Mongo, Redis, Neo4j, Postgres
+-----------------------------------
+
+Refinery
+------------
+
+* Apartments and sweetness of postgress multi schemas 
+-----------------------------------------------------
+
+
+Discussion Platform
+-------------------
+https://github.com/discourse/discourse
+--------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+Real Example RapidFire Engine
+================================
+- Rails 6.0.X Ruby 2.7.0 (Sprockets + Webpacks)
+- Vue
+- Devise ready
+
+- Survey Engine (rapidfire)
+- CMS: Refinery
+
+- Activeadmin + theme + ancestry (tree gem table) tool
+- sp-admin theme
+- Ancestry (not awesome_nestedt_set) + UI in activeadmin
+
+- File uploader / Manager -- activestorage
+	- upload multiple images
+	- vue-based file manager !! or rails
+	
+- File system listener !! (listener gem) https://github.com/markets/awesome-ruby#file-system-listener
+- God: The Ruby Framework for Process Management / https://github.com/rtomayko/posix-spawn
+
+
+Questions:
+----------
+- max number of users in linux system (with details) .. LDAP ?
+- searching file names
+- searching file contents
+- searching files for certain user !!
+
+Steps:
+------
+> rails g model Node name:string title:string summary:string body:text parent_id:integer user:references info:text --force
+
+- rails generate scaffold Node name:string title:string summary:string body:text parent_id:integer user:references info:text
+
+
+	class CreateNodes < ActiveRecord::Migration[6.0]
+	  def change
+		create_table :nodes do |t|
+		  t.string :name
+		  t.string :title
+		  t.string :summary
+		  t.text :body
+*		  t.integer :parent_id
+		  t.references :user, null: false, foreign_key: true
+		  t.text :info
+
+		  t.timestamps
+		end
+	  end
+	end
+
+node.rb
+
+class Node < ApplicationRecord
+  belongs_to :user
+end
+
+---
+rails new myapp
+cd myapp
+rails g model todo title:string
+rails db:migrate
+rails g scaffold_controller api::todo --api
+---
+
+> rails db:migrate
+> rails g scaffold_controller Node
+
+> routes.rb
+
+	resources :nodes
+
+- To add user check .. (nodes_controller)
+
+	before_action :authenticate_user! #, :except => [:index, :vue]
+	
+See https://gist.github.com/alexpchin/b1baa37bd2b4856cc445
+
+> rails generate active_admin:resource Node
+
+
+
+
+
+
+
+
+Notes:
+================
+
+Maybe it will help to enable SQL logging and see if the correct data is sent to the database? 
+ActiveRecord::Base.logger = Logger.new(STDOUT). – shock_one Feb 10 '15 at 21:04
+
+
+
+References
+==========
+- https://github.com/markets/awesome-ruby
+
+
+
+
+
+
+
+channels 
+=========
+> rails g channel room
+
+app/channels
+├── application_cable
+│   ├── channel.rb		*
+│   └── connection.rb	*
+└── room_channel.rb <----------
+
+
+app/javascript/channels
+├── consumer.js
+├── index.js
+└── room_channel.js	<----------
+
+Now, 
+
+channel.rb:
+
+	module ApplicationCable
+	  class Channel < ActionCable::Channel::Base
+	  end
+	end
+
+connection.rb:
+
+module ApplicationCable
+
+  class Connection < ActionCable::Connection::Base
+    identified_by :current_user
+    def connect
+      logger.info "========================== connected"
+      # logger.info env['warden'].user.id
+      self.current_user = find_verified_user		<-- used with devise
+      logger.add_tags 'ActionCable', current_user.id
+    end
+
+    protected
+
+    def find_verified_user # this checks whether a user is authenticated with devise
+      if verified_user = env['warden'].user
+        verified_user
+      else
+        reject_unauthorized_connection
+      end
+    end
+  end
+end
+
+room_channel.rb:
+
+	class RoomChannel < ApplicationCable::Channel
+	  def subscribed
+		stream_from "room_channel"		<-----------------
+	  end
+
+	  def unsubscribed
+		# Any cleanup needed when channel is unsubscribed
+	  end
+	end
+
+----
+
+room_channel.js:
+
+	import consumer from "./consumer"
+
+	consumer.subscriptions.create("RoomChannel", {
+	  connected() {
+		// Called when the subscription is ready for use on the server
+		console.log("connected")
+	  },
+
+	  disconnected() {
+		// Called when the subscription has been terminated by the server
+	  },
+
+	  received(data) {
+		// Called when there's incoming data on the websocket for this channel
+	  }
+	});
+
+
+- From anywhere in rails, do
+
+    ActionCable.server.broadcast "room_channel", message: "helllo"
+
+# This will be captured inside room_channel.js:
+
+	received(data) {
+		// Called when there's incoming data on the websocket for this channel
+		
+		--> data['message']
+	}
+
+- To send a message from client to server (channel).
+
+    consumer.send({
+		command: 'message', data: JSON.stringify({	
+			message: 'This is a cool chat app.'
+		}), 
+		identifier: JSON.stringify({
+			channel: "RoomChannel"
+		})
+	});
+
+
+
+
+this.$root.cable.connection.isOpen()
+consumer.connection.open()
+
+$(document).on('turbolinks:load', function() {
+
+
+
+* Stimulus reflex
+========================================================================
+- 
+- Check Stimilus https://docs.stimulusreflex.com/quickstart
+- https://devhints.io/stimulus-reflex
+
+# For new projects
+
+	rails new myproject --webpack=stimulus
+	cd myproject
+
+# For existing projects
+
+	bundle exec rails webpacker:install:stimulus
+
+# For both project types
+
+	bundle add stimulus_reflex
+	bundle exec rails stimulus_reflex:install
+
+----
+
+> bundle add stimulus_reflex
+> bundle exec rails stimulus_reflex:install
+
+app/reflexes/
+├── application_reflex.rb
+├── counter_reflex.rb	<--------------
+└── example_reflex.rb
+
+
+Any page:
+
+	<a href="#"
+	   data-reflex="click->Counter#increment"
+	   data-step="1"
+	   data-count="<%= @count.to_i %>"
+	>Increment <%= @count.to_i %></a>
+
+app/reflexes/counter_reflex.rb:
+
+	class CounterReflex < ApplicationReflex
+	  def increment
+		@count = element.dataset[:count].to_i + element.dataset[:step].to_i
+		# ActionCable.server.broadcast "room_channel", message: @count.to_s
+		# morph "#messages", @count #render(partial: "path/to/foo")	<- decide which block#html and what data to render (even partials)
+	  end
+	end
+
+
+- Using Stimilus.js Controller
+
+	<!-- index.html.erb -->
+	<a href="#"
+	  data-controller="counter"
+	  data-action="click->counter#increment"
+	>Increment <%= @count %></a>
+	
+// counter_controller.js
+
+	import { Controller } from 'stimulus'
+	import StimulusReflex from 'stimulus_reflex'
+
+	export default class extends Controller {
+	  connect() {
+		StimulusReflex.register(this)
+	  }
+
+	  increment(event) {
+		event.preventDefault()
+		this.stimulate('Counter#increment', 1)
+	  }
+	}
+
+# counter_reflex.rb
+
+	class CounterReflex < StimulusReflex::Reflex
+	  def increment(step = 1)
+		session[:count] = session[:count].to_i + step
+	   end
+	end
+
+- morpth a certain selected div
+- morth :nothing
+- render the whole pa
+
+The full page (default)				Yes		~50ms
+All children of a CSS DOM selector	No		~15ms
+Nothing at all						No		~6ms
+
+Scoping Page Morphs
+
+	data-reflex-root=".class, #id, [attribute]"
+
+	<div data-reflex-root="[forward],[backward]">
+	  <input type="text" value="<%= @words %>" data-reflex="keyup->Example#words">
+	  <div forward><%= @words %></div>
+	  <div backward><%= @words&.reverse %></div>
+	</div>
+
+Permanent Elements
+
+	<div data-reflex-permanent>
+	  <iframe src="https://ghbtns.com/github-btn.html?user=stimulusreflex&repo=stimulus_reflex&type=star&count=true" frameborder="0" scrolling="0" class="ghbtn"></iframe>
+	  <iframe src="https://ghbtns.com/github-btn.html?user=stimulusreflex&repo=stimulus_reflex&type=fork&count=true" frameborder="0" scrolling="0" class="ghbtn"></iframe>
+	</div>
+
+Selector Morphs
+
+	<header data-reflex="click->Example#change">
+	  <div id="foo">
+		<span class="spa"><%= message %></span>
+	  </div>
+	</header>
+
+	class ExampleReflex < ApplicationReflex
+	  def change
+		morph "#foo", "Your muscles... they are so tight."
+	  end
+	end
+
+Intelligent defaults
+
+	yelling = element.value.upcase
+	morph "#foo", render(partial: "path/to/foo", locals: {message: yelling})
+	
+
+
+
+- https://dev.to/phawk/hotwire-best-practices-for-stimulus-40e
+
+ViewComponent
+-------------
+# https://viewcomponent.org/
+
+- A framework for creating reusable, testable & encapsulated view components, built to integrate seamlessly with Ruby on Rails.
+- So, instead of building partials with direct database access for reusability !
+
+
+	# app/components/message_component.rb
+	class MessageComponent < ViewComponent::Base
+	  def initialize(name:)
+		@name = name
+	  end
+	end
+
+	<%# app/components/message_component.html.erb %>
+	<h1>Hello, <%= @name %>!</h1>
+
+Which is rendered by calling:
+
+	<%# app/views/demo/index.html.erb %>
+	<%= render(MessageComponent.new(name: "World")) %>
+
+
+* StimilusReflex is using ViewComponent
+# https://viewcomponent.org/resources.html
+# https://primer.style/view-components/components/menu#url
+
+#* https://github.com/joshleblanc/view_component_reflex
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Mailer
+========================================================================
+
+Sending E-mails
+===============
+- Check this 
+	http://localhost:3000/rails/mailers/	
+	http://localhost:3000/rails/mailers/spree/mailer_previews/order/confirm
+
+	To change any of the templates
+	
+	- https://github.com/solidusio/solidus/blob/master/core/app/views/spree/order_mailer/confirm_email.html.erb
+
+
+	Copy files form core/app/views/spree/*_mailers + whatever you need to your local project 
+	directory respecting the relative paths.
+
+	
+
+Review emails
+-------------
+- https://dev.mikamai.com/2017/03/30/setting-an-environment-for-previewing-email-in-rails/
+/rails/mailers/spree/mailer_preview/order/confirm.html?locale=en
+
+* check mailcatcher 
+
+
+
+
+
+
+
+
+
+Translations
+========================================================================
+https://github.com/glebm/i18n-tasks
+https://github.com/Sage/i18n_yaml_editor
+
+> gem install i18n_yaml_editor
+> i18n_yaml_editor path/to/i18n/locales [port]
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+Notes:
+================
+
+Maybe it will help to enable SQL logging and see if the correct data is sent to the database? 
+ActiveRecord::Base.logger = Logger.new(STDOUT). – shock_one Feb 10 '15 at 21:04
+
+
+
+References
+==========
+- https://github.com/markets/awesome-ruby
+
+
+
+Design Patterns
+=====================================================================================
+
+- Factory
+Class that has one creation method with a large conditional.
+
+- Form object
+Move form-specific logic away from your ActiveRecord models into a separate class.
+
+	Submitting form data is a common feature of web applications – allowing users to submit their information and giving them feedback whether the information is valid or not.
+	ActiveRecord comes with a powerful set of validators for attributes on a persisted data model. When data is not persisted, or used for other non-active record purposes, Active Model Helper Modules reduce the complexity of validations on your plain old Ruby objects.
+
+	- Routing
+	---------
+	Create the routes needed for displaying the form object and posting the data
+	Restrict resources to the routes you need using only:
+	
+		# config/routes.rb
+		resources :registration, only: [:new, :create]
+
+	- Controller and Actions
+	------------------------
+	Create a controller with new and create actions.
+
+	respond_with will re-render the new action if there are any validation errors on the model
+	If there are no errors on the model the visitor will be redirected to show the current resource. In this case the user will be redirected to some_other_success_path
+
+		# app/controllers/registration_controller.rb
+		class RegistrationsController < ApplicationController
+		  respond_to :html
+
+		  def new
+			@registration = Registration.new
+		  end
+
+		  def create
+			@registration = Registration.new(registration_params)
+			@registration.register
+
+			respond_with @registration, location: some_success_path
+		  end
+
+		  private
+
+		  def registration_params
+			# ...
+		  end
+		end
+
+	- View with Registration Form
+	------------------------------
+	The view renders a web form with fields to submit.
+
+	Use the ActiveModel object @registration in the form
+	Form generates the endpoint registration_path and method of delivery post
+	Validation errors will display inline within the form just like ActiveRecord
+
+		# app/views/registration/new.html.erb
+		<%= form_for @registration do |f| %>
+		  <%= f.label :first_name, 'First Name' %>:
+		  <%= f.text_field :first_name %>
+		  ...
+		  <%= f.submit %>
+		<% end %>
+
+	- Object with ActiveModel Conversion, Naming, and Validations
+	-------------------------------------------------------------
+	Use any of the ActiveRecord Validations in the model.
+
+	Command pattern used when calling register method.
+	ActiveRecord validation syntax on attributes.
+	ActiveModel::Model mixin includes modules, and includes an initialization method.
+
+		# app/models/registration.rb
+		class Registration
+		  include ActiveModel::Model
+
+		  attr_accessor(
+			:company_name,
+			:email,
+			:first_name,
+			:last_name,
+			:terms_of_service
+		  )
+
+		  validates :company_name, presence: true
+		  validates :email, presence: true, email: true
+		  validates :first_name, presence: true
+		  validates :last_name, presence: true
+		  validates :terms_of_service, acceptance: true
+
+		  def register
+			if valid?
+			  # Do something interesting here
+			  # - create user
+			  # - send notifications
+			  # - log events, etc.
+			end
+		  end
+
+		  private
+
+		  def create_user
+			# ...
+		  end
+		end
+
+
+- Value object
+A small simple object, like a date range or location, whose equality isn’t based on identity.
+<=>, hash, and eql? which allow us to make use of operations like sort and uniq. We get the following usage:
+
+- Null object
+Instead of returning null, or some odd value, return a Special Case that has the same interface as what the caller expects.
+
+- Query object
+Represent a database query or a set of database queries related to the same table.
+# https://medium.flatstack.com/query-object-in-ruby-on-rails-56ea434365f0
+
+- Service object
+Concentrate the core logic of a request operation into a separate object.
+# http://brewhouse.io/blog/2014/04/30/gourmet-service-objects.html
+
+	A service object does one thing
+	A service object (aka method object) performs one action. It holds the business logic to perform that action. Here is an example:
+
+	class Invite < ActiveRecord::Base
+	  def accept!(user, time=Time.now)
+		update_attributes!(
+		  accepted_by_user_id: user.id,
+		  accepted_at: time
+		)
+	  end
+	end
+
+	# app/services/accept_invite.rb
+	class AcceptInvite
+
+	  def self.call(invite, user)
+		invite.accept!(user)
+		UserMailer.invite_accepted(invite).deliver
+	  end
+
+	end
+
+	.. then
+	
+	class InviteController < ApplicationController
+	  def accept
+		invite = Invite.find_by_token!(params[:token])
+
+		if AcceptInvite.call(invite, current_user)
+		  redirect_to invite.item, notice: "Welcome!"
+		else
+		  redirect_to '/', alert: "Oopsy!"
+		end
+	  end
+	end
+
+
+- Decorators used in rails ... 
+
+	
+
+
+Background Jobs
+========================================================================
+
+- delayed_job
+- Sidekiq : https://github.com/mperham/sidekiq
+
+
+
+
+
+Some Handy Gems
+========================================================================
+
+
+
+
+
+Process management / puma / passenger / and cloud stuff ..... with nginx
+========================================================================
+
+
+
+nginx
+======
+
+> rails s =p 3005
+
+
+nginx:
+
+
+server {
+
+        listen 443;
+
+        ssl on;
+        ssl_certificate /data/opt/nginx/conf/ssl/bundle.crt;
+        ssl_certificate_key /data/opt/nginx/conf/ssl/d1g_com.key;
+        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+
+
+        server_name www.d1g.com yasater.d1g.com hasnaa.d1g.com .d1g.com *.d1g.com d1g.com;
+        rewrite ^/photos(.*)$ https://www.yasater.com/photos$1 last;
+
+        rewrite ^/(.*)$ https://www.yasater.com/$1 redirect;
+
+        location / {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                # try_files $uri $uri/ =404;
+                proxy_pass http://127.0.0.1:3005;
+                # Uncomment to enable naxsi on this location
+                # include /etc/nginx/naxsi.rules
+        }
+}
+
+
+
+
+
+Missing `secret_key_base` for 'production' environment
+
+RAILS_ENV=production rake secret -->
+
+prodcuction.rb
+
+config.secret_key_base = "1104db7a0342fc8b1f65c683681270b15f115bdf1477823ebe92b9ea10bcd0827b15e23db168c41ddcbd463986d0e8d72f8c5d0e0aac16827e8df093e15873a3"
+
+
+
+
+
+
+
+
+
+
+Caching:
+========
+- https://guides.rubyonrails.org/caching_with_rails.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

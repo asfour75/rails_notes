@@ -1,0 +1,1177 @@
+Rails + Vue
+==========================================================================================
+
+rails new vuejs-rails-starterkit --force --database=postgresql \
+  --skip-action-mailer --skip-action-cable --skip-sprockets --skip-turbolinks \
+  --webpack=vue
+
+https://github.com/vueonrails/vueonrails
+
+rvm use ruby-2.7.0@rails-vue --create
+gem install rails
+rails new rails-vue -m https://vueonrails.com/vue -d sqlite3
+# mysql, postgresql, sqlite3, oracle, frontbase, ibm_db, sqlserver, jdbcmysql, jdbcsqlite3, jdbcpostgresql, jdbc
+
+OR
+
+rails new app --webpack=vue -d postgresql
+gem 'vueonrails'
+rails vue:setup
+
+Manually
+.........
+
+rails new app --webpack=vue -d postgresql
+yarn add vue-turbolinks
+
+
+Rails & VUE
+-----------
+
+https://github.com/vueonrails/vueonrails
+
+rvm use ruby-2.7.0@rails-vue --create
+gem install rails
+rails new rails-vue -m https://vueonrails.com/vue -d sqlite
+# mysql, postgresql, sqlite3, oracle, frontbase, ibm_db, sqlserver, jdbcmysql, jdbcsqlite3, jdbcpostgresql, jdbc
+
+OR
+
+rails new app --webpack=vue -d postgresql
+gem 'vueonrails'
+rails vue:setup
+
+Adding Vue to existing Rails:
+-------------------------------
+
+	> rails webpacker:install:vue
+	> yarn add vue-turbolinks
+
+# Rename app/javascript/packs/hello_vue.js => whatever_vue.js
+
+Edit the app/views/layout/application.html.erb or create a new one.
+
+	<%= javascript_pack_tag 'vue' %>
+	<%= stylesheet_pack_tag 'vue' %>
+
+Edit the app/javascript/packs/vue.js
+
+	import TurbolinksAdapter from 'vue-turbolinks';
+	import Vue from 'vue';
+	import App from '../app.vue';    
+
+	Vue.use(TurbolinksAdapter);
+
+	document.addEventListener('turbolinks:load', () => {
+	  const el = document.getElementById('vue-todo-app');
+
+	  if (el !== null) {
+		new Vue({
+		  el,
+		  render: h => h(App)
+		});
+	  }
+	});
+
+Add a page to any controller:
+
+	def vue
+		render :template => "home/vue", :layout => "vue"
+	end
+
+
+
+vue layout:
+-----------
+
+	<!DOCTYPE html>
+	<html>
+	<head>
+	  <title>Rapidfire</title>
+	  <%= csrf_meta_tags %>
+	  <%= csp_meta_tag %>
+
+	  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+	  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+	  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
+
+	  <%= stylesheet_pack_tag 'vue', media: 'all', 'data-turbolinks-track': 'reload' %>			<------------- inside assets/stylesheets/vue.scss
+	  <%= javascript_pack_tag 'vue', 'data-turbolinks-track': 'reload' %>						<------------- inside app/javascript/packs/vue.js
+	  <style>
+	  </style>
+	</head>
+	<body>
+		<%= yield %>
+	</body>
+	</html>
+
+
+To install vuteify within rails app ... do it the manual way .. 
+----------------------------------------------------------------
+> npm add vuetify
+> yarn add vuetify
+
+Via ui .. (make sure you already installed @vue/cli)
+
+> npm install -g @vue/cli
+> vue ui 
+
+
+if used wepack with vue
+-----------------------
+- https://gist.github.com/danielpclark/29697006a9294ea0b88de2a18f8cd797
+
+	In your config > webpack > environment.js add:
+
+	const { environment } = require('@rails/webpacker')
+	const vue =  require('./loaders/vue')
+
+	environment.loaders.append('vue', vue)
+
+	const resolver = {
+	  resolve: {
+		alias: {
+		  'vue$': 'vue/dist/vue.esm.js'
+		}
+	  }
+	}
+	environment.config.merge(resolver)
+	module.exports = environment
+	
+	
+	In javascript > application.js, you can now import Vue and Vuetify like this with no error:
+
+	import Vue from 'vue'
+	import Vuetify from 'vuetify'
+
+
+
+
+Or the manual way ... (better)./...
+------------------------------------------------------------------------
+
+	> yarn add vuetify
+	> yarn add sass sass-loader deepmerge -D
+
+- Update your javascript/packs/vue.js
+
+	import TurbolinksAdapter from 'vue-turbolinks';
+	import Vue from 'vue'
+	import store from './store'
+
+	import Vuetify from 'vuetify'
+	import 'vuetify/dist/vuetify.min.css'
+
+	import App from '../app.vue'
+
+	Vue.use(TurbolinksAdapter);
+	Vue.use(Vuetify)
+
+	document.addEventListener('DOMContentLoaded', () => {
+	  const el = document.getElementById('app');
+	  const app = new Vue({
+		store,
+		el,
+		vuetify: new Vuetify(),
+		render: h => h(App)
+	  }).$mount()
+	  document.body.appendChild(app.$el)
+
+	  console.log(app);
+	})
+
+- your app.vue
+
+	<template>
+	  <div id="app">
+		<v-app>								<--------- notice this
+		  <p>{{ message }}</p>
+		  <user/>
+		</v-app>
+	  </div>
+	</template>
+	<script>
+		
+		import user from "./packs/components/user.vue";	<-- using components
+		
+		export default {
+		  data: function () {
+			return {
+			  message: "Hello Vue!",
+			}
+		  },
+		  components: {
+			user: user
+		  },
+		  mounted: async function () {
+			this.message = Hello World
+		  }
+		}
+	</script>
+	<style scoped>
+		p {
+		  font-size: 2em;
+		  text-align: center;
+		}
+		#app {
+		  font-family: 'Roboto','Avenir', Helvetica, Arial, sans-serif; /* this was it */
+		  -webkit-font-smoothing: antialiased;
+		  -moz-osx-font-smoothing: grayscale;
+		  text-align: center;
+		  color: #2c3e50;
+		}
+	</style>
+
+- inside packs, create a file name components/node.vue
+	- https://levelup.gitconnected.com/vue-js-with-rails-6-and-performing-crud-operations-b043ef3691f2
+	- based on node model rails / controllers methods .. 
+	
+	<template>
+	  <v-data-table :headers="headers" :items="nodes" sort-by="calories" class="elevation-1">
+		<template v-slot:top>
+		  <v-toolbar flat color="white">
+			<v-toolbar-title>My CRUD</v-toolbar-title>
+			<v-divider class="mx-4" inset vertical></v-divider>
+			<v-spacer></v-spacer>
+			<v-dialog v-model="dialog" max-width="500px">
+			  <template v-slot:activator="{ on }">
+				<v-btn color="primary" dark class="mb-2" v-on="on">New Item</v-btn>
+			  </template>
+			  <v-card>
+				<v-card-title>
+				  <span class="headline">{{ formTitle }}</span>
+				</v-card-title>
+
+				<v-card-text>
+				  <v-container>
+					<v-row>
+					  <v-col cols="12" sm="6" md="4">
+						<v-text-field v-model="editedItem.name" label="Name"></v-text-field>
+					  </v-col>
+					  <v-col cols="12" sm="6" md="4">
+						<v-text-field v-model="editedItem.title" label="Title"></v-text-field>
+					  </v-col>
+					  <v-col cols="12" sm="6" md="4">
+						<v-text-field v-model="editedItem.summary" label="Summary"></v-text-field>
+					  </v-col>
+					  <v-col cols="12" sm="6" md="4">
+						<v-text-field v-model="editedItem.body" label="Body"></v-text-field>
+					  </v-col>
+					  <v-col cols="12" sm="6" md="4">
+						<v-text-field v-model="editedItem.info" label="info"></v-text-field>
+					  </v-col>
+					</v-row>
+				  </v-container>
+				</v-card-text>
+
+				<v-card-actions>
+				  <v-spacer></v-spacer>
+				  <v-btn color="blue darken-1" text @click="close">Cancel</v-btn>
+				  <v-btn color="blue darken-1" text @click="save(editedItem)">Save</v-btn>
+				</v-card-actions>
+			  </v-card>
+			</v-dialog>
+		  </v-toolbar>
+		</template>
+		<template v-slot:item.action="{ item }">
+		  <v-icon small class="mr-2" @click="editItem(item)">edit</v-icon>
+		  <v-icon small @click="deleteItem(item)">delete</v-icon>
+		</template>
+		<template v-slot:no-data>
+		  <v-btn color="primary" @click="initialize">Reset</v-btn>
+		</template>
+	  </v-data-table>
+	</template>
+
+	<script>
+	import axios from "axios";
+	export default {
+	  data: () => ({
+		dialog: false,
+		headers: [
+		  {
+			text: "Name",
+			align: "left",
+			sortable: false,
+			value: "name"
+		  },
+		  { text: "Title", value: "title" },
+		  { text: "Summary", value: "summary" },
+		  { text: "Body", value: "body" },
+		  { text: "Info", value: "info" },
+		  { text: "Actions", value: "action", sortable: false }
+		],
+		nodes: [],
+		editedIndex: -1,
+		editedItem: {
+		  name: "",
+		  title: "",
+		  summary: "",
+		  body: "",
+		  info: ""
+		},
+		defaultItem: {
+		  name: "",
+		  title: "",
+		  summary: "",
+		  body: "",
+		  info: ""
+		}
+	  }),
+	  computed: {
+		formTitle() {
+		  return this.editedIndex === -1 ? "New Item" : "Edit Item";
+		}
+	  },
+	  watch: {
+		dialog(val) {
+		  val || this.close();
+		}
+	  },
+	  created() {
+		this.initialize();
+	  },
+	  methods: {
+		initialize() {
+		  return axios
+			  .get("http://localhost:4000/nodes.json")
+			  .then(response => {
+				console.log(response.data);
+				this.nodes = response.data;
+			  })
+			  .catch(e => {
+				console.log(e);
+			  });
+		},
+		getItem(item) {
+		  axios.get("https://localhost:4000/nodes/${item.id}.json")
+			  .then(response => {
+				this.nodes = response.data;
+			  })
+			  .catch(error => {
+				console.log(error);
+			  })
+		},
+		editItem(item) {
+		  this.editedIndex = item.id;
+		  this.editedItem = Object.assign({}, item);
+		  this.dialog = true;
+		},
+		save(item) {
+		  if (this.editedIndex > -1) {
+			axios
+				.put(`http://localhost:4000/nodes/${item.id}.json`, {
+				  id: this.editedItem.id,
+				  name: this.editedItem.name,
+				  title: this.editedItem.title,
+				  summary: this.editedItem.summary,
+				  body: this.editedItem.body,
+				  info: this.editedItem.info
+				},{
+				  responseType: 'json',
+				  headers: {
+					// Overwrite Axios's automatically set Content-Type
+					'Content-Type': 'application/json'
+				  }
+				})
+				.then(response => {
+				  console.log(response);
+				  this.initialize();
+				})
+				.catch(error => {
+				  console.log(error);
+				});
+		  } else {
+			axios
+				.post(`http://localhost:4000/nodes.json`, {
+				  user: this.editedItem
+				})
+				.then(response => {
+				  console.log(response);
+				  console.log("Created!");
+				  this.initialize();
+				})
+				.catch(error => {
+				  console.log(error);
+				});
+		  }
+		  this.close();
+		},
+		deleteItem(item) {
+		  const index = this.nodes.indexOf(item);
+		  confirm("Are you sure you want to delete this item?");
+		  axios
+			  .delete(`http://localhost:4000/nodes/${item.id}.json`)
+			  .then(response => {
+				console.log(response);
+				console.log(response.data.json);
+				alert(response.data.json);
+				this.initialize();
+			  })
+			  .catch(error => {
+				console.log(error);
+			  });
+		  this.nodes.splice(index, 1);
+		},
+		close() {
+		  this.dialog = false;
+		  setTimeout(() => {
+			this.editedItem = Object.assign({}, this.defaultItem);
+			this.editedIndex = -1;
+		  }, 300);
+		}
+	  }
+	};
+	</script>
+	
+	
+	Cool !!!!
+
+
+	
+Integrate with Rails + Devise
+----------------------------------------------------------------------------
+- https://github.com/gbarillot/rails-vue-demo-app
+
+- do the login as usual from rails / sessions /new view .. 
+- Or do the login via form request (user name / password) to get the token .. 
+
+	user = User.find_for_database_authentication(email: args[:email])
+	if user.present?
+		if user.valid_password?(args[:password])
+			session[:current_user] = user
+			# and / or use the devise method sign_in(user)
+		else
+			raise Exception.new "Invalid password"
+		end
+	else
+		raise Exception.new "Invalid e-mail"
+	end
+
+	- then get the authentication_token from user ..... to use later 
+
+- From Vue, you can generally set all requests to fetch the token as following
+
+	$.ajaxSetup({
+	  beforeSend: function(xhr) {
+		xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'));
+	  },
+	  complete: function(xhr, status) {
+		if(xhr.status === 200 || xhr.status === 422) {
+		  return true;
+		}
+		if(xhr.status === 404) {
+		  return window.location.href = '/404';
+		}
+
+		return window.location.href = '/500';
+	  }
+	})
+
+- hanlding incoming response from server : 401 / 500
+
+	- Using axios
+	- https://blog.bitsrc.io/setting-up-axios-interceptors-for-all-http-calls-in-an-application-71bc2c636e4e
+	- https://blog.clairvoyantsoft.com/intercepting-requests-responses-using-axios-df498b6cab62
+	
+	axios.interceptors.request.use(
+		request => {
+		  console.log("============")
+		  console.log(request)
+			request.headers['X-CSRF-Token'] = $('meta[name="csrf-token"]').attr('content');
+		  return request
+		},
+		function(error) {
+			console.log("============2")
+			console.log(error)
+		  return Promise.reject(error);
+		}
+	);
+
+	axios.interceptors.response.use(
+		response => {
+			console.log("r============")
+			console.log(response)
+			return response
+		},
+		function(error) {
+			console.log("r============2")
+			console.log(error)
+			return Promise.reject(error);
+		}
+	);
+
+	- if using fetch !! 
+
+		- use a third party library : https://www.npmjs.com/package/fetch-intercept
+		
+	
+
+
+Managing Routes with Vue
+============================================================================================
+
+Imagine you have a resource /items in rails, but you need to have this route also fir vue ..
+when you browse /items ... 
+
+- always have your root to the main page of vue .. 
+
+	root to: 'home#index'
+ 
+	this page will always open the first "/" page in vue .. starting point
+	
+		- Usually it's empty page
+		- the layout application is where it will load the main javascript file (main.js)
+		
+		- all vue routes can be defined within routes.rb as dynamic paths
+		- all rails resources will be named scope (api)
+
+		  root to: 'home#index'
+
+		  get 'home', to: 'home#index'
+		  get 'home/index', to: 'home#index'
+		  # get 'home/protected', to: 'home#protected'
+
+		  scope '/api' do
+			# api routes here
+			resources :items
+		  end
+
+		  get '/*path', to: 'home#index'
+
+
+
+
+Routers as described in vue.txt
+--------------------------------
+
+	- yarn add vue-router
+	
+	- setup
+	
+		import Vue from 'vue'
+		import VueRouter from 'vue-router'
+
+		Vue.use(VueRouter)
+	
+	
+	- quick sample
+	
+		// 0. If using a module system (e.g. via vue-cli), import Vue and VueRouter
+		// and then call `Vue.use(VueRouter)`.
+
+		// 1. Define route components.
+		// These can be imported from other files
+		const Foo = { template: '<div>foo</div>' }
+		const Bar = { template: '<div>bar</div>' }
+
+		// 2. Define some routes
+		// Each route should map to a component. The "component" can
+		// either be an actual component constructor created via
+		// `Vue.extend()`, or just a component options object.
+		// We'll talk about nested routes later.
+		const routes = [
+		  { path: '/foo', component: Foo },
+		  { path: '/bar', component: Bar }
+		]
+
+		// 3. Create the router instance and pass the `routes` option
+		// You can pass in additional options here, but let's
+		// keep it simple for now.
+		const router = new VueRouter({
+		  routes // short for `routes: routes`
+		})
+
+		// 4. Create and mount the root instance.
+		// Make sure to inject the router with the router option to make the
+		// whole app router-aware.
+		const app = new Vue({
+		  router
+		}).$mount('#app')
+
+		// Now the app has started!
+	
+	- but we prefer creating router file 
+	- create router.js inside packs
+
+		import Vue from 'vue'
+		import Router from 'vue-router'
+		import Home from './pages/Home'
+		import Item from './components/item'
+		import Account from './pages/Account'
+
+		Vue.use(Router)
+
+		export default new Router({
+			mode: 'history',
+			base: process.env.BASE_URL,
+			routes: [
+				{
+					path: '/',
+					name: 'home',
+					component: Home
+				},
+				{
+					path: '/items',
+					name: 'items',
+					component: Item
+				},
+				{
+					path: '/account',
+					name: 'account',
+					component: Account
+				},
+				// {
+				//     path: '/about',
+				//     name: 'about',
+				//     // route level code-splitting
+				//     // this generates a separate chunk (about.[hash].js) for this route
+				//     // which is lazy-loaded when the route is visited.
+				//     component: () => import(/* webpackChunkName: "about" */ './views/About.vue')
+				// }
+			]
+		})
+
+	- in layout
+	
+		  <v-main>
+			<div class="ml-12-">
+			  <v-container class="fill-height-">
+				<router-view/>
+			  </v-container>
+			</div>
+		  </v-main>
+
+	- Navigation via 
+	
+		<v-btn
+			v-show="loggedIn == true"
+			to="/items" icon>
+			<v-icon>mdi-cogs</v-icon>
+		</v-btn>
+
+	- via code
+	- remember you have access to 
+	
+		this.$router
+	
+		// Home.vue
+		export default {
+		  computed: {
+			username() {
+			  // We will see what `params` is shortly
+			  return this.$route.params.username			<-----------
+			}
+		  },
+		  methods: {
+			goBack() {
+			  window.history.length > 1 ? this.$router.go(-1) : this.$router.push('/')
+			}
+		  }
+		}
+	
+	- to add dynamic function names
+	
+	
+	handle_function_call(function_name) {
+		this[function_name]()
+	},
+	And from template when iterating over items you can call that function by passing the function name like
+
+	<button v-for="button of items"
+		   :key="button.id" 
+		   @click="handle_function_call(button.fn_name)" //=> note here
+	>
+	  {{ button.text }}
+	</button>
+	
+	
+
+
+
+localStorage
+------------
+https://blog.logrocket.com/localstorage-javascript-complete-guide/
+
+setItem(): Add key and value to localStorage
+getItem(): This is how you get items from localStorage
+removeItem(): Remove an item by key from localStorage
+clear(): Clear all localStorage
+key(): Passed a number to retrieve the key of a localStorage
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Good Read
+========================================================================
+https://dalezak.medium.com/rails-6-strategy-to-use-vue-components-and-dynamically-load-webpacker-assets-50fb055b8b1e
+
+
+
+With GraphQL
+====================================================================================
+- install graphql to rails
+- https://graphql-ruby.org/getting_started
+
+	> bundle add graphql --version="~> 1.9"
+	> rails generate graphql:install
+	
+		- generates app/graphql/mutations / types
+		- added route:
+		
+		  if Rails.env.development?
+			mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql"
+		  end
+
+		  post "/graphql", to: "graphql#execute"
+
+	- You will need to add this to environements.development.rb
+	
+		config.assets.check_precompiled_asset = false 
+
+	# browse to /graphiql
+	
+
+- let's create our first model (define schema)
+	
+	> rails g graphql:object item
+
+	/app/graphql/types/item_type.rb:
+	
+	module Types
+	  class ItemType < Types::BaseObject
+	  
+		graphql_name 'Item'
+	  
+		field :id, ID, null: false
+		field :name, String, null: true
+		field :title, String, null: true
+		field :summary, String, null: true
+		field :body, String, null: true
+		
+		field :user_id, Integer, null: false, camelize: false	<--- because graphql are camelized based : userId but you can disable it here 
+
+		field :info, String, null: true
+		field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+		field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+		field :ancestry, String, null: true
+		field :status, Integer, null: true
+		field :type, Integer, null: true
+		field :reference_id, Integer, null: true
+		field :tags, String, null: true
+		field :position, Integer, null: true
+		
+	  end
+	end
+
+	- inside /app/graphql/types/query_type.rb add:
+	
+		field :items,
+		  [Types::ItemType],
+		  null: false,
+		  description: "Returns a list of items in the martian library"
+
+		def items
+		  Item.all
+		end
+	
+	- from /graphiql ... browse
+	
+		{
+		  items {
+			name
+			body
+		  }
+		}
+
+	Cool !!
+
+- Let's pass some arguments, update query_type as this:
+	
+	field :items, [Types::ItemType], null: true do
+		description "Returns a list of items in the martian library"
+		argument :limit, Integer, default_value: 20, required: false	<---------- limit
+	end
+
+	def items(limit:)
+	  Item.all.limit(limit)
+	end
+
+	- the query can be :
+	
+	{
+	  items(limit: 2) {
+		name
+		body
+	  }
+	}
+		
+- items belongs_to user ... so ... 
+
+	- you can update the item_type:
+	
+		field :user, UserType, null: false	<--------------------
+
+	- of course you need to add user object:
+	
+		> rails g graphql:object user
+	
+	
+			module Types
+			  class UserType < Types::BaseObject
+				
+				graphql_name  "User"
+				
+				field :id, ID, null: false
+				field :email, String, null: false
+				field :encrypted_password, String, null: false
+				field :reset_password_token, String, null: true
+				field :reset_password_sent_at, GraphQL::Types::ISO8601DateTime, null: true
+				field :remember_created_at, GraphQL::Types::ISO8601DateTime, null: true
+				field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+				field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+				field :role, Integer, null: true
+				field :confirmation_token, String, null: true
+				field :confirmed_at, GraphQL::Types::ISO8601DateTime, null: true
+				field :confirmation_sent_at, GraphQL::Types::ISO8601DateTime, null: true
+				field :unconfirmed_email, String, null: true
+
+				field :items, [Types::ItemType], null: true	<----------- has_many
+
+			  end
+			end	
+	
+		- so with users, bring the user and all it's items .. 	
+		
+			{
+				users {
+					email
+					items {
+						name
+					}
+				}
+			}
+
+		- to bring items with their associated users
+	
+			{
+			  items(limit: 2) {
+				name
+				body
+				user_id	<---- now you can use this style since you added (, camelize: false) to field :user_id
+				user {
+				  email
+				}
+			  }
+			}
+		
+
+- Mutations ?
+	
+	- used to update data	
+	- let's create a mutation 
+	- https://github.com/rmosolgo/graphql-ruby/blob/master/guides/schema/generators.md
+	
+	> rails g graphql:mutation create_item		<-- check mutations/create_item
+	
+		module Mutations
+		  class CreateItem < BaseMutation
+			# TODO: define return fields
+			# field :post, Types::PostType, null: false
+
+			field :item, Types::ItemType, null: false		<--- add this
+
+			# TODO: define arguments
+			# argument :name, String, required: true
+
+			argument :name, String, required: true			<--- add those
+			argument :body, String, required: true
+			argument :user_id, Integer, required: true, camelize: false	<---- notice this
+
+			# TODO: define resolve method
+			# def resolve(name:)
+			#   { post: ... }
+			# end
+			#
+			
+			def resolve(name:, body:)						<--- add the resolver
+			  item = Item.create!(name: name, body: body)
+			  {
+				item: item
+			  }
+			end
+			
+		  end
+		end
+
+	- Define the mutation field: app/graphql/types/mutation_type.rb
+	
+		module Types
+		  class MutationType < Types::BaseObject
+			.
+			field :create_item, mutation: Mutations::CreateItem	<-----
+			.
+		  end
+		end
+	
+	- trye it 
+	
+		mutation	{
+			createItem (input: { name: "name here", body: "body here", user_id: 5}) {
+				item {
+					id,
+					name,
+					body,
+          user {
+            email
+          }
+				}
+			}
+		}
+	
+	Cool !
+
+- More about types and under_score case (camelized)
+
+	- in the previous example, we add this
+	
+		argument :user_id, Integer, required: true, camelize: false	<---- notice this
+	
+	- but we can use delegate:
+	- https://graphql-ruby.org/fields/introduction.html#field-resolution
+	
+	    field :userId, Integer, null: false	
+		delegate :user_id, to: :object			<--- didn;t work .. use methods
+
+	- field can be a method:
+	
+		field :authentication_token, String, null: false
+
+		def authentication_token
+		  if object.gql_id != context[:current_user]&.gql_id
+			raise GraphQL::UnauthorizedFieldError,
+				  "Unable to access authentication_token"
+		  end
+
+		  object.authentication_token
+		end
+
+
+- Now we need to start integrating the session (devise) along with graphql .. context
+	
+	- https://github.com/kleinjm/vue_graphql_auth_example
+	
+	- Add to graphql_controller.rb:
+	
+	  def execute
+		..
+		context = {
+		  # Query context goes here, for example:
+		  current_user: current_user,		<---------
+		}
+		..
+	
+		And you can read it via : context[:current_user] from your query_type.rb
+
+	- Since we are dealing with json like requests from server (if you used --api you wouldn't add this step)
+		
+		- Add to Application.rb:
+		
+			protect_from_forgery with: :null_session, if: Proc.new { |c| c.request.format =~ %r{application/json} }
+
+
+
+- To manage login / register via graphql / rails / devise
+
+	- https://github.com/kleinjm/vue_graphql_auth_example/blob/0920730c90ecc747cc2c3d11782440ad80f4b518/app/graphql/mutations/register_user.rb
+	- sample of login action
+	
+		module Mutations
+		  class SignIn < Mutations::BaseMutation
+			graphql_name "SignIn"
+
+			argument :email, String, required: true
+			argument :password, String, required: true
+
+			field :user, Types::UserType, null: false
+
+			def resolve(args)
+			  user = User.find_for_database_authentication(email: args[:email])
+
+			  if user.present?
+				if user.valid_password?(args[:password])
+				  context[:current_user] = user
+				  MutationResult.call(obj: { user: user }, success: true)
+				else
+				  GraphQL::ExecutionError.new("Incorrect Email/Password")
+				end
+			  else
+				GraphQL::ExecutionError.new("User not registered on this application")
+			  end
+			end
+		  end
+		end
+
+
+GraphQL - Client Side
+----------------------------------------------------------------------------
+- Apollo : https://apollo.vuejs.org/
+
+	> yarn add vue-apollo graphql apollo-boost
+	> yarn add apollo-client apollo-cache-inmemory apollo-link-http apollo-link-error apollo-link graphql graphql-tag
+	
+- In your application 
+
+	import { ApolloClient } from 'apollo-client'
+	import { createHttpLink } from 'apollo-link-http'
+	import { InMemoryCache } from 'apollo-cache-inmemory'
+
+	// HTTP connection to the API
+	const httpLink = createHttpLink({
+		// You should use an absolute URL here
+		uri: 'http://localhost:4000/graphql',
+	})
+
+	// Cache implementation
+	const cache = new InMemoryCache()
+
+	// Create the apollo client
+	const apolloClient = new ApolloClient({
+		link: httpLink,
+		cache,
+	})
+
+	import VueApollo from 'vue-apollo'
+	Vue.use(VueApollo)
+
+	const apolloProvider = new VueApollo({
+		defaultClient: apolloClient,
+	})
+
+- In your component / query
+
+	<template>
+	  <div>{{ items }}</div>
+	</template>
+
+	<script>
+	import gql from 'graphql-tag'
+
+	export default {
+	  apollo: {
+		// Simple query that will update the 'hello' vue property
+		items: gql`query {
+		  items {
+			name
+		  }
+		}`,
+	  },
+	}
+	</script>
+
+- to pass parameters to Query
+- https://apollo.vuejs.org/guide/apollo/queries.html#query-with-parameters
+
+  apollo: {
+    // Simple query that will update the 'hello' vue property
+    items: {
+      query: gql`query items($limit: Int!) {
+        items(limit: $limit) {
+          name
+        }
+      }`,
+      variables: {
+        limit: 2
+      }
+    }
+  },
+
+
+
+- mutation
+
+	methods: {
+	  async createItem() {
+		// Call to the graphql mutation
+		const result = await this.$apollo.mutate({
+		  // Query
+		  mutation: gql`mutation ($label: String!) {
+			createItem(name: $name, body: $body, user_id: $user_id) {		<--- make sure addItem is defined in server side
+				id,
+				name,
+				body,
+			}
+		  }`,
+		  // Parameters
+		  variables: {
+			name: this.name,
+			body: this.body,
+			user_id: this.user_id, // 5
+		  },
+		})
+	  }
+	}
+
+- check also https://apollo.vuejs.org/guide/apollo/queries.html#simple-query	
+	
+	
+
+------------------------------------------------------------------------------
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+References:
+- http://www.guillaume-barillot.com/2017/12/02/how-to-organize-your-vue-files-in-a-rails-5-1-project-using-webpack/
+- https://github.com/gbarillot/rails-vue-demo-app

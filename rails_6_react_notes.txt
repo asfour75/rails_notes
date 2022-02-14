@@ -1,0 +1,395 @@
+Rails + React
+==========================================================================================
+- https://learnetto.com/blog/react-rails
+
+You can integrate react on rails via 3 methods:
+
+	1- webpacker
+	2- react-rails
+	3- react_on_rails
+
+
+References:
+
+> https://github.com/reactjs/react-rails#server-side-rendering
+> https://github.com/shakacode/react_on_rails
+> https://learnetto.com/blog/react-rails
+
+
+Using ES6 within rails:
+-----------------------
+gem "sprockets"
+gem "sprockets-es6"
+
+- Sprockets is a Ruby library for compiling and serving web assets.
+
+
+Architectures
+--------------
+SSR -> Server Side Rendering : Express, Redux, Rails, Flask .. etc
+CSR -> Default bundling
+
+
+React via webpack 
+========================================================================
+
+- Installation
+---------------
+
+	> rvm use ruby-2.7.0@rails_react --create
+	> gem install rails
+	> rails new rails_react --webpack=react
+	> cd rails_react
+	> echo "rvm use ruby-2.7.0@rails_react" > .rvmrc
+	> bundle install
+	
+	- Notice
+	
+	app/javascript:
+	  └── packs:
+		  └── application.js
+		  └── hello_react.jsx
+
+	- create a model 
+	
+	> rails generate model book title:string author:string
+	> rails generate scaffold book title:text author:string
+	
+	- create a new layout : react.html.erb
+	
+		<!DOCTYPE html>
+		<html>
+		  <head>
+			<title>RailsReact</title>
+			<meta name="viewport" content="width=device-width,initial-scale=1">
+			<%= csrf_meta_tags %>
+			<%= csp_meta_tag %>
+
+			<%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+			<%= javascript_pack_tag 'hello_react', 'data-turbolinks-track': 'reload' %>	<---- notice this
+		  </head>
+
+		  <body>
+			<%= yield %>
+		  </body>
+		</html>
+	
+	- create a new page: books/react.html.erb .. empty
+	
+	- create new route for the new page
+	
+		  get 'books/react', :to => 'books#react'
+		  resources :books do
+			# get 'react', on: :collection
+		  end
+	
+	Cool !
+	
+- Since we are using rails, we can use gem react-rails to offer better data passing and server side rendering
+- https://podrezo.medium.com/rails-6-web-app-quick-start-guide-react-bootstrap-fontawesome-and-more-44d323b1061a
+
+	> bundle add react-rails
+	> rails generate react:install
+	> rails generate react:component Book title:text author:string
+	
+	- What happened ... 
+	
+		- application.js now includes all the needed initializations for react ... 
+		
+		import Rails from "@rails/ujs"
+		import Turbolinks from "turbolinks"
+		import * as ActiveStorage from "@rails/activestorage"
+		import "channels"
+
+		Rails.start()
+		Turbolinks.start()
+		ActiveStorage.start()
+
+		// Support component names relative to this directory:
+		var componentRequireContext = require.context("components", true);	<---------- see this .. 
+		var ReactRailsUJS = require("react_ujs");
+		ReactRailsUJS.useContext(componentRequireContext);
+		
+	- Since all added components are added to application.js, make your layout refers to application.js
+	
+	<%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>
+	
+	Or use the application layout for this purpose .... 
+	
+	- create home controller
+	
+		> rails g controller home
+		> add index method with a page
+		> add route root "home#index"
+		
+		Note: home will use by default the application layout which holds our react configurations
+		
+	- Check our first generated component Book:
+	
+		import React from "react"
+		import PropTypes from "prop-types"
+		class Book extends React.Component {
+		  render () {
+			return (
+			  <React.Fragment>
+				Title: {this.props.title}
+				Author: {this.props.author}
+			  </React.Fragment>
+			);
+		  }
+		}
+
+		Book.propTypes = {
+		  title: PropTypes.node,
+		  author: PropTypes.string
+		};
+		export default Book
+
+	- Let's call this component in home/index.html.erb
+
+		<%= react_component("Book", {title: 'Quran', author: 'Allah'}, {prerender: true}) %>
+		
+		* OR you can render directly the component from the home controller
+		
+		class HomeController < ApplicationController
+		  def index
+			render(component: 'Book', props: { title: 'Quran', author: 'Allah' }) 
+		  end
+		end
+		
+	Note: One little thing I also like to add is to change my generated 
+	react component files from a “.js” extension to “.jsx” — this may 
+	require adding a line to config/webpacker.yml to allow that, so under 
+	default → extensions in that file, add a line that says-.jsx after 
+	the line that says - .js if it is not already there.
+		
+		
+	- Let's add bootstrap 
+		
+		> bundle add bootstrap
+		> yarn add bootstrap
+		
+			* Remember when adding bootstrap also : yarn add react-router-dom bootstrap jquery popper.js
+
+	- add to file: app/assets/stylesheets/application.css --> application.scss
+	
+		@import "bootstrap";
+
+	- Adding FontAwesome icons
+
+		> bundle add font-awesome-rails			* always run bundle install !!
+
+	- Add to application.scss
+	
+		@import "font-awesome";
+
+	- to add bootstrap4 to react 
+	
+		> yarn add react-bootstrap
+
+	- add button style to react component 
+	
+		import Button from 'react-bootstrap/Button';
+		<Button>Hello {props.name}!</Button>
+		
+* Note ... when using router .. respect the routes of rails .. since routes will use relative path .. 
+
+	- add thise to routes.rb:
+	
+		get '/*path' => 'home#react'
+	
+So in App.jsx for example
+
+
+	import Book from './Book'
+	import Home from "./Home";
+	import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+	import React, { Component } from "react";
+
+
+	export default (props) => (
+		<Router>
+			<Switch>
+				<Route path="/home/react" exact component={Home} />
+				<Route path="/home/react/1" exact component={Book} />
+			</Switch>
+		</Router>
+	);
+
+
+- Using React Router along with Rails .. (howto)
+ 
+ * https://www.digitalocean.com/community/tutorials/how-to-set-up-a-ruby-on-rails-project-with-a-react-fronten
+		
+Back to the traditional way (react + webnpack ....)
+--------------------------------------------------------------------------------------------------------------
+
+Make sure to:
+
+	> yarn add bootstrap react-bootstrap react-router-bootstrap
+
+
+- layout react.html.erb
+
+	<!DOCTYPE html>
+	<html>
+	  <head>
+		<title>RailsReact</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1">
+		<%= csrf_meta_tags %>
+		<%= csp_meta_tag %>
+
+		<%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+		<%= javascript_pack_tag 'react', 'data-turbolinks-track': 'reload' %>	--> app/javascript/packs/react.jsx
+	  </head>
+	  <body>
+		<%= yield %>
+	  </body>
+	</html>
+
+- From your controller homer_controller.rb
+
+	def react
+		render :react, :layout => "react"
+	end
+
+- routes.rb
+
+	root "home#react"
+	get 'home/react', :to => 'home#react'	# not needed
+	get '/*path' => 'home#react'
+
+- app/javascript/packs/react.jsx
+
+	import React from 'react'
+	import ReactDOM from 'react-dom'
+	import 'bootstrap/dist/css/bootstrap.min.css';
+	import $ from 'jquery';								<-- not friendly with react see **
+	import Popper from 'popper.js';						<-- not friendly with react
+	import 'bootstrap/dist/js/bootstrap.bundle.min';
+	import App from "../components/App";
+
+
+	document.addEventListener('DOMContentLoaded', () => {
+	  ReactDOM.render(
+		<App name="Ali" />,
+		document.body.appendChild(document.createElement('div')),
+	  )
+	})
+
+
+** 	Bootstrap 4 is the most popular CSS framework for building responsive layouts with many new features such as the support for Flexbox and a new Card component.
+	Bootstrap 4 depends on both jQuery and Popper.js but using jQuery with React is not recommended since jQuery uses direct DOM manipulation.
+
+	If you need to add to add Bootstrap 4 styling to your React app the community has created some packages for making it possibly to use Bootstrap 4 without jQuery but still be able to use the complete features and components of BS 4.
+
+	In this tutorial we'll see how to use Reactstrap <------------ ***
+
+	So head back to your terminal and navigate inside your React project the run the following command to install bootstrap and reactstrap
+
+		> yarn add reactstrap@next
+
+*** let's start without reactstrap !
+
+--> https://react-bootstrap.github.io/getting-started/introduction
+--> https://github.com/react-bootstrap/code-sandbox-examples/blob/master/README.md
+
+
+- app/javascript/components/App.jsx <-- our main application
+
+	import React from 'react';
+	import { MemoryRouter, Switch, Route, Link, Redirect } from 'react-router-dom';
+	import 'bootstrap/dist/css/bootstrap.css';
+	import { Navbar, Nav, NavItem } from 'react-bootstrap';
+	import Jumbotron from 'react-bootstrap/Jumbotron';
+	import Container from 'react-bootstrap/Container';
+	import Button from 'react-bootstrap/Button';
+	import ButtonToolbar from 'react-bootstrap/ButtonToolbar';
+
+	import { LinkContainer } from 'react-router-bootstrap';
+
+	import './App.css';
+
+	const Home = () => <span>Home</span>;
+	const About = () => <span>About</span>;
+	const Users = () => <span>Users</span>;
+
+	const App = () => (
+		<MemoryRouter>													
+			<Container className="p-3">
+				<Jumbotron>
+					<h1 className="header">Welcome To React-Bootstrap</h1>
+					<h2>
+						Current Page is {' '}
+						<Switch>
+							<Route path="/about">
+								<About />
+							</Route>
+							<Route path="/users">
+								<Users />
+							</Route>
+							<Route path="/">
+								<Home />
+							</Route>
+						</Switch>
+					</h2>
+					<h2>
+						Navigate to {' '}
+						<ButtonToolbar className="custom-btn-toolbar">
+							<LinkContainer to="/">
+								<Button>Home</Button>
+							</LinkContainer>
+							<LinkContainer to="/about">
+								<Button>About</Button>
+							</LinkContainer>
+							<LinkContainer to="/users">
+								<Button>Users</Button>
+							</LinkContainer>
+						</ButtonToolbar>
+					</h2>
+				</Jumbotron>
+			</Container>
+		</MemoryRouter>
+	);
+
+	export default App;
+
+
+- to Override styling .. 
+
+	create custom.css:
+	
+		/* The following block can be included in a custom.scss */
+
+		/* make the customizations */
+		$theme-colors: (
+			"info": tomato,
+			"danger": teal
+		);
+
+		/* import bootstrap to set changes */
+		import 'bootstrap/scss/bootstrap.scss';
+		
+	- then 
+	
+		import "./custom";
+
+
+- To import Button
+
+	import Button from 'react-bootstrap/Button';
+
+	// or less ideally
+	import { Button } from 'react-bootstrap';
+
+- Navigation .... 
+
+	
+
+
+
+
+
+
+
+

@@ -1,0 +1,210 @@
+Testing
+
+MiniTest (default)
+========================================================================
+
+
+
+RSpec and BDD
+========================================================================
+
+rails new app -d=sqlite3 -T --skip-coffee --webpack # --api --webpack=react 
+cd app
+bundle install
+
+vim Gemfile
+
+group :development, :test do
+  # There may be other lines in this block already. Simply append the following after:
+  %w[rspec-core rspec-expectations rspec-mocks rspec-rails rspec-support].each do |lib|
+    gem lib, git: "https://github.com/rspec/#{lib}.git", branch: 'main' # Previously '4-0-dev' or '4-0-maintenance' branch
+  end
+end
+
+# gem install rspec
+
+rspec --init
+
+Or
+
+rails generate rspec:install
+
+spec/
+├── rails_helper.rb
+└── spec_helper.rb
+
+.rspec
+
+add devise:
+gem 'devise'
+
+bundle install
+rails generate devise:install
+rails generate devise User
+rails db:migrate
+rails g devise:views
+
+db/seeds.rb
+
+	if !User.find_by_email("test@rapidfire.com")
+	  user = User.create(
+		:email                 => "test@rapidfire.com",
+	#		:role                   => 1,
+		:password              => "test123",
+		:password_confirmation => "test123",
+	# 		:confirmed_at => DateTime.now
+
+	  )
+	  user.save!
+	end
+
+rake db:seed
+
+Setuo home controller
+
+rails g controller Home
+mkdir app/views/home/index.html.erb
+add def index to controller
+
+  before_action :authenticate_user!
+
+
+Simply navigate to the /spec directory and create a folder called /controllers. It should look like this: /spec/controllers.
+
+rspec
+
+Traceback (most recent call last):
+	2: from /home/isalem/.rvm/gems/ruby-2.7.2@app/bin/rspec:23:in `<main>'
+	1: from /home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:300:in `activate_bin_path'
+/home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:281:in `find_spec_for_exe': can't find gem rspec-core (>= 0.a) with executable rspec (Gem::GemNotFoundException)
+
+
+gem update --system
+bundle install
+rm Gemfile.lock 
+bundle install
+
+rspec .... great
+
+Now 
+
+
+to generate test with rails ..
+
+config/initializers/generators.rb:
+
+Rails.application.config.generators do |g|
+  g.test_framework :rspec
+end
+
+rails g model Article title:string body:text
+rails db:migrate
+
+# to generate test for article model
+rails generate rspec:model article
+
+# Default: Run all spec files (i.e., those matching spec/**/*_spec.rb)
+$ bundle exec rspec
+
+# Run all spec files in a single directory (recursively)
+$ bundle exec rspec spec/models
+
+# Run a single spec file
+$ bundle exec rspec spec/controllers/accounts_controller_spec.rb
+
+# Run a single example from a spec file (by line number)
+$ bundle exec rspec spec/controllers/accounts_controller_spec.rb:8
+
+# See all options for running specs
+$ bundle exec rspec --help
+
+for spec/models/article_spec.rb
+
+RSpec.describe Article, type: :model do
+
+  current_user = User.first_or_create!(email: 'test@some.com', password: 'test123', password_confirmation: 'test123')
+  
+  it 'has a title' do
+    post = Article.new(
+      title: '',
+      body: 'A Valid Body',
+      user: current_user
+    )
+    expect(post).to_not be_valid
+
+    post.title = 'Has a title'
+    expect(post).to be_valid
+  end
+
+  it 'has a body' do
+    post = Article.new(
+      title: 'A Valid Title',
+      body: '',
+      user: current_user
+    )
+    expect(post).to_not be_valid
+
+    post.body = 'Has a title'
+    expect(post).to be_valid
+  end
+
+  it 'has a title at least 2 characters long' do
+    post = Article.new(
+      title: '1',
+      body: 'A Valid Body',
+      user: current_user
+    )
+    expect(post).to_not be_valid
+
+    post.title = '12'
+    expect(post).to be_valid
+  end
+
+  it 'has a body between 5 and 100 characters' do
+    post = Article.new(
+      title: '12',
+      body: '1234',
+      user: current_user
+    )
+    expect(post).to_not be_valid
+
+    post.body = '12345'
+    expect(post).to be_valid
+
+    hundred_char_string = 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean m'
+    post.body = hundred_char_string
+    expect(post).to be_valid
+
+    post.body = hundred_char_string + '1'
+    expect(post).to_not be_valid
+  end
+
+
+
+  # pending "add some examples to (or delete) #{__FILE__}"
+end
+
+-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.
+
+Using test (original)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

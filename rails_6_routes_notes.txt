@@ -1,0 +1,188 @@
+Rails Routes
+==========================================================================================
+- https://guides.rubyonrails.org/routing.html
+- Create a route that maps a URL to the controller action
+
+	Rails.application.routes.draw do
+	  root 'homepage#index'
+	  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
+	end
+
+	- mounted on '/'  .. the root
+	--> app/controllers/homepage_controller.index --> app/views/homepage/index.html.erb
+
+- Shorthand for connecting a route to a controller/action
+	
+	config/routes.rb:
+	
+		get 'welcome' => 'pages#home'
+
+		get 'photos/show'
+		# The above is the same as: 
+		get 'photos/show', :to 'photos#show'
+		get 'photos/show' => 'photos#show'
+
+- Automagically create all the routes for a RESTful resource
+
+	config/routes.rb:
+
+		resources :photos 
+
+	HTTP Verb 	Path 			Controller#Action 	Used for
+	GET 		/photos 		photos#index 		display a list of all photos
+	GET 		/photos_new 	photos#new 			return an HTML form for creating a new photo
+	POST 		/photos 		photos#create 		create a new photo
+	GET 		/photos/:id 		photos#show 	display a specific photo
+	GET 		/photos/:id/edit 	photos#edit 	return an HTML form for editing a photo
+	PATCH/PUT 	/photos/:id 	photos#update 		update a specific photo
+	DELETE 		/photos/:id 	photos#destroy 		delete a specific photo
+
+- Create resources for only certain actions
+
+	config/routes.rb:
+
+		resources :photos, :only => [:index]
+
+	# On the flip side, you can create a resource with exceptions 
+	resources :photos, :except => [:new, :create, :edit, :update, :show, :destroy]
+
+- Create a route to a static view, without an action in the controller
+
+	config/routes.rb:
+
+		# If there's a file called 'about.html.erb' in 'app/views/photos', this file will be 
+		#   automatically rendered when you call localhost:3000/photos/about
+
+		get 'photos/about', to: 'photos#about'
+		
+		articles GET    /articles(.:format)          {action:"index", controller:"articles"}
+
+	- https://gist.github.com/mdang
+	- Also, you can :
+
+		resources :home, only: [:index]
+
+- What is on: :collection  or on: :member 
+
+	resources :posts do
+	  # on collection
+	  get 'search', on: :collection 
+	  # --> generates '/posts/search' and search_posts_path
+
+	  # on member
+	  get 'share', on: :member      
+	  # --> generates'/posts/:id/share' and share_post_path(@post)
+	end
+
+- Notice, to add new route to extsing resource ..
+
+  get 'books/react', :to => 'books/react'	<------ this 
+
+  resources :books do
+    # get 'react', on: :collection			<----- or this
+  end
+
+	TestApp::Application.routes.draw do
+		resources :courses do
+		  member do						<---- or like this
+			get "preview"  # Preview a single course (requires ID)
+		  end
+		  collection do					<---- or like this
+			get "upcoming"  # Show a list of *all* upcoming courses (no ID needed)
+		  end
+		end
+	end
+
+
+- using redirects
+
+  TestApp::Application.routes.draw do
+    get 'courses/:course_name' => redirect('/courses/%{course_name}/lessons'), :as => "course"
+	match "/posts/:id" => redirect("/articles/%{id}")
+  end
+
+
+- Handling Parameters and Formats
+
+	The only other complex part about a table entry is the path. Here are the unique path patterns from the above table:
+
+		/articles(.:format)
+		/articles/new(.:format)
+		/articles/:id/edit(.:format)
+		/articles/:id(.:format)
+
+- Nested Resources
+
+	Nested resources sound like a great idea because they can build up beautiful URLs. For instance, let’s say our articles are going to have comments. For an article with ID 16 we might want to list the comments with this URL:
+
+		http://localhost:3000/articles/16/comments
+
+	To create this, we nest the comments resource inside the articles like below:
+
+		MyApp::Application.routes.draw do
+		  resources :articles do
+			member do
+			  put 'publish'
+			end
+
+			collection do
+			  put 'publish_all'
+			end
+
+			resources :comments
+		  end
+		end
+
+	
+- Non-RESTful Routes
+
+	Using a non-RESTful approach is not recommended, but you can do it if the need arises.
+	In routes.rb you’d call the match method and define a pattern like this:
+
+		MyApp::Application.routes.draw do
+		  match 'articles/:id' => 'articles#show'
+		end
+
+	Or, to go all in, you can use the this pattern:
+
+		match ':controller(/:action(/:id(.:format)))'
+
+- Type-able URLs
+
+	When an app supports authentication, you might add routes like this:
+
+		MyApp::Application.routes.draw do
+		  resources :sessions
+		  match '/login' => 'sessions#new', as: 'login'
+		  match '/logout' => 'sessions#destroy', as: 'logout'
+		end
+
+	There are still the normal RESTful routes for sessions, but now there are the additional convenience routes /login and /logout. In addition, the :as parameter gives them a name to use with the helper. In your app you can now refer to login_path and logout_path in addition to new_session_path. Run rake routes and it’d show these:
+
+		login  /login(.:format)        {controller:"sessions", action:"new"}
+		logout  /logout(.:format)       {controller:"sessions", action:"destroy"}
+
+- Root Route
+
+	  root to: "articles#index"
+
+
+Cool Stuff
+=============================
+
+- objects = controller_name.classify.constantize.find(:all)
+- instance_variable_set("@#{controller_name}", objects)	# @names = objects 
+
+
+- controller_path.classify	# Admin::Role
+- controller_name.classify	# Role
+
+- self.class.name.sub("Controller","").singularize	# NamesController -> Name
+- Rails.application.routes.recognize_path "/orders/34"
+
+{:controller => "orders", :action => "show", :id => "34"}
+
+
+
+
+

@@ -1,0 +1,1633 @@
+* Active Admin
+==========================================================================================
+
+gem 'activeadmin'
+
+# Plus integrations with:
+gem 'devise'
+gem 'cancancan'
+gem 'draper'
+gem 'pundit'
+
+> rails g active_admin:install --skip-users
+
+- If you want to use an existing user class, provide it as an argument:
+> rails g active_admin:install User
+
+- Otherwise, with no arguments we will create an AdminUser class to use with Devise:
+> rails g active_admin:install
+
+
+The generator adds these core files, among others:
+
+    app/admin/dashboard.rb
+    app/assets/javascripts/active_admin.js
+    app/assets/stylesheets/active_admin.scss
+    config/initializers/active_admin.rb
+
+Now, migrate and seed your database before starting the server:
+
+rails db:migrate
+rails db:seed
+rails server
+
+Visit http://localhost:3000/admin and log in as the default user:
+
+    User: admin@example.com
+    Password: password
+
+* To register an existing model with Active Admin:
+
+	> rails generate active_admin:resource MyModel
+
+
+Configurations
+============
+https://activeadmin.info/1-general-configuration.html
+
+Utility Navigation
+
+	ActiveAdmin.setup do |config|
+	  config.namespace :admin do |admin|
+		admin.build_menu :utility_navigation do |menu|
+		  menu.add label: "ActiveAdmin.info", url: "http://www.activeadmin.info",
+											  html_options: { target: :blank }
+		  admin.add_current_user_to_menu  menu
+		  admin.add_logout_button_to_menu menu
+		end
+	  end
+	end
+
+--
+	config.footer = "MyApp Revision v1.3"
+
+	config.site_title = 'Administration'.html_safe
+	config.authentication_method = :authenticate_admin_user!
+  
+  	config.on_unauthorized_access = :access_denied
+  
+  	config.logout_link_path = :destroy_admin_user_session_path
+  	config.current_user_method = :current_admin_user
+  	config.logout_link_method = :get
+  
+  	config.root_to = 'dashboard#index'
+  
+  	config.comments = false
+	config.show_comments_in_menu = false
+	config.comments_registration_name = 'AdminComment'
+	config.comments_order = 'created_at ASC'
+
+  	config.batch_actions = true
+	config.localize_format = :long
+
+	config.meta_tags = { author: 'My Company' }
+
+  	meta_tags_options = { viewport: 'width=device-width, initial-scale=1' }
+  	config.meta_tags = meta_tags_options
+  	config.meta_tags_for_logged_out_pages = meta_tags_options
+
+	config.meta_tags_for_logged_out_pages = {}
+
+	config.register_javascript 'my_javascript.js'
+	config.register_stylesheet 'my_print_stylesheet.css', media: :print
+	config.register_stylesheet 'my_stylesheet.css'
+
+	config.breadcrumb = false
+
+	config.csv_options = { col_sep: ';' }
+	config.csv_options = { force_quotes: true }
+
+    config.namespace :admin do |admin|
+    	admin.build_menu :utility_navigation do |menu|
+        	menu.add label: "Sign out", url: "/users/sign_out", html_options: { target: :blank }
+         	admin.add_logout_button_to_menu menu
+       	end
+	end
+
+    config.namespace :admin do |admin|
+    	# Disable the links entirely
+      	# admin.download_links = false
+
+		# Only show XML & PDF options
+      	admin.download_links = [:xml, :pdf]
+
+      	# Enable/disable the links based on block
+      	#   (for example, with cancan)
+      	# admin.download_links = proc { can?(:view_download_links) }
+    end
+    
+    config.default_per_page = 30
+	config.max_per_page = 10_000
+
+	config.filters = true
+
+-----
+-----    
+    
+    config.site_title       = "My Admin Site"
+	config.site_title_link  = "/"
+	config.site_title_image = "site_image.png"
+	config.site_title_image = "http://www.google.com/images/logos/google_logo_41.png"
+	config.site_title_image = ->(context) { context.current_user.company.logo_url }
+
+	# config/initializers/kaminari.rb
+	Kaminari.configure do |config|
+	  config.page_method_name = :per_page_kaminari
+	end
+
+	If you are also using Draper, you may want to make sure per_page_kaminari is delegated correctly:
+	Draper::CollectionDecorator.send :delegate, :per_page_kaminari
+    
+    
+* You can use the same syntax inside registered resource.
+
+- For the integration with existing devise installation:
+
+Add the following in application_controller
+
+  def authenticate_admin_user!
+    authenticate_user!
+    unless current_user.admin?
+      flash[:alert] = "This area is restricted to administrators only."
+      redirect_to root_path
+    end
+  end
+
+  def current_admin_user
+    return nil if user_signed_in? && !current_user.admin?
+    current_user
+  end
+
+  # In Rails 4.2 and above
+  def verified_request?
+    super || valid_authenticity_token?(session, request.headers['X-XSRF-TOKEN'])
+  end
+
+
+
+with webpacker
+---------------
+For new apps starting with Rails 6.0, Webpacker has become the default asset generator. You can opt-in to using Webpacker for ActiveAdmin assets as well by updating your configuration to turn on the use_webpacker option, either at installation time or manually.
+
+    at active_admin installation:
+
+    rails g active_admin:install --use_webpacker
+
+    manually:
+
+    ActiveAdmin.setup do |config|
+      config.use_webpacker = true
+    end
+
+    And run the generator to get default Active Admin assets:
+
+    rails g active_admin:webpacker
+
+
+/--- end of active admin
+
+json editor (activeadmin)
+-------------------------
+* https://github.com/udacity/activeadmin_json_editor
+
+	gem 'activeadmin_json_editor', '~> 0.0.7'
+	$ bundle
+
+- Include styles in "active_admin" initializer
+
+	config.register_stylesheet 'active_admin/json_editor.css'
+	config.register_javascript 'active_admin/json_editor.js'
+
+- Then 
+
+	f.input :info, as: :json
+
+- Further reading, create your own field renderer:
+* https://lixy.tech/blog/2019/05/active-admin-jsonb-forms.html
+
+
+Resources  :
+===========
+https://activeadmin.info/2-resource-customization.html
+
+> rails generate active_admin:resource MyModel
+
+This will generate a file in app/admin/mymodel.rb:
+
+ActiveAdmin.register MyModel do
+	# See permitted parameters documentation:
+	# https://github.com/activeadmin/activeadmin/blob/master/docs/2-resource-customization.md#setting-up-strong-parameters
+	#
+	# permit_params :list, :of, :attributes, :on, :model --> to add which fields to update
+	#
+	# or
+	#
+	# permit_params do
+	#   permitted = [:permitted, :attributes]
+	#   permitted << :other if resource.something?
+	#   permitted
+	# end
+end
+
+This will show the minimum index, show and filters .
+
+- For nested asscoaitions
+
+	permit_params :title, :content, :publisher_id,
+		tags_attributes: [:id, :name, :description, :_destroy]
+    
+- disable / enable
+
+	actions :all, except: [:update, :destroy]
+
+- To rename actions
+
+	en:
+	  active_admin:
+		resources:
+		  offer: # Registered resource
+			new_model: 'Make an Offer' # new action item
+			edit_model: 'Change Offer' # edit action item
+			delete_model: 'Cancel Offer' # delete action item
+
+- To rename resource
+
+	ActiveAdmin.register Post, as: "Article"
+
+- name spaces
+
+	# Available at /today/posts
+	ActiveAdmin.register Post, namespace: :today
+
+	# Available at /posts
+	ActiveAdmin.register Post, namespace: false
+
+- disable showing the resource in menu
+
+	menu false
+	.
+	menu label: "My Posts"
+	menu priority: 1 # so it's on the very left
+	menu if: proc{ current_user.can_edit_posts? }
+	menu parent: "Blog"
+
+- Parent Menu Items
+
+	# config/initializers/active_admin.rb
+	config.namespace :admin do |admin|
+	  admin.build_menu do |menu|
+		menu.add label: 'Blog', priority: 0
+	  end
+	end
+
+	# app/admin/post.rb
+	ActiveAdmin.register Post do
+	  menu parent: 'Blog'
+	end
+
+Scoping
+------------
+
+	scope_to :current_user # limits the accessible posts to `current_user.posts`
+	# Finally, you can pass a block to be called:
+	scope_to do
+		User.most_popular_posts
+	end
+	
+	scope_to :current_user, if:     proc{ current_user.limited_access? }
+	scope_to :current_user, unless: proc{ current_user.admin? }
+
+- Eager loading
+
+	ActiveAdmin.register Post do
+	  includes :author, :categories
+	end
+
+- how to retreive
+	
+	controller do
+		def scoped_collection
+			end_of_association_chain.where(visibility: true)
+		end
+	end
+
+- If you need to completely replace the record retrieving code (e.g., you have a custom to_param implementation in your models), override the find_resource method on the controller:
+
+	ActiveAdmin.register Post do
+	  controller do
+		def find_resource
+		  scoped_collection.where(id: params[:id]).first!
+		end
+	  end
+	end
+	
+- Belongs To
+
+	It’s common to want to scope a series of resources to a relationship. For example a Project may have many Milestones and Tickets. To nest the resource within another, you can use the belongs_to method:
+
+	ActiveAdmin.register Project
+	ActiveAdmin.register Ticket do
+	  belongs_to :project
+	end
+	
+	# Projects will be available as usual and tickets will be available by visiting /admin/projects/1/tickets assuming that a Project with the id of 1 exists. Active Admin does not add “Tickets” to the global navigation because the routes can only be generated when there is a project id.
+
+	ActiveAdmin.register Project do
+
+	  sidebar "Project Details", only: [:show, :edit] do
+		ul do
+		  li link_to "Tickets",    admin_project_tickets_path(resource)
+		  li link_to "Milestones", admin_project_milestones_path(resource)
+		end
+	  end
+	end
+
+	ActiveAdmin.register Ticket do
+	  belongs_to :project
+	end
+
+	ActiveAdmin.register Milestone do
+	  belongs_to :project
+	end
+
+
+Index Pages
+===========
+https://activeadmin.info/3-index-pages.html
+
+	index do
+	  id_column
+	  column :image_title
+	  actions
+	end
+
+	index as: :grid do |product|
+	  link_to image_tag(product.image_path), admin_product_path(product)
+	end
+
+	--
+	
+	index do
+	  column :image_title
+	  actions
+	end
+
+	index as: :grid, default: true do |product|
+	  link_to image_tag(product.image_path), admin_product_path(product)
+	end
+
+	--
+
+- Adding new filters
+
+	filter :id
+	filter :description
+	filter :status, as: :select, collection: Order.statuses
+	filter :booking_status, as: :select, collection: {'Incomplete' => 0, 'Pending' => 1, 'Complete' => 2}
+	filter :category
+	filter :created_at, as: :date_range
+
+	filter :author, as: :check_boxes
+
+	filter :name_equals
+	# or
+	filter :name_contains
+	filter :author, label: 'Something else'
+	filter :first_name_or_last_name_cont, as: :string, label: "Name"
+	
+- disable filters
+
+	ActiveAdmin.register Post do
+		config.filters = false
+	end
+
+preserve default ones
+
+	preserve_default_filters!
+	filter :author
+	remove_filter :id
+
+
+-Index Scopes
+
+	scope :all, default: true
+
+	# assumes the model has a scope called ':active'
+	scope :active
+
+	# renames model scope ':leaves' to ':subcategories'
+	scope "Subcategories", :leaves
+
+	# Dynamic scope name
+	scope ->{ Date.today.strftime '%A' }, :published_today
+
+	# custom scope not defined on the model
+	scope("Inactive") { |scope| scope.where(active: false) }
+
+	# conditionally show a custom controller scope
+	scope "Published", if: -> { current_admin_user.can? :manage, Posts } do |posts|
+	  posts.published
+	end
+
+- grouping scopes
+
+	# a scope in the default group
+	scope :all
+
+	# two scopes used to filter by status
+	scope :active, group: :status
+	scope :inactive, group: :status
+
+	# two scopes used to filter by date
+	scope :today, group: :date
+	scope :tomorrow, group: :date
+
+- Index default sort order
+	You can define the default sort order for index pages:
+
+	ActiveAdmin.register Post do
+	  config.sort_order = 'name_asc'
+	end
+
+- Index pagination
+
+	ActiveAdmin.setup do |config|
+		config.default_per_page = 30
+		config.paginate = false
+		config.per_page = [10, 50, 100]
+	end
+	
+	controller do
+	  before_action only: :index do
+		@per_page = 100
+	  end
+	end
+
+- Download Links
+
+	# Per resource:
+	ActiveAdmin.register Post do
+
+	  index download_links: false
+	  index download_links: [:pdf]
+	  index download_links: proc{ current_user.can_view_download_links? }
+
+	end
+
+	# For the entire application:
+	ActiveAdmin.setup do |config|
+
+	  config.download_links = false
+	  config.download_links = [:csv, :xml, :json, :pdf]
+	  config.download_links = proc { current_user.can_view_download_links? }
+
+	end
+
+
+Forms
+=====
+
+- Simple
+
+	form do |f|
+	  f.semantic_errors # shows errors on :base
+	  f.inputs          # builds an input field for every attribute
+	  f.actions         # adds the 'Submit' and 'Cancel' buttons
+	end
+
+- Complex
+
+	ActiveAdmin.register Post do
+
+	  form title: 'A custom title' do |f|
+		inputs 'Details' do
+		  input :title
+		  input :published_at, label: "Publish Post At"
+		  li "Created at #{f.object.created_at}" unless f.object.new_record?
+		  input :category
+		end
+		panel 'Markup' do
+		  "The following can be used in the content below..."
+		end
+		inputs 'Content', :body
+		para "Press cancel to return to the list without saving."
+		actions
+	  end
+
+	end
+
+- Partials
+
+	ActiveAdmin.register Post do
+		form partial: 'form'
+	end
+
+	--> 
+	
+	# app/views/admin/posts/_form.html.arb
+	insert_tag active_admin_form_for resource do |f|
+		inputs :title, :body
+		actions
+	end
+
+- Nested Resources
+
+	ActiveAdmin.register Post do
+	  permit_params :title,
+					:published_at,
+					:body,
+					categories_attributes: [:id, :title, :_destroy],
+
+	  form do |f|
+		f.inputs 'Details' do
+		  f.input :title
+		  f.input :published_at, label: 'Publish Post At'
+		end
+		f.inputs 'Content', :body
+		f.inputs do
+		  f.has_many :categories, heading: 'Themes',
+								  allow_destroy: true,
+								  new_record: false do |a|
+			a.input :title
+		  end
+		end
+		f.actions
+	  end
+
+	end
+
+
+- Datepicker
+
+	f.input :starts_at, as: :datepicker,
+	datepicker_options: {
+		min_date: "2013-10-8",
+		max_date: "+3D"
+	}
+
+- Displaying Errors
+
+	form do |f|
+	  f.semantic_errors *f.object.errors.keys
+	  # ...
+	end
+
+- Tabs
+
+	form do |f|
+		tabs do
+		  tab 'Basic' do
+			f.inputs 'Basic Details' do
+			  f.input :email
+			  f.input :password
+			  f.input :password_confirmation
+			end
+		  end
+
+		  tab 'Advanced', html_options: { class: 'specific_css_class' } do
+			f.inputs 'Advanced Details' do
+			  f.input :role
+			end
+		  end
+		end
+		f.actions
+	end
+
+- Customize the Create Another checkbox
+	In order to simplify creating multiple resources you may enable ActiveAdmin to show nice “Create Another” checkbox alongside of Create Model button. It may be enabled for the whole application:
+
+	ActiveAdmin.setup do |config|
+	  config.create_another = true
+	end
+	or for the particular resource:
+
+	ActiveAdmin.register Post do
+	  config.create_another = true
+	end
+
+
+Show Pages
+==========
+
+	ActiveAdmin.register Post do
+	  show do
+		h3 post.title
+		div do
+		  simple_format post.body
+		end
+	  end
+	end
+...
+	show do
+		# renders app/views/admin/posts/_some_partial.html.erb
+		render 'some_partial', { post: post }
+	end
+
+
+	show do
+		attributes_table do
+		  row :title
+		  row :image do |ad|
+			image_tag ad.image.url
+		  end
+		end
+		active_admin_comments
+	end
+
+	show title: :name do
+		# ...
+	end
+
+- With sidebar
+
+	ActiveAdmin.register Book do
+	  show do
+		panel "Table of Contents" do
+		  table_for book.chapters do
+			column :number
+			column :title
+			column :page
+		  end
+		end
+		active_admin_comments
+	  end
+
+	  sidebar "Details", only: :show do
+		attributes_table_for book do
+		  row :title
+		  row :author
+		  row :publisher
+		  row('Published?') { |b| status_tag b.published? }
+		end
+	  end
+	end
+
+- preserve default one
+
+	show do
+	  div do
+		h3 'Some custom charts about this object'
+		render partial: 'charts'
+	  end
+	  default_main_content
+	end
+
+
+
+
+Sidebar
+=======
+
+	sidebar :help do
+	  "Need help? Email us at help@example.com"
+	end
+
+	sidebar :help, only: :index do
+	  "Need help? Email us at help@example.com"
+	end
+		
+	sidebar :help, if: proc{ current_admin_user.super_admin? } do
+	  "Only for super admins!"
+	end
+
+	sidebar :custom, only: :show do
+		resource.a_method
+	end
+
+	sidebar :help                    # app/views/admin/posts/_help_sidebar.html.erb
+	sidebar :help, partial: 'custom' # app/views/admin/posts/_custom.html.erb
+
+	sidebar :help, class: 'custom_class'
+
+	# will push Help section to the top (above default Filters section)
+	sidebar :help, priority: 0
+
+	# you can use both, resource or resource instance (quote)
+
+	sidebar  "Customer", only: [:show, :edit] do
+		render :partial => "/admin/customer", :locals => {:order => resource}
+	end
+
+	# the partial views/admin/_customer.html.arb # ARB
+	
+		user = order.user
+		table do
+			tr do
+	
+	# the partial can be .html.erb as well
+	
+		<%
+			_order = order
+			.....
+		%>
+
+	sidebar :Subtotal, only: [:show, :edit] do
+		strong "#{with_currency2(quote, :total_price)}", :class => "right"
+	end
+
+
+
+
+
+
+
+Custom Controller Actions
+=========================
+
+- Collection Actions
+
+	ActiveAdmin.register Post do
+	  collection_action :import_csv, method: :post do
+		# Do some CSV importing work here...
+		redirect_to collection_path, notice: "CSV imported successfully!"
+	  end
+	end
+
+- Member Actions
+
+	ActiveAdmin.register User do
+	  member_action :lock, method: :put do
+		resource.lock!
+		redirect_to resource_path, notice: "Locked!"
+	  end
+	end
+
+- HTTP Verbs
+
+	member_action :foo, method: [:get, :post] do
+	  if request.post?
+		resource.update_attributes! foo: params[:foo] || {}
+		head :ok
+	  else
+		render :foo
+	  end
+	end
+
+- Rendering
+
+  # /admin/posts/:id/comments
+  member_action :comments do
+    @comments = resource.comments
+    # This will render app/views/admin/posts/comments.html.erb
+  end	
+
+	- For example, create app/views/admin/posts/comments.html.arb with:
+
+	table_for assigns[:post].comments do
+	  column :id
+	  column :author
+	  column :body do |comment|
+		simple_format comment.body
+	  end
+	end
+
+- Page Titles
+
+	ActiveAdmin.register Post do
+	  member_action :comments do
+		@comments   = resource.comments
+		@page_title = "#{resource.title}: Comments" # Sets the page title
+	  end
+	end
+
+- Action Items
+
+	# To include your own action items (like the New, Edit and Delete buttons), add an action_item block. The first parameter is just a name to identify the action, and is required. For example, to add a “View on site” button to view a blog post:
+
+	action_item :view, only: :show do
+	  link_to 'View on site', post_path(post) if post.published?
+	end
+
+
+	action_item :super_action,
+				only: :show,
+				if: proc{ current_admin_user.super_admin? } do
+	  "Only display this to super admins on the show screen"
+	end
+
+	action_item :help, priority: 0 do
+		"Display this action to the first position"
+	end
+	
+- Modifying the Controller
+
+	ActiveAdmin.register Post do
+	  controller do
+		# This code is evaluated within the controller class
+		def define_a_method
+		  # Instance method
+		end
+	  end
+	end	
+
+Also
+
+	before_action  do |resource|
+	end
+
+	before_create do |resource|
+	end
+	
+	def edit
+      super
+    end
+	
+	def create
+      create! do |success, failure|
+        success.html { redirect_to collection_url }
+        failure.html { redirect_to admin_shipments_new_url,  alert: "Pick one item at least"}
+      end
+    end
+    
+    after_create do |resource|
+    end
+    
+	def update_resource(object, attributes)
+      # object.items.update_all(:user_id => object.user_id)
+      # moved the logic to order model ..
+      object.update(*attributes)
+    end
+
+    def update(options={}, &block)
+      # You can put your send email code over here
+      super do |success, failure|
+        block.call(success, failure) if block
+        failure.html { render :edit }
+      end
+    end
+
+    before_action :populate_collection, :only => [:new, :update]
+    
+    
+    
+    
+
+Batch Actions
+===============
+
+	# By default, the index page provides you a “Batch Action” to quickly delete records, as well as an API for you to easily create your own. Note that if you override the default index, you must add selectable_column back for batch actions to be usable:
+
+	index do
+	  selectable_column
+	  # ...
+	end
+
+- Creating your own
+
+	ActiveAdmin.register Post do
+	  batch_action :flag do |ids|
+		batch_action_collection.find(ids).each do |post|
+		  post.flag! :hot
+		end
+		redirect_to collection_path, alert: "The posts have been flagged."
+	  end
+	end
+
+- Disabling Batch Actions
+
+	# config/initializers/active_admin.rb
+	ActiveAdmin.setup do |config|
+
+	  # Application level:
+	  config.batch_actions = false
+
+	  # Namespace level:
+	  config.namespace :admin do |admin|
+		admin.batch_actions = false
+	  end
+	end
+
+	# app/admin/post.rb
+	ActiveAdmin.register Post do
+
+	  # Resource level:
+	  config.batch_actions = false
+	end	
+
+- Modification
+
+	ActiveAdmin.register Post do
+	  batch_action :destroy do |ids|
+		redirect_to collection_path, alert: "Didn't really delete these!"
+	  end
+	end
+
+- Removal
+
+	ActiveAdmin.register Post do
+	  batch_action :destroy, false
+	end
+
+- Conditional display
+
+	ActiveAdmin.register Post do
+	  batch_action :flag, if: proc{ can? :flag, Post } do |ids|
+		# ...
+	  end
+	end
+
+- Priority in the drop-down menu
+
+	ActiveAdmin.register Post do
+	  batch_action :destroy, priority: 1 do |ids|
+		# ...
+	  end
+	end
+
+- Confirmation prompt
+
+	ActiveAdmin.register Post do
+	  batch_action :destroy, confirm: "Are you sure??" do |ids|
+		# ...
+	  end
+	end
+	
+- Batch Action forms
+	If you want to capture input from the user as they perform a batch action, Active Admin has just the thing for you:
+
+	batch_action :flag, form: {
+	  type: %w[Offensive Spam Other],
+	  reason: :text,
+	  notes:  :textarea,
+	  hide:   :checkbox,
+	  date:   :datepicker
+	} do |ids, inputs|
+	  # inputs is a hash of all the form fields you requested
+	  redirect_to collection_path, notice: [ids, inputs].to_s
+	end
+	
+- If you pass a nested array, it will behave just like Formtastic would, with the first element being the text displayed and the second element being the value.
+
+	batch_action :doit, form: {user: [['Jake',2], ['Mary',3]]} do |ids, inputs|
+	  User.find(inputs[:user])
+	  # ...
+	end
+
+- When you have dynamic form inputs you can pass a proc instead:
+
+	batch_action :doit, form: -> { {user: User.pluck(:name, :id)} } do |ids, inputs|
+	  User.find(inputs[:user])
+	  # ...
+	end
+	
+- Under the covers this is powered by the JS ActiveAdmin.ModalDialog which you can use yourself:
+
+if $('body.admin_users').length
+  $('a[data-prompt]').click ->
+    ActiveAdmin.ModalDialog $(@).data('prompt'), comment: 'textarea',
+      (inputs)=>
+        $.post "/admin/users/#{$(@).data 'id'}/change_state",
+          comment: inputs.comment, state: $(@).data('state'),
+          success: ->
+            window.location.reload()
+
+- Translation
+
+So this:
+
+	ActiveAdmin.register Post do
+	  batch_action :publish do |ids|
+		# ...
+	  end
+	end
+
+Can be translated with:
+
+	# config/locales/en.yml
+	en:
+	  active_admin:
+		batch_actions:
+		  labels:
+			publish: "Publish"
+
+- Support for other index types
+	
+	# You can easily use batch_action in the other index views, Grid, Block, and Blog; however, these will require custom styling to fit your needs.
+
+	ActiveAdmin.register Post do
+
+	  # By default, the "Delete" batch action is provided
+
+	  # Index as Grid
+	  index as: :grid do |post|
+		resource_selection_cell post
+		h2 auto_link post
+	  end
+
+	  # Index as Blog requires nothing special
+
+	  # Index as Block
+	  index as: :block do |post|
+		div for: post do
+		  resource_selection_cell post
+		end
+	  end
+
+	end
+
+
+Custom Pages
+============
+
+	If you have data you want on a standalone page that isn’t tied to a resource, custom pages provide you with a familiar syntax and feature set:
+
+	a menu item
+	sidebars
+	action items
+	page actions
+
+- Create a new Page
+	
+	# app/admin/calendar.rb
+	ActiveAdmin.register_page "Calendar" do
+	  content do
+		para "Hello World"
+	  end
+	end
+
+- Anything rendered within content will be the main content on the page. Partials behave exactly the same way as they do for resources:
+
+	# app/admin/calendar.rb
+	ActiveAdmin.register_page "Calendar" do
+	  content do
+		render partial: 'calendar'
+	  end
+	end
+
+	# app/views/admin/calendar/_calendar.html.arb
+	table do
+	  thead do
+		tr do
+		  %w[Sunday Monday Tuesday Wednesday Thursday Friday Saturday].each &method(:th)
+		end
+	  end
+	  tbody do
+		# ...
+	  end
+	end
+
+- Customize the Menu --> see menu section in resources
+- Customize the breadcrumbs
+
+	ActiveAdmin.register_page "Calendar" do
+	  breadcrumb do
+		['admin', 'calendar']
+	  end
+	end
+
+- Customize the Namespace
+
+	# Available at /today/calendar
+	ActiveAdmin.register_page "Calendar", namespace: :today
+
+	# Available at /calendar
+	ActiveAdmin.register_page "Calendar", namespace: false
+
+- Belongs To
+
+	ActiveAdmin.register Project
+	ActiveAdmin.register_page "Status" do
+	  belongs_to :project			---> see belongs to in resource section
+	end
+
+- Add a Sidebar --> see sidebars
+- Add an Action Item
+
+	# Just like other resources, you can add action items. The difference here being that :only and :except don’t apply because there’s only one page it could apply to.
+
+	action_item :view_site do
+	  link_to "View Site", "/"
+	end
+
+- Add a Page Action
+
+	# Page actions are custom controller actions (which mirror the resource DSL for the same feature).
+
+	page_action :add_event, method: :post do
+	  # ...
+	  redirect_to admin_calendar_path, notice: "Your event was added"
+	end
+
+	action_item :add do
+	  link_to "Add Event", admin_calendar_add_event_path, method: :post
+	end
+	
+	- This defines the route /admin/calendar/add_event which can handle HTTP POST requests.
+	- Clicking on the action item will reload page and display the message “Your event was added”
+	- Page actions can handle multiple HTTP verbs.
+
+	page_action :add_event, method: [:get, :post] do
+	  # ...
+	end
+	
+- Use custom column as id
+
+	# You can use custom parameter instead of id
+
+	ActiveAdmin.register User do
+	  controller do
+		defaults :finder => :find_by_name
+	  end
+	end
+	
+	- This defines the resource route as /admin/users/john if user name is john
+	
+- Decorators
+
+	# app/models/post.rb
+	class Post < ActiveRecord::Base
+	  # has title, content, and image_url
+	end
+
+	# app/decorators/post_decorator.rb
+	class PostDecorator < Draper::Decorator
+	  delegate_all
+
+	  def image
+		h.image_tag model.image_url
+	  end
+	end
+
+	# app/admin/post.rb
+	ActiveAdmin.register Post do
+	  decorate_with PostDecorator
+
+	  index do
+		column :title
+		column :image
+		actions
+	  end
+	end
+
+	- You can pass any decorator class as an argument to decorate_with as long as it accepts the record to be decorated as a parameter in the initializer, and responds to all the necessary methods.
+
+	# app/decorators/post_decorator.rb
+	class PostDecorator
+	  attr_reader :post
+	  delegate_missing_to :post
+
+	  def initialize(post)
+		@post = post
+	  end
+	end
+
+- Forms
+
+	# By default, ActiveAdmin does not decorate the resource used to render forms. If you need ActiveAdmin to decorate the forms, you can pass decorate: true to the form block.
+
+	ActiveAdmin.register Post do
+	  decorate_with PostDecorator
+
+	  form decorate: true do |f|
+		# ...
+	  end
+	end
+
+
+Arbre Components
+================
+
+	https://activeadmin.info/12-arbre-components.html
+
+- layout
+
+	html do
+	 head do
+	   title('Welcome page')
+	 end
+	 body do
+	   para('Hello, world')
+	 end
+	end
+
+
+- Text Node
+
+	panel "Post Details" do
+      attributes_table_for post do
+        row :id
+        row 'Tags' do
+          post.tags.each do |tag|
+            a tag, href: admin_post_path(q: {tagged_with_contains: tag})
+            text_node "&nbsp;".html_safe
+          end
+        end
+      end
+    end
+
+- Panels
+
+  panel "Post Details" do
+    render partial: "details", locals: {post: post}
+  end
+
+  panel "Post Tags" do
+    render partial: "tags",    locals: {post: post}
+  end
+
+- Columns
+
+	columns do
+	  column do
+		span "Column #1"
+	  end
+
+	  column do
+		span "Column #2"
+	  end
+	end
+	
+- Spanning Multiple Columns
+
+	columns do
+	  column span: 2 do
+		span "Column # 1"
+	  end
+	  column do
+		span "Column # 2"
+	  end
+	end
+
+- Custom Column Widths
+
+	columns do
+	  column max_width: "200px", min_width: "100px" do
+		span "Column # 1"
+	  end
+	  column do
+		span "Column # 2"
+	  end
+	end
+
+- Custom Column Class
+
+	columns do
+	  column class: "important" do
+		span "Column # 1"
+	  end
+	  column do
+		span "Column # 2"
+	  end
+	end
+
+- Table For
+
+	#Table For provides the ability to create tables like those present in index_as_table. It takes a collection and a hash of options and then uses column to build the fields to show with the table.
+
+	table_for order.payments do
+	  column(:payment_type) { |payment| payment.payment_type.titleize }
+	  column "Received On",     :created_at
+	  column "Details & Notes", :payment_details
+	  column "Amount",          :amount_in_dollars
+	end
+
+- Internationalization
+
+	table_for payments, i18n: Payment do
+		#	 ...
+	end
+
+- Status tag
+
+	status_tag 'In Progress'
+	# => <span class='status_tag in_progress'>In Progress</span>
+
+	status_tag 'active', class: 'important', id: 'status_123', label: 'on'
+	# => <span class='status_tag active important' id='status_123'>on</span>
+
+	status_tag true
+	# => <span class='status_tag yes'>Yes</span>
+
+- Tabs
+
+	#The Tabs component is helpful for saving page real estate. The first tab will be the one open when the page initially loads and the rest hidden. You can click each tab to toggle back and forth between them. Arbre supports unlimited number of tabs.
+
+	tabs do
+	  tab :active do
+		table_for orders.active do
+		  ...
+		end
+	  end
+
+	  tab :inactive do
+		table_for orders.inactive do
+		  ...
+		end
+	  end
+	end
+
+
+- Create your own component
+
+	Active Admin is based on several libraries, among which I would highlight 
+	- arbre, 
+	- formtastic, 
+	- inherited_resources, and 
+	- ransack. 
+
+	Each of them is responsible for its part and deserves separate consideration.
+	Arbre is a library for defining templates using Ruby objects. Here’s an example of a basic page written with Arbre DSL:
+
+		html do
+		 head do
+		   title('Welcome page')
+		 end
+		 body do
+		   para('Hello, world')
+		 end
+		end
+
+	- Like all Arbre components, our Admin::Components::HelloWorld inherits from Arbre::Component class:
+
+	# app/admin/components/hello_world.rb
+	module Admin
+	  module Components
+		class HelloWorld < Arbre::Component
+		  builder_method :hello_world
+
+		  def build(attributes = {})
+			super(attributes)
+			text_node('Hello world!')
+			add_class('hello-world')
+		  end
+
+		  def tag_name
+			'h1'
+		  end
+		end
+	  end
+	end
+
+	- Starting from the top: 
+	
+	builder_method defines a method to create a component using DSL. 
+	Arguments passed to the component will be passed to the #build method.
+
+	Each Arbre component is a separate DOM element (similar to the way modern frontend frameworks work, only dates back to 2012). 
+	
+	All components are rendered as div DOM elements by default. 
+	You can override #tag_name method to change this behavior. 
+	As you might guess, #add_class method adds a class attribute to the root DOM element.
+
+	- The only thing left is to call our new component. For example, let’s do this in app/admin/dashboard.rb:
+
+	# app/admin/dashboard.rb
+	ActiveAdmin.register_page 'Dashboard' do
+	  menu priority: 1, label: proc { I18n.t('active_admin.dashboard') }
+
+	  content do
+		hello_world
+	  end
+	end
+
+
+	- To understand how to use Arbre in a production environment, 
+	let’s assume that we have a blog with posts (Post) and comments 
+	(Comment) with a 1:M relationship. 
+	We need to display the last ten comments on the show page of a post.
+
+	# app/admin/posts.rb
+	ActiveAdmin.register Post do
+	  permit_params :title, :body
+
+	  show do
+		attributes_table(:body, :created_at)
+
+		panel I18n.t('active_admin.posts.new_comments') do
+		  table_for resource.comments.order(created_at: :desc).first(10) do
+			column(:author)
+			column(:text)
+			column(:created_at)
+		  end
+		end
+	  end
+	end
+
+
+	- Now we’ll move the table with comments into a separate component. 
+	
+	Create a new class and inherit it from ActiveAdmin::Views::Panel. 
+	If you create a new component from scratch (as in hello_world example above) 
+		and call panel from it, panel will be wrapped by another div, and this will probably break the layout.
+
+	Put our new class in app/admin/components/posts/new_comments.rb, 
+	since Active Admin automatically requires everything inside app/admin/**/*:
+
+	# app/admin/components/posts/new_comments.rb
+	module Admin
+	  module Components
+		module Posts
+		  class NewComments < ActiveAdmin::Views::Panel
+			builder_method :posts_new_comments
+
+			def build(post)
+			  super(I18n.t('active_admin.posts.new_comments'))
+			  table_for last_comments(post) do
+				column(:author)
+				column(:text)
+				column(:created_at)
+			  end
+			end
+
+			private
+
+			def last_comments(post)
+			  post.comments
+				  .order(created_at::desc)
+				  .first(10)
+			end
+		  end
+		end
+	  end
+	end
+
+--> https://skryukov.github.io/rails/activeadmin/2020/09/29/an-unofficial-active-admin-guide.html
+
+
+
+
+* Client side validation
+========================
+https://blog.kiprosh.com/implement-client-side-validation-in-active-admin/
+https://github.com/DavyJonesLocker/client_side_validations
+
+- rails g client_side_validations:install
+- #= require rails.validations
+
+- Use 
+
+	ActiveAdmin.register Item do
+	  form partial: 'form'
+	end
+	
+_form.erb.html
+
+	<%= semantic_form_for [:admin, @item], validate: true do |f| %>
+	  <%= f.semantic_errors(*f.object.errors.keys) %>
+
+	  <%= f.inputs 'Required Information' do %>
+		<%= f.input :name %>
+		<%= f.input :short_description %>
+		<%= f.input :price_in_dollar, as: :number %>
+	  <% end %>
+
+	  <%= f.inputs 'Additional Information' do%>
+		<%= f.input :long_description%>
+		<%= f.input :available_at,    as: :date_time_picker %>
+		<% end %>
+
+	  <%= f.actions %>
+	<% end %>
+
+> rails g client_side_validations:copy_assets --> app/assets/rails.validation.js
+
+Active admin uses formastic gem for for form building so you can add following code in you js file. This will add formbuilder for active admin form.
+
+app/assets/rails.validation.js:
+
+  window.ClientSideValidations.formBuilders['Formtastic::FormBuilder'] = {
+      add: function(element, settings, message) {
+        // custom add code here
+      },
+    
+      remove: function(element, settings) {
+        // custom remove code here
+      }
+    }
+
+
+
+
+
+
+
+
+
+
+* Authorization Adapter
+=======================
+
+	https://activeadmin.info/13-authorization-adapter.html
+
+
+
+
+* Nested Nodes (ancestry) + ActiveAdmin
+=================================
+
+via Adding a field (parent_id) .. and manage it your self .. 
+it's good to add some other helper fields : status (bitwise), type, path, reference_id, image/s, tags, 
+
+https://github.com/stefankroes/ancestry
+https://github.com/zorab47/active_admin-sortable_tree
+
+> gem 'ancestry'
+> rails g migration add_ancestry_to_nodes ancestry:string:index
+
+This will add the following fields: 
+
+class AddAncestryToNodes < ActiveRecord::Migration[6.0]
+  def change
+    add_column :nodes, :ancestry, :string
+    add_index :nodes, :ancestry
+  end
+end
+
+in Node.rb model:
+
+  has_ancestry :orphan_strategy => :rootify
+	
+in admin/nodes.rb
+
+	sortable tree: true,
+           sorting_attribute: :updated_at, #:position,
+           # parent_method: :parent,
+           # children_method: :children,
+           # roots_method: :roots,
+           # roots_collection: proc { current_user.pages.roots }
+
+You can override any of the magic attributes to represent: parent, position, .. etc
+Remove parent_id field, no need for this field
+
+- Of course you can add int position field, and set it as sorting attribute
+
+- no need for parent_id
+> rails g migration remove_parent_id_from_nodes
+
+* Whenever active admin + sortable issue with csrf .. 
+- app/assets/javascripts/active_admin/sortable.js.coffee ..... make a copy from the original gem to your local folders
+
+        $.ajax
+          url: $this.data("sortable-url")
+          type: "post"
+          data: $this.nestedSortable("serialize")
++         beforeSend: (xhr) ->
++           xhr.setRequestHeader('X-CSRF-Token', $('meta[name="csrf-token"]').attr('content'))
+
+Mmmmmmmmm when used the same code from rails 4 -> 5
+
+Do the same for the view .. 
+
+https://github.com/stefankroes/ancestry
+
+
+
+Charts
+======
+
+https://chartkick.com/
+
+gem "chartkick"
+gem "chartkick"
+gem 'groupdate'
+
+
+
+active_admin.js
+
+//= require chartkick
+//= require Chart.bundle
+
+
+line_chart User.group_by_day(:created_at).count %>
+bar_chart Order.all.group_by { |m| m.created_at.month }.count
+
+
+
+
+
+
+
+
+
+Refer3endes:
+============
+https://skryukov.github.io/rails/activeadmin/2020/09/29/an-unofficial-active-admin-guide.html
+https://varyonic.gitbooks.io/activeadmin/content/12-arbre-components.html
+https://activeadmin.info/9-batch-actions.html
+
+https://github.com/platanus/activeadmin_addons
+
+https://www.blocknot.es/2018-09-02-active-admin-plugins/
+
+
+
+====================================================================================================
+====================================================================================================
+
+
+
+
+> bundle add motor-admin
+> rails motor:install && rake db:migrate	--> /motor_admin
+
+
+
+
+
+
+
+
+
+	
+	

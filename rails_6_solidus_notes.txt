@@ -1,0 +1,3973 @@
+==========================================================================================
+Solidus
+==========================================================================================
+==========================================================================================
+
+Notes:
+
+	> apt install build-essential
+	> apt-get install imagemagick imagemagick-common libmagickcore-dev libmagickwand-dev
+
+- On mac, using brew .. etc
+
+	> rvm install ruby 2.6.0
+	> rvm use 2.6.0@solidus --create
+
+- build rails app
+
+	> gem install rails # version 6.0.0 latest
+	> rails new solidus
+	> cd solidus
+	
+- Adding the following lines to Gemfile:
+
+	gem 'solidus'
+	gem 'solidus_auth_devise'
+
+- Then, 
+
+	> bundle
+	> bundle exec rails g spree:install
+	
+		db:migrate
+		db:seed
+		spree_sample:load
+	
+	> bundle exec rails g solidus:auth:install
+	> bundle exec rake railties:install:migrations
+
+# you might need to upgrade yarn:
+
+	> yarn install --check-files
+	> brew upgrade yarn
+	> yarn upgrade
+
+- Consider using default database (sqlite)
+
+*	> bundle exec rails s -p 3002
+
+Or:
+	> rails g spree:install --migrate=false --sample=false --seed=false
+
+	> bundle exec rake railties:install:migrations
+	> bundle exec rake db:migrate
+	> bundle exec rake db:seed
+	> bundle exec rake spree_sample:load
+
+
+
+To reset database 
+-----------------
+	> rake db:reset
+	
+		Dropped database 'db/development.sqlite3'
+		Dropped database 'db/test.sqlite3'
+		Created database 'db/development.sqlite3'
+		Created database 'db/test.sqlite3'
+		Loading seed file: stores
+		Loading seed file: store_credit
+		Loading seed file: countries
+		Loading seed file: return_reasons
+		Loading seed file: states
+		Loading seed file: stock_locations
+		Loading seed file: zones
+		Loading seed file: refund_reasons
+		Loading seed file: roles
+		Loading seed file: shipping_categories
+		Create the admin user (press enter for defaults).
+		Email [admin@example.com]: 
+		Password [test123]:
+	
+	> rake spree_sample:load
+	> rake db:migrate	
+	
+- And prefer to:
+	
+	> rake temp:cache:clear
+
+
+Issues:
+-------
+It tried to pull solidus version 1 .. so update to 
+
+	gem 'solidus', github: 'solidusio/solidus'
+
+An error occurred while installing nokogiri (1.10.4), and Bundler cannot continue.
+Make sure that `gem install nokogiri -v '1.10.4' --source 'https://rubygems.org/'` succeeds before bundling.
+
+==> Installing libxml2 dependency: python
+Error: Your Xcode (7.3.1) is too outdated.
+Please update to Xcode 9.2 (or delete it).
+Xcode can be updated from the App Store.
+
+Error: Xcode alone is not sufficient on Sierra.
+Install the Command Line Tools:
+  xcode-select --install
+
+	> xcode-select --install
+	> brew resinstall libxml2	
+	> bundle	
+
+========================================
+  Your Yarn packages are out of date!
+  Please run `yarn install --check-files` to update.
+========================================
+
+To disable this check, please change `check_yarn_integrity`
+to `false` in your webpacker config file (config/webpacker.yml). <------- in development section
+
+yarn check v1.17.3
+success Folder in sync.
+Done in 0.16s.
+yarn check v1.17.3
+error "webpack-dev-server#yargs#yargs-parser" is wrong version: expected "^11.1.1", got "13.1.1"
+error Found 1 errors.
+info Visit https://yarnpkg.com/en/docs/cli/check for documentation about this command.
+
+	> brew upgrade yarn
+	> yarn install --check-files
+	> yarn install
+	> yarn upgrade
+
+on Ubuntu 
+
+	> curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+	> echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+	> sudo apt update
+	> sudo apt install yarn
+
+Run
+----
+
+*	> bundle exec rails s -p 3002
+
+
+More about Rails 6
+---------------------
+**
+	config.autoloader = :zeitwerk
+	config.autoloader = :classic
+
+Since Rails 6, it started using :zeitwerk autoloader ... Remember, decorator definition has
+been changed from .class_eval style to prepend style .. see examples .. 
+
+- bin/rails zeitwerk:check
+
+Now, since we are using Solidus (latest) with Rails 6, some old exnetions (gems) are still
+using the old style of autoloader (classic) .. how to fix that ?
+
+- Set the default autoloader in environments files to:
+
+	config.autoloader = :classic
+
+- Or, change all decorator files to use the prepend style .. 
+- But, how to set that gem to load which loader ??? instead of changing the whole 
+  environment autoloader .. 
+
+
+
+
+
+
+
+Solidus Core
+============
+Overrides
+===========================================================================================
+
+- Now, let's override views:
+
+	> bundle exec rails g solidus:views:override	
+
+! Deface
+--------
+
+If you want to avoid upgrade difficulties, or you just need a tiny change to get feature you need, you can use the Deface gem
+. Deface dynamically changes your templates in-place.
+However, if you use Deface extensively it can be tricky to find out where a particular piece of HTML actually comes from.
+
+# Still using spree defaces gem
+
+	--> https://github.com/spree/deface
+
+* You can install solidus command:
+
+	> gem install solidus_cmd
+	> solidus extension myext
+	
+- Add to Gemfile:
+
+	gem "solidus_extension_name", path: "./myext"
+
+- Check extensions : https://extensions.solidus.io/
+- Now trying to use a theme template that has the following folders:
+
+- Adding the new folder/s to the searching path of assets: config/initializers/assets.rb
+- config.assets.paths << Rails.root.join("app", "assets", "plugins", "bootstrap","js")
+
+- to override Admin pages:
+
+	- pull the solidus-master from github
+	- fetch to views/spree/admin, views/spree/layouts .. and copy them to your project
+
+Decorators
+-----------
+- decorators are working differently than spree .. the old way (as spree) using class_eval
+  is still working, but solidus is trying to push for repend approach so you can 
+  call the super exact method of the overriden class or module .. 
+  
+* Yet it has some issues, and hot reloading of files are not working as expected !!!!
+
+	module MyStore::OrderDecorator
+	  def total
+		super + BigDecimal(10.0)
+	  end
+
+	  Spree::Order.prepend self
+	end
+
+- Remember, the piece of code in application.rb that makes it possible
+
+    initializer 'spree.decorators' do |app|
+      config.to_prepare do
+        Dir.glob(Rails.root.join('app/**/*_decorator*.rb')) do |path|
+
+          puts path
+          Rails.configuration.cache_classes ? require(path) : load(path)
+          # require_dependency(path)
+        end
+      end
+    end
+
+    # Load application's view overrides
+    initializer 'spree.overrides' do |app|
+      config.to_prepare do
+        Dir.glob(Rails.root.join('app/overrides/*.rb')) do |path|
+          require_dependency(path)
+        end
+      end
+    end
+
+
+Auth (Devise)
+--------------
+
+- spree_current_user Used to tell Spree what the current user of a request is.
+- spree_login_path The location of the login/sign in form in your application.
+- spree_signup_path The location of the sign up form in your application.
+- spree_logout_path The location of the logout feature of your application.
+
+    if spree_current_user != nil
+      puts spree_current_user.has_spree_role?(:admin)
+    end
+
+	<% if spree_current_user %>
+	  <li class="nav-item">
+		<%= link_to spree.account_path, class: "nav-link btn-sm" do %>
+			<i class="fa fa-user"></i>
+		<% end %>
+	  </li>
+	  <li class="nav-item">
+		<%= link_to spree.logout_path, class: "nav-link btn-sm", method: Devise.sign_out_via do %>
+			<i class="fa fa-sign-out-alt"></i>
+		<% end %>
+	  </li>
+	<% else %>
+	  <li class="nav-item" id="link-to-login"><%= link_to I18n.t('spree.login'), spree.login_path, class: "nav-link btn-sm" %></li>
+	  <li class="nav-item"><%= link_to I18n.t('spree.register'), spree.signup_path, class: "nav-link btn-sm" %></li>
+	<% end %>
+
+- to override login / reg views
+	browse to solidusio/solidus_auth_devise/lib/frontend/spree/ .. copy all files to 
+	your project
+  
+
+
+Spree:Config
+-------------
+core/lib/spree/app_configuration.rb
+
+For example, if the store administrator lives in Germany, you could change the configured value to the ISO code for Germany:
+Ruby
+	Spree::Config.admin_vat_country_iso = "DE"
+
+    puts @searcher.pricing_options.class # Spree::Variant::PricingOptions
+    puts Spree::Config.default_pricing_options.class  # Spree::Variant::PricingOptions
+    puts Spree::Config.pricing_options_class.class  # Spree::Variant::PricingOptions
+    puts Spree::Config.searcher_class # Spree::Core::Search::Base
+    puts Spree::Config.currency #
+
+Preferences
+-----------
+- Spree uses the application global preferences approach which is not used anymore in 
+solidus .. instead it uses per model preferences so you will have to add a new migration
+column in the model (preferences) to store extra variables .. 
+
+Example, adding the three variables in store model as preferences, and related files 
+used to update variables, and how to fetch them .. 
+
+#Better explanation on spree fork
+- https://guides.spreecommerce.org/developer/core/preferences.html
+- https://guides.solidus.io/developers/preferences/add-model-preferences.html
+
+
+Prices / Multi currency
+------------------------
+- There is no currency selector anymore in solidus, cuz it's taking the approach of multi-
+  store architecture, each store is defined by it's url, and it's default currency !
+
+- all prodcuts support mutli-currencies by default   
+- When changing the currency, it means you are changing the store !!
+- changing the currency within the store .. is possible ?
+
+* See steps of the new extension to fit latest solidus .. (it's working on the old arch
+ of spree).
+
+.. using preferences in store model for currency selector .....
+
+	#index
+	    @searcher.pricing_options = Spree::Variant::PricingOptions.new(currency: session[:currency], country_iso: nil) if session[:currency]
+
+	#base_controller --> before_action do
+	    current_store.default_currency = session[:currency] if session[:currency]
+
+
+`Variant.active(currency)` is deprecated. Please use `Variant.with_prices(pricing_options)` instead
+#<Spree::Variant::PricingOptions:0x00007f869f7c6b18 @desired_attributes={:currency=>"JOD", :country_iso=>"JO"}>
+              
+price = product.price_for(current_pricing_options)              
+price_for --> app/models/spree/variant/price_selector.rb
+ 
+	 def price_for(price_options)
+		c = variant.currently_valid_prices.detect do |price|
+		  ( price.country_iso == price_options.desired_attributes[:country_iso] ||
+			price.country_iso.nil?
+		  ) && price.currency == price_options.desired_attributes[:currency]
+		end.try!(:money)
+	  end
+
+--> Spree::Money ... inspect
+Spree::Money<Spree::Money:0x00007fa3d343d108 @money=#&lt;Money fractional:78000 currency:JOD&gt;, @options={:sign_before_symbol=&gt;true, :currency=&gt;"JOD"}>
+                    
+price.html:
+<span class="price selling font-weight-bold" itemprop="price" content="78.0">
+	<span class="money-currency-symbol">د.ا</span>
+	<span class="money-whole">78</span>
+	<span class="money-decimal-mark">.</span>
+	<span class="money-decimal">000</span>
+</span>
+
+Product view
+<%= display_price(@product.master) %>   -> base_helper
+
+  def display_price(product_or_variant)
+    product_or_variant.price_for(current_pricing_options).to_html
+  end
+  
+  --> price_for --> app/models/spree/variant/price_selector.rb
+ 
+	 def price_for(price_options)
+		c = variant.currently_valid_prices.detect do |price|
+		  ( price.country_iso == price_options.desired_attributes[:country_iso] ||
+			price.country_iso.nil?
+		  ) && price.currency == price_options.desired_attributes[:currency]
+		end.try!(:money)
+	  end
+  
+ 		see above html structure 		
+  
+- But in cart_form
+
+	<%= display_price(@product.master) %> is called inside .. 
+	
+	<span class="price selling font-weight-bold" itemprop="price" content="<%= @product.price_for(current_pricing_options).to_d %>">
+		<%= display_price(@product.master) %>
+	</span>
+  
+	>> <span class="price selling font-weight-bold" itemprop="price" content="100.0">
+	د.ا.‏ 100.00
+	</span>
+
+	and this span is getting filled by a value as shown .. 	د.ا.‏ 100.00
+
+	Mmmmmmmmmmm
+
+Spree::Money:
+-------------
+initializer for Money gem .. https://github.com/RubyMoney/money
+
+.format:
+
+	@money.inspect -> <Money fractional:100000 currency:JOD>	
+	@money.format(@options.merge(options)) ({:sign_before_symbol=>true, :currency=>"JOD"})
+
+	return 100.0 د.أ.
+
+	@money.currency:
+	
+	#<Money::Currency id: jod, priority: 100, symbol_first: true, thousands_separator: ,, html_entity: , decimal_mark: ., name: Jordanian Dinar, symbol: د.ا, subunit_to_unit: 1000, exponent: 3, iso_code: JOD, iso_numeric: 400, subunit: Fils, smallest_denomination: 5>
+
+Cool .. Found it .. 
+
+	the	@money is generated by:
+	
+	def initialize(amount, options = {})
+		if amount.to_s =~ RUBY_NUMERIC_STRING
+			@money = Monetize.from_string(amount, currency)
+	
+check gem https://github.com/RubyMoney/monetize .. 	
+	
+	
+* Important, the cart_form, the main price product is shown is:
+
+<span class="price selling font-weight-bold" itemprop="price" content="<%= @product.price_for(current_pricing_options).to_d %>">
+	<%= display_price(@product.master) %>
+</span>
+
+But the span, will get replaced by .. price update of core spree
+app/assets/javascripts/spree/frontend/product.js
+
+    Spree.updateVariantPrice = function(variant) {
+        var variantPrice = variant.data("price");
+        if (variantPrice) {
+            $(".price.selling").text(variantPrice);
+        }
+    };
+
+Also, the flexi seems to make a change in the price based on its own selection.
+Check: extensions/solidus_flexi_variants/app/views/spree/products/_pricing.html.erb
+
+          Spree.ready(function() {
+            // watch for variant changes
+            $('#product-variants input:radio[name="variant_id_"]').change(function() {
+              updatePrice();
+            });
+
+            // 'watch' our configurations
+            $('.ad-hoc-option-select').change(function() {
+              // get _every_ option drop down and recalculate product price
+              // do this immediately, since we are not waiting on the results of the exlusions post
+              updatePrice();
+            });
+
+            if ($('.ad-hoc-option-select').length) {
+              updatePrice(); // set the initial price
+            }
+          }); // ready
+	
+	
+          function updatePrice() {
+            var cur_variant_price_diff = compute_variant_price_diff(base_price);
+            var cur_configuration_price = compute_configuration_price();
+            var cur_customization_price = compute_customization_price();
+            var cur_price = base_price + cur_variant_price_diff + cur_configuration_price + cur_customization_price;
+
+            var region = $.formatCurrency.getRegionFromCurrency("<%= current_pricing_options.currency %>"); <--
+//            $('.price.selling').text(cur_price.toFixed(2)).formatCurrency({region: region});
+          }
+	
+	
+		jquery.formatCurrency-1.4.0.min.js --> 
+		extensions/solidus_flexi_variants/vendor/assets/javascripts/i18n/jquery.formatCurrency.all.js
+		
+		Change the currency symbol from there .. 
+		
+
+
+Make add to cart ajax
+----------------------
+> vim app/controllers/spree/orders_controller.rb
+add:	
+	respond_to :js
+
+> touch app/controllers/spree/orders_controller_decorator.rb 
+add:
+	Spree::OrdersController.class_eval do
+		respond_to :js
+	end
+	
+> touch app/overrides/ajax_cart_form.rb
+add:
+	Deface::Override.new(:virtual_path => 'spree/products/_cart_form',
+                     :name => 'remote_cart_form',
+                     :replace => "code[erb-loud]:contains('form_for :order, :url => populate_orders_url do |f|')",
+                     :erb => "<%= form_for :order, :url => populate_orders_url, :remote => true do |f| %>")
+
+
+
+> touch app/views/spree/orders/populate.js.erb
+add:
+	$('#link-to-cart').html("<%= j(link_to_cart) %>");
+
+
+
+CMS:
+----
+- static pages
+- blogging
+- alchemy	https://github.com/AlchemyCMS/alchemy-solidus
+
+	gem 'alchemy-solidus', '~> 2.4.0'
+	bundle install
+	
+	config/initializers/alchemy.rb:
+		Alchemy.user_class_name     = 'Spree::User'       # Defaults to 'User'
+		Alchemy.current_user_method = :spree_current_user  # Defaults to 'current_user'
+		Alchemy.signup_path         = '/signup'   # Defaults to '/signup'
+		Alchemy.login_path          = '/login'    # Defaults to '/login'
+		Alchemy.logout_path         = '/logout'   # Defaults to '/logout'
+
+	bin/rails g alchemy:solidus:install --help
+	bundle exec rake alchemy_solidus:install:migrations
+	bundle exec rake alchemy:install
+	
+	If you plan to render the Alchemy site in the Solidus layout add the following to your initializer:
+
+	# config/initializers/alchemy.rb
+	require 'alchemy/solidus/use_solidus_layout'
+
+	Render Alchemy Content in Solidus views
+
+	If you plan to render Alchemy content in your Solidus views (ie. a global header or footer section), you need to include the Alchemy view helpers and language store in your Solidus controllers with the following addition to your initializer:
+
+	# config/initializers/alchemy.rb
+	require 'alchemy/solidus/alchemy_in_solidus'
+
+
+- For static pages, blogging you need to add role "blogger"
+
+> Spree::Role.create(name: 'blogger')
+
+
+
+Reviews / Rating
+-----------------
+- https://github.com/solidusio-contrib/solidus_reviews
+> gem 'solidus_reviews', github: 'solidusio-contrib/solidus_reviews'
+> bundle
+> rails g solidus_reviews:install
+> db:migrate
+
+
+
+Recently Viewed
+---------------
+	gem 'solidus_recently_viewed', github: 'solidusio-contrib/solidus_recently_viewed'
+
+	> bundle install
+	> bundle exec rails g solidus_recently_viewed:install
+
+	git clone to extensions to explore and override
+
+Related Products
+----------------
+
+	gem 'solidus_related_products', github: 'solidusio-contrib/solidus_related_products'
+	gem 'solidus_related_products'
+
+	> bundle install
+	> bundle exec rails g solidus_related_products:install
+
+	git clone to extensions to explore and override
+
+
+Sales
+------
+https://github.com/solidusio-contrib/solidus_sale_prices
+
+	gem 'solidus_sale_prices', github: 'nebulab/solidus_sale_prices'
+	
+	> bundle install
+	> bundle exec rails generate solidus_sale_prices:install
+	
+	product = Spree::Product.first
+
+	puts product.price.to_f              # => 20.0
+	puts product.on_sale?                # => false
+
+	product.put_on_sale 10
+
+	puts product.price.to_f              # => 10.0
+	puts product.original_price.to_f     # => 20.0
+	puts product.on_sale?                # => true
+
+Sliders / Carousels
+-------------------
+- http://kenwheeler.github.io/slick/
+- remote gem, override in main folders
+
+
+* Move from paperclip to activestorage
+------------------------------------
+> rails g task local storage_migrate
+> create lib/tasks/local.rake
+
+- https://github.com/thoughtbot/paperclip/blob/master/MIGRATING.md
+- https://blog.codeminer42.com/migrating-from-paperclip-to-activestorage-b37ef187fb17/
+
+
+Active
+-------
+- https://github.com/jtapia/solidus_slider/
+- https://github.com/highweb/awesome-bootstrap
+- https://bootstrapious.com/p/bootstrap-search-bar
+- https://iqbalfn.github.io/bootstrap-image-checkbox/
+- https://blacklapel.com/shop/suits/light-gray-fresco-suit/
+- http://bootstrap-ecommerce.com/developer.html
+- https://www.codeply.com/bootstrap-4-examples
+- https://github.com/solidusio/solidus_i18n
+- https://github.com/solidusio-contrib/solidus_globalize
+
+
+- https://developer.snapappointments.com/bootstrap-select/
+
+
+- For image-based radio / check boxes (used in cart)
+- https://iqbalfn.github.io/bootstrap-image-checkbox/
+
+
+Warnings:
+
+`Variant.active(currency)` is deprecated. Please use `Variant.with_prices(pricing_options)` instead
+
+
+Permissions & Roles
+===================================================================================================
+https://guides.solidus.io/developers/customizations/customizing-permissions.html
+https://github.com/solidusio/solidus/tree/master/core/lib/spree/permission_sets
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=======================================================================================================================
+=======================================================================================================================
+Products / Variants / Orders / Item_line / Stores / Prices
+=======================================================================================================================
+Seems Solidus doesn't support changing currency on the spot, you have to create a new order
+Each store has its won currency, country .. and it's fixed
+Check table spree_line_item .. it doesn't have currency field same as original spree
+
+spree_line_items
+Spree:
+CREATE TABLE spree_line_items
+(
+    id INTEGER PRIMARY KEY NOT NULL,
+    variant_id INTEGER DEFAULT NULL,
+    order_id INTEGER DEFAULT NULL,
+    quantity INTEGER NOT NULL,
+    price REAL NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    -currency TEXT DEFAULT 'NULL',
+
+    cost_price REAL DEFAULT NULL,
+    tax_category_id INTEGER DEFAULT NULL,
+    adjustment_total REAL DEFAULT 0.0,
+    additional_tax_total REAL DEFAULT 0.0,
+    promo_total REAL DEFAULT 0.0,
+    included_tax_total REAL DEFAULT 0.0 NOT NULL,
+
+    -pre_tax_amount REAL DEFAULT 0.0 NOT NULL,
+    -taxable_adjustment_total REAL DEFAULT 0.0 NOT NULL,
+    -non_taxable_adjustment_total REAL DEFAULT 0.0 NOT NULL
+);
+
+Solidus:
+
+CREATE TABLE spree_line_items
+(
+    id INTEGER PRIMARY KEY NOT NULL,
+    variant_id INTEGER DEFAULT NULL,
+    order_id INTEGER DEFAULT NULL,
+    quantity INTEGER NOT NULL,
+    price REAL NOT NULL,
+    created_at TEXT DEFAULT 'NULL',
+    updated_at TEXT DEFAULT 'NULL',
+
+    cost_price REAL DEFAULT NULL,
+    tax_category_id INTEGER DEFAULT NULL,
+    adjustment_total REAL DEFAULT 0.0,
+    additional_tax_total REAL DEFAULT 0.0,
+    promo_total REAL DEFAULT 0.0,
+    included_tax_total REAL DEFAULT 0.0 NOT NULL
+);
+
+
+spree_products (Product)
+	id
+	
+spree_variants (Variant)
+	id								<---
+	product_id						--->
+	is_master							
+	cost_price
+	cost_currency
+
+spree_prices (Price)
+	variant_id
+	amount
+	currency		
+
+# prices are in different table to hold multi currencies, and which country iso (JO)
+
+spree_option_values_variants
+	id								<---
+	variant_id						---> spree_variants 				
+	option_value_id
+		*
+		|
+		|
+		*
+spree_option_values (OptionValue)
+	id					1		5						<---
+	name				Small	Red
+	presentation		S		Red
+	option_type_id		1		2						-->
+		*
+		|
+		|		
+spree_option_types (OptionType)
+	id					1				2				<---
+	name				tshirt-size		tshirt-color
+	presentation		Size			Color			
+	
+
+spree_product_option_types
+	id
+	product_id				-->
+	option_type_id			-->
+
+
+- So there are option types: Size, Color
+- And option values for each option type: For Size, there are S, M, L, XL
+
+- Each product can have 0-* option types 
+- Each variant added, you select which value of each option type set for the master product
+	you set the size value, color value, w, height, width, depth combination -> price
+
+
+In Spree::Product:
+
+def variants_and_option_values_for(pricing_options = Spree::Config.default_pricing_options)
+  variants.includes(:option_values).with_prices(pricing_options).select do |variant|
+	variant.option_values.any?
+  end
+end
+
+.
+.
+
+- For each variant
+
+<% @product.variants_and_option_values_for(current_pricing_options).each_with_index do |variant, index| %>
+	<%= radio_button_tag "variant_id", variant.id, index == 0, 'data-price' => variant.price_for(current_pricing_options)  %>
+	.
+	.
+	
+	<span class="variant-description">
+		<%= variant_options variant %> ---> 1
+	</span>
+	<% if variant_price variant %>
+		<span class="price diff"><%= variant_price variant %></span>
+	<% end %>
+	<% unless variant.can_supply? %>
+		<span class="out-of-stock"><%= t('spree.out_of_stock') %></span>
+	<% end %>
+	.
+	.
+<% end %>
+
+And for Master product (no variants)
+
+<div id="product-price">
+	<h6 class="product-section-title"><%= t('spree.price') %></h6>
+	<div>
+		<span class="price selling" itemprop="price" content="<%= @product.price_for(current_pricing_options).to_d %>">
+			<%= display_price(@product) %>
+		</span>
+		<span itemprop="priceCurrency" content="<%= current_pricing_options.currency %>"></span>
+	</div>
+	<% if @product.master.can_supply? %>
+		<link itemprop="availability" href="http://schema.org/InStock" />
+	<% elsif @product.variants.empty? %>
+  		<br />
+		<span class="out-of-stock"><%= t('spree.out_of_stock') %></span>
+	<% end %>
+</div>
+
+
+
+With Flexi (adhoc / customized options)
+---------------------------------------
+
+spree_variants
+    id INTEGER PRIMARY KEY NOT NULL,			------>	7,8 (Fur.. , Cars..)
+    sku TEXT DEFAULT '' NOT NULL,
+    weight REAL DEFAULT 0.0,
+    height REAL,
+    width REAL,
+    depth REAL,
+    deleted_at TEXT,
+    is_master INTEGER DEFAULT 0,				
+    product_id INTEGER,							------>	1
+    cost_price REAL,
+    position INTEGER,
+    cost_currency TEXT,
+    track_inventory INTEGER DEFAULT 1,
+    tax_category_id INTEGER,
+    updated_at TEXT,
+    created_at TEXT
+
+
+
+spree_option_values_variants
+	id								<---						6,7
+	variant_id						---> spree_variants 		7,8	
+	option_value_id												5,6	*
+		*
+		|
+		|
+		*
+spree_option_values (OptionValue)
+	id					1		5						<---	5,6 (Fur.. , Cars..)
+	name				Small	Red
+	presentation		S		Red
+	option_type_id		1		2						-->		3
+		*
+		|
+		|		
+spree_option_types (OptionType)
+	id					1				2				<---	3
+	name				tshirt-size		tshirt-color
+	presentation		Size			Color			
+	
+
+spree_product_option_types
+	id
+	product_id				-->									1	*
+	option_type_id			-->									3	(Product Ttype) <-- start here
+
+After adding to cart
+
+spree_line_items
+    id INTEGER PRIMARY KEY NOT NULL,					-->		1																2
+    variant_id INTEGER DEFAULT NULL,					-->		7	based on selected option value with variants (Furnitures)	7 with Customization .. mm
+    order_id INTEGER DEFAULT NULL,						-->		1																1
+    quantity INTEGER NOT NULL,							-->
+    price REAL NOT NULL,
+    created_at TEXT DEFAULT 'NULL',
+    updated_at TEXT DEFAULT 'NULL',
+    cost_price REAL DEFAULT NULL,
+    tax_category_id INTEGER DEFAULT NULL,
+    adjustment_total REAL DEFAULT 0.0,
+    additional_tax_total REAL DEFAULT 0.0,
+    promo_total REAL DEFAULT 0.0,
+    included_tax_total REAL DEFAULT 0.0 NOT NULL,
+    custom TEXT DEFAULT 'NULL'
+					
+
+----
+Notice, you need to build variants to link option values with each .. 
+Now, the flexi gives the ability to do the same, but without the need for variants .. 
+
+here is how, first creat a new adhoc type cloned from existing options types (product type)
+
+after adding .. 
+
+spree_ad_hoc_option_types
+    id INTEGER PRIMARY KEY NOT NULL,							4
+    product_id INTEGER,								<----		1
+    option_type_id INTEGER,							<----		1   ---> look up
+    price_modifier_type TEXT DEFAULT 'NULL',		<----
+    is_required INTEGER DEFAULT 0,					<----
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    position INTEGER DEFAULT 0
+
+
+
+spree_ad_hoc_option_values
+    id INTEGER PRIMARY KEY NOT NULL,				-------->	7,8
+    ad_hoc_option_type_id INTEGER,					-------->	4,4
+    option_value_id INTEGER,						-------->	5,6	---> look up
+    price_modifier REAL DEFAULT 0.0 NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    position INTEGER,
+    selected INTEGER,
+    cost_price_modifier REAL
+
+
+- after adding to cart
+
+spree_ad_hoc_option_values_line_items
+    id INTEGER PRIMARY KEY NOT NULL,				------>	5
+    line_item_id INTEGER,							------>	1	---> look up line item (spree_line_items) 1
+    ad_hoc_option_value_id INTEGER,					------>	7	---> Furnitures
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+
+------ * Great .. 
+
+Create product_customization_types, choose which calculator !!
+The calculator (Object) will describe how to add the customized values
+
+We will use /Users/isalem/Projects/kbeeer/kbeeer2/extensions/solidus_flexi_variants/app/models/spree/calculator/no_charge.rb
+
+	require_dependency 'spree/calculator'
+
+	module Spree
+	
+	  preference :measure, :integer, default: 1	<-------------------
+	
+	  class Calculator::NoCharge < Calculator
+		def self.description
+		  "This customization has no charge"
+		end
+
+		def self.register
+		  super
+		  ProductCustomizationType.register_calculator(self)
+		end
+
+		def create_options
+		  # This calculator knows that it needs one CustomizableOption named amount
+		  [
+			CustomizableProductOption.create(name: "amount", presentation: "Amount")	<---- Notice here
+		  ]
+		end
+
+		def compute(product_customization, variant=nil)
+		  return 0
+		end
+	  end
+	end
+
+
+Notice:
+
+in above example, preference measure will show at creating customization type, but if float it doesn;t !!!
+
+#admin_form_preference_names ⇒ Array
+Preference names representable as form fields in Solidus backend
+Not all preferences are representable as a form field.
+Arrays and Hashes for instance are supported preference field types, but do not represent well as a form field.
+As these kind of preferences are mostly developer facing and not admin facing we should not render them.
+Overwrite allowed_admin_form_preference_types in your class that includes Spree::Preferable if you want to provide more fields. 
+If you do so, you also need to provide a preference field partial that lives in:
+app/views/spree/admin/shared/preference_fields/ <----- _float.html.erb
+
+
+
+
+
+
+
+spree_product_customization_types
+    id INTEGER PRIMARY KEY NOT NULL,			---> 8
+    name TEXT,									---> custom1
+    presentation TEXT,
+    description TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+
+- After the first edit, it will create first option (amount) ... caption this .. 
+- This table can be managed to add / remove options ... fix the links ya shater .. 
+- When choose different calculator .. remove / update all options .. OR, keep ? for existing orders ?
+- Mmmmmmmmmmmmmmmmmmmm
+
+Notice, if you delete a (product_customization_type) .. still records remain inside:
+- spree_customized_product_options
+- spree_product_customizations
+
+
+spree_customizable_product_options
+    id INTEGER PRIMARY KEY NOT NULL,						---> 1
+  * product_customization_type_id INTEGER DEFAULT NULL,		---> 8	-- look up
+    position INTEGER DEFAULT NULL,
+    presentation TEXT NOT NULL,								---> Amount
+    name TEXT NOT NULL,										---> amount (from the object)
+    description TEXT DEFAULT 'NULL',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+
+- After Update .. ok
+- Now, we need to add this customized option set to our product .. 
+
+CREATE TABLE spree_product_customization_types_products
+(
+  * product_customization_type_id INTEGER,					---> 8	-- look up -- to show when open cart
+    product_id INTEGER										---> 1
+);
+
+- After adding to Cart
+
+spree_product_customizations
+    id INTEGER PRIMARY KEY NOT NULL,						---> 2 *
+    line_item_id INTEGER,									---> 2 --> check created lines items .. (spree_line_items)
+  * product_customization_type_id INTEGER,					---> 8 look up
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+
+
+spree_customized_product_options							
+    id INTEGER PRIMARY KEY NOT NULL,						---> 11
+  * product_customization_id INTEGER,						---> 2	-- look up
+    customizable_product_option_id INTEGER,					---> 1 -- look up		 
+    value TEXT,												---> 55
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    customization_image TEXT
+
+spree_ad_hoc_variant_exclusions
+    id INTEGER PRIMARY KEY NOT NULL,
+    product_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+
+--
+
+Now .. 
+
+Let's design specs needed for an order
+
+link
+description
+category
+weight
+price
+currency
+quantity
+width
+height
+length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1 Helper
+--------
+# human readable list of variant options
+def variant_options(variant, _options = {})
+  variant.options_text
+end
+
+def options_text
+  values = option_values.includes(:option_type).sort_by do |option_value|
+	option_value.option_type.position
+  end
+  values.to_a.map! do |ov|
+	"#{ov.option_type.presentation}: #{ov.presentation}"
+  end
+  values.to_sentence({ words_connector: ", ", two_words_connector: ", " })
+end
+
+- When user select a radio button variant, it will use function in 
+
+solidus/frontend/app/assets/javascripts/spree/frontend/product.js :
+
+// IMage thumbnails hanlding when selectin variant
+.
+.
+.
+  Spree.updateVariantPrice = function(variant) {
+    var variantPrice = variant.data("price");
+    if (variantPrice) {
+      $(".price.selling").text(variantPrice);
+    }
+  };
+
+  var radios = $('#product-variants input[type="radio"]');
+  if (radios.length > 0) {
+    var selectedRadio = $(
+      '#product-variants input[type="radio"][checked="checked"]'
+    );
+    Spree.showVariantImages(selectedRadio.attr("value"));
+    Spree.updateVariantPrice(selectedRadio);
+  }
+
+  Spree.addImageHandlers();
+
+  radios.click(function(event) {
+    Spree.showVariantImages(this.value);
+    Spree.updateVariantPrice($(this));
+  });
+
+* We will use these functions later in out new implementation
+
+Using Select boxes instead of radio buttons 
+--------------------------------------------
+- Now, in order to change the list of vairants radio button's you can change it
+to select boxes, each for option type .. whenever you make a select, it needs to validate 
+the options combination (option value variant) if it's available, or out of stock !!
+
+- Validation can be conducted via two ways, remotely by sending the selected combination to
+be validated at server side .. or by loading all variants in a lookup table, and validate 
+against it .. 
+
+- Remember, along with each variant you can get if it's available, out of stock or requires
+additional cost !
+
+	variant.price_for(current_pricing_options) # will show the total price
+	variant_price(variant) # helper API .. will show the difference +/-
+
+ solidus/core/app/helpers/spree/products_helper.rb :
+ 
+	def variant_price(variant)
+      if Spree::Config[:show_variant_full_price]
+        variant_full_price(variant)
+      else
+        variant_price_diff(variant) -->
+      end
+    end
+
+	variant_price_diff(variant) -> 
+
+		def variant_price_diff(variant)
+		  return if variant.price_same_as_master?(current_pricing_options)
+		  difference = variant.price_difference_from_master(current_pricing_options)
+		  absolute_amount = Spree::Money.new(difference.to_d.abs, currency: difference.currency.iso_code) <--
+		  i18n_key = difference.to_d > 0 ? :price_diff_add_html : :price_diff_subtract_html
+		  t(i18n_key, scope: [:spree, :helpers, :products], amount_html: absolute_amount.to_html)
+		end
+		
+		en.yml
+		------
+		spree:
+			helpers:
+				products:
+					price_diff_add_html: "(Add: %{amount_html})"
+					price_diff_subtract_html: "(Subtract: %{amount_html})"
+		
+	
+- Check Money gem https://github.com/Rubymoney/money
+- Check https://github.com/RubyMoney/monetize to convert from anything to money \ 
+
+	<%= Money.new(1000, "USD").format(html_wrap: true) %>
+	<span class="money-currency-symbol">$</span>
+	<span class="money-whole">10</span>
+	<span class="money-decimal-mark">.</span>
+	<span class="money-decimal">00</span>
+
+
+Implementation
+--------------
+Helpers:
+	product.price_for(current_pricing_options) # master price
+
+Add the following javascript block:
+
+	<script>
+		var options = {};
+		var variants_data = {};
+		var product_id = <%= @product.id %>;
+	</script>
+
+Then add the select boxes html along with the variant_id .. cuz we are going to disable the one in radio buttons
+
+	<% ov_id = 0 %>
+	<div class="form-fields-group row product-filters">
+	  <% @product.option_types.each_with_index do |ot, index| %>
+		  <div class="mb-3 col-md-6 filters-<%= ot.presentation %>">
+			<label class="font-weight-bold text-capitalize">Select <%= ot.presentation %></label>
+			<% ot_values = ot.option_values.collect { |ov| [ov.presentation, ov.id] } %>
+			<%= select("options", ot.id, ot_values, {:include_blank_ => Spree.t(:please_select)}, {:onChange_ => "javascript:;", :autocomplete => "off", :class => "form-control options mb-2", "data-style" => "btn-primary"}) %>
+			<span class="small text-info font-weight-light">Please Select <%= ot.presentation %></span>
+		  </div>
+		  <script>
+		  	  // for each option type, Color, Size .... add the fetched id's of options into options hash.
+			  options[<%= ot.id %>] = parseInt($("#options_" + <%= ot.id %>).val());
+		  </script>
+	  <% end %>
+	</div>
+	<%= hidden_field_tag "variant_id", @product.variants.first.id %>
+
+Now, whenever a variant change, based on this javascript function:
+
+	$('.options').on('changed.bs.select', function (e, clickedIndex, isSelected, previousValue) {
+		// e.preventDefault();
+		e.stopImmediatePropagation();
+		var optionType = e.target.id.split("_")[1];
+		var optionValue = e.target.value;
+		options[optionType] = parseInt(optionValue);
+		check_options();
+	});
+
+
+	var check_options = function() {
+		// validate remote, get the variant id
+		Spree.ajax({
+			// get_options_values
+			url: Spree.pathFor("validate_variant_options"),
+			dataType: "json",
+			type: "GET",
+			data: {
+				options: options, product_id: <%= @product.id %>
+			},
+			success: function (data) {
+				variant_id = data.variant;
+				$("#variant-status").html(data.status);
+
+				if (data.total_on_hand > 0) {
+					$("#variant-status").html("Available");
+					$('#add-to-cart-button').removeAttr("disabled");
+					$("#variant-in-stock").text(data.total_on_hand + " in Stock");
+				} else {
+					if (data.is_backorderable == true) {
+						$("#variant-status").html("Backorder");
+						$('#add-to-cart-button').removeAttr("disabled");
+					}
+					$("#variant-in-stock").text("<%= Spree.t(:out_of_stock) %>");
+				}
+
+				if (data.status == "Not Available") {
+					$('#add-to-cart-button').attr("disabled", true);
+				}
+
+				if (data.diff_zero == false) {
+					$("#variant-message").html(data.diff_message);
+				} else {
+					$("#variant-message").html("");
+				}
+
+				if (data.is_backorderable == false) {
+					$("#cart-backordered-info").html("");
+				} else {
+					$("#cart-backordered-info").html("<%= Spree.t(:backordered_info) %>");
+				}
+
+				$("#variant_id").val(variant_id);
+				if (data.on_sale == true) {
+					$(".original-price").text(data.original_price);
+				} else {
+					$(".original-price").text('');
+				}
+
+				$(".price.selling").text(data.price);	<--
+				Spree.showVariantImages(variant_id)		<--
+			},
+			error: function (data) {
+				console.log("Error: " + data)
+			}
+		});
+	}
+
+
+Add to cart button & statuses
+-----------------------------
+
+	<div class="status mb-1">
+		<span class="small" id="variant-status">
+		  <% if @product.master.total_on_hand > 0 %>
+			<%= Spree.t(:available) %>
+		  <% else %>
+			<%= Spree.t(:not_available) %>
+		  <% end %>
+		</span>
+		<span class="small" id="variant-message">
+		  <%= variant_price(@product.master).to_s %>
+		</span>
+	</div>
+
+
+	<% if @product.master.can_supply? or true %>
+	<div class="add-to-cart row">
+	  <div class="col-lg-3 col-sm-5 col-5 mb-2">
+		<%= number_field_tag :quantity, 1, class: 'form-control', min: 1, max: 100 %>
+	  </div>
+	  <div class="col-lg-9 col-sm-7 col-7" data-hook="add_button">
+		<%= button_tag class: 'btn btn-primary float-left mr-2 mb-2', id: 'add-to-cart-button', disabled: (@product.variants.empty? and !@product.master.can_supply?), type: :submit do %>
+			<%= t('spree.add_to_cart') %>
+			<i class="fa fa-cart-plus"></i>
+		<% end %>
+	  </div>
+	</div>
+	<% end %>
+
+	<span class="small text-info" id="variant-in-stock">
+	  <% if @product.master.total_on_hand > 0 %>
+		<%= @product.master.total_on_hand.to_s + " in stock" %>
+	  <% else %>
+		<%= Spree.t(:out_of_stock) %>
+	  <% end %>
+	</span>
+
+See also other helper functions:
+
+	variant.price_for(current_pricing_options) # total price
+	difference = variant.price_difference_from_master(current_pricing_options) # difference than master price +/-
+	absolute_amount = Spree::Money.new(difference.to_d.abs, currency: difference.currency.iso_code)		
+	
+Notice we used two functions from  solidus/frontend/app/assets/javascripts/spree/frontend/product.js 
+
+- Spree.showVariantImages(variant_id) // to switch the thumbnail
+- Spree.updateVariantPrice(variant) <-- varianbt should hold the data-price .. from old radio
+
+instead do:
+	$(".price.selling").text(_variants_data.master_price);
+
+
+
+- What is the difference between:
+	- variant.price_for(current_pricing_options)
+	- variant.price_on(currency)
+
+
+
+
+
+
+
+Store entity
+-------------
+- current_store
+
+	#<Spree::Store 
+		id: 1, 
+		url: "store1.solidus.com", 
+		mail_from_address: "sore1.solidus.com", 
+		default_currency: "USD", 
+		code: "sample-store", 
+		default: true, 
+		created_at: "2019-12-02 10:06:00", 
+		updated_at: "2019-12-10 10:02:57", 
+		cart_tax_country_iso: "JO", 
+		available_locales: "ar,en", 
+		preferences: {:allow_currency_change=>true, :show_currency_selector=>true, :supported_currencies=>"USD,JOD"}, 
+		name: "Sample Store", 
+		meta_description: nil, 
+		meta_keywords: nil, 
+		seo_title: nil>
+
+
+Price
+--------------------------------------------------------
+- master product is a variant with flag 
+- Spree::Price objects track a price for a specific currency and variant combination. 
+For example, if a variant is available for $15 USD or €7 EUR, that variant would have two 
+Spree::Price objects associated with it (one for each currency).
+
+
+You can see a variant's price in the store's configured currency by calling the price method on that instance:
+
+	Spree::Variant.find(1).price
+
+	price --> extend DisplayMoney
+
+	product.price	--> 
+
+	alert('<%= @product.price_in(current_currency).price %>')
+
+
+
+	It's recommended to use price_for:
+
+	- product.price_for(current_pricing_options)
+	- variant.price_for(line_item.pricing_options).money.to_f
+
+
+
+	Where current_pricing_options:
+	#<Spree::Variant::PricingOptions:0x00007fed6a799aa0 @desired_attributes={:currency=>"JOD", :country_iso=>"JO"}>
+	
+
+	also, 
+
+	
+
+Order.rb
+	include Spree::Order::Checkout --> 1
+    include Spree::Order::Payments
+
+
+1 --> define_state_machine!
+
+if states[:delivery]
+	before_transition to: :delivery, do: :ensure_shipping_address
+	before_transition to: :delivery, do: :create_proposed_shipments
+	before_transition to: :delivery, do: :ensure_available_shipping_rates <-- 2
+	before_transition from: :delivery, do: :apply_shipping_promotions
+end
+
+2 --> 
+
+
+
+Taxons
+--------------------------------------------------------
+
+@product.taxons.inspect:
+
+[#<Spree::Taxon 
+	id: 13, 
+	parent_id: 1, 
+	position: 0, 
+	taxonomy_id: 1, 
+	lft: 2, rgt: 3, 
+	icon_file_name: "navy-blue-saxony-suit-front-2.jpg", 
+	icon_content_type: "image/jpeg", 
+	icon_file_size: 219007, 
+	icon_updated_at: "2020-02-02 19:40:27", 
+	created_at: "2020-01-19 11:39:13", 
+	updated_at: "2020-08-18 17:43:10", 
+	depth: 1, 
+	name: "Suites", 
+	description: nil, meta_title: nil, meta_description: nil, meta_keywords: nil, 
+	permalink: "clothing/suites">, 
+	.... #<Spree::Taxon id: 18, parent_id: 17, position: 0, taxonomy_id: 4, lft: 8, rgt: 9, icon_file_name: nil, icon_content_type: nil, icon_file_size: nil, icon_updated_at: nil, created_at: "2020-02-05 09:49:12", updated_at: "2020-08-18 17:43:10", depth: 1, name: "Gochi", description: nil, meta_title: nil, meta_description: nil, meta_keywords: nil, permalink: "brands/gochi">]
+
+
+
+	@taxonomies = Spree::Taxonomy.includes(root: :children)
+
+
+	#<ActiveRecord::Relation 
+		[#<Spree::Taxonomy 
+			id: 1, 
+			created_at: "2019-12-28 11:46:07", 
+			updated_at: "2020-08-26 20:42:13", 
+			position: 1, 
+			name: "Clothing">, 
+		#<Spree::Taxonomy 
+			id: 4, 
+			created_at: "2020-02-05 09:48:57", 
+			updated_at: "2020-08-26 20:41:59", 
+			position: 2, 
+			name: "Brands">]>
+
+
+	@taxonomies[0].root
+	
+	#<Spree::Taxon 
+		id: 1, 
+		parent_id: nil, 
+		position: 0, 
+		taxonomy_id: 1, lft: 1, rgt: 10, icon_file_name: nil, icon_content_type: nil, icon_file_size: nil, icon_updated_at: nil, 
+		created_at: "2019-12-28 11:46:07", updated_at: "2020-08-26 20:42:13", depth: 0, 
+		name: "Clothing", description: nil, meta_title: nil, meta_description: nil, meta_keywords: nil, permalink: "clothing">
+
+
+	@taxonomies[0].root.children
+	
+	
+	#<ActiveRecord::Associations::CollectionProxy 
+		[#<Spree::Taxon 
+			id: 13, parent_id: 1, position: 0, taxonomy_id: 1, lft: 2, rgt: 7, icon_file_name: "navy-blue-saxony-suit-front-2.jpg", icon_content_type: "image/jpeg", icon_file_size: 219007, icon_updated_at: "2020-02-02 19:40:27", created_at: "2020-01-19 11:39:13", updated_at: "2020-08-26 20:42:13", depth: 1, 
+			name: "Suites", description: nil, meta_title: nil, meta_description: nil, meta_keywords: nil, permalink: "clothing/suites">, 
+		#<Spree::Taxon 
+			id: 16, parent_id: 1, position: 0, taxonomy_id: 1, lft: 8, rgt: 9, icon_file_name: nil, icon_content_type: nil, icon_file_size: nil, icon_updated_at: nil, created_at: "2020-01-19 21:26:24", updated_at: "2020-08-26 20:40:10", depth: 1, 
+			name: "Shirts", description: nil, meta_title: nil, meta_description: nil, meta_keywords: nil, permalink: "clothing/shirts">]>
+
+
+
+
+Product & Variant
+==========================================================================================
+
+
+
+item.variant.gallery.images.first || item.variant.product.gallery.images.first
+
+<%= render 'spree/admin/shared/image',
+        image: (item.variant.gallery.images.first || item.variant.product.gallery.images.first),
+        size: :mini %>
+        
+<%= link_to(
+	render('spree/shared/image', 
+		image: is_variant == true ? product.images.first : product.gallery.images.first, 
+		size: :small, 
+		itemprop: "image"), 
+		
+	url, itemprop: 'url') %>        
+        
+
+styles: { mini: '48x48>', small: '400x400>', product: '680x680>', large: '1200x1200>' },
+
+
+product.variants.each do |variant|
+
+	variant.variant_properties
+	variant.stock_items
+	variant.price_for(pricing_options)
+	variant.tax_category
+	variant.cost_price
+	variant.options
+	variant.option_value(opt_name)
+	variant.is_backorderable?
+	variant.is_master?
+	
+	variant.orders
+	variant.line_items
+	variant.stock_items
+	variant.prices
+	variant.currently_valid_prices
+	variant.master
+	variant.taxons
+	variant.images
+
+	variant.product
+	
+end
+
+
+product:
+
+	product.orders
+	product.line_items
+	product.stock_items
+	product.prices
+	product.variants_including_master
+	product.variants
+	product.master
+	product.taxons
+
+	product.master_images.first # --> .images
+	product.variant_images.first
+
+
+    # Determines the name of an Exchange variant.
+    #
+    # @return [String] the master variant name, if it is a master; or a comma-separated list of all option values.
+    def exchange_name
+      is_master? ? name : options_text
+    end
+
+    # Generates a verbose name for the variant, appending 'Master' if it is a
+    # master variant, otherwise a list of its option values.
+    #
+    # @return [String] the generated name
+    def descriptive_name
+      is_master? ? name + ' - Master' : name + ' - ' + options_text
+    end
+    
+    def price_selector
+      @price_selector ||= Spree::Config.variant_price_selector_class.new(self)
+    end
+    
+    -->
+    
+
+Products searching 
+==========================================================================================
+- searcher
+
+    # core/lib/spree/core/controller_helpers/search.rb
+
+    # def build_searcher(params)
+    #   Spree::Config.searcher_class.new(params).tap do |searcher|
+    #     searcher.current_user = try_spree_current_user
+    #     searcher.pricing_options = current_pricing_options --> Spree::Config.pricing_options_class.from_context(self)
+    #   end
+    # end
+
+	@searcher = build_searcher(params.merge(include_images: true))
+	
+    puts @searcher.pricing_options.class # Spree::Variant::PricingOptions
+    puts Spree::Config.default_pricing_options.class  # Spree::Variant::PricingOptions
+    puts Spree::Config.pricing_options_class.class  # Spree::Variant::PricingOptions
+	
+    # def self.default_price_attributes
+    #   {
+    #     currency: Spree::Config.currency,
+    #     country_iso: Spree::Config.admin_vat_country_iso
+    #   }
+    # end
+
+    # def self.from_price(price)
+    #   new(currency: price.currency, country_iso: price.country_iso)
+    # end
+
+    # def self.from_context(context)
+    #   new(
+    #     currency: context.current_store.try!(:default_currency).presence || Spree::Config[:currency],
+    #     country_iso: context.current_store.try!(:cart_tax_country_iso).presence
+    #   )
+    # end
+
+    puts Spree::Config.searcher_class # Spree::Core::Search::Base
+
+    # def initialize(params)
+    #   self.pricing_options = Spree::Config.default_pricing_options
+    #   @properties = {}
+    #   prepare(params)
+    # end
+    #
+    # def current_currency=(currency)
+    #   self.pricing_options = Spree::Config.pricing_options_class.new(
+    #     pricing_options.desired_attributes.merge(currency: currency)
+    #   )
+    # end
+    #
+    # def current_currency
+    #   pricing_options.currency
+    # end	
+    
+---
+
+	@searcher = build_searcher(params.merge(include_images: true))
+	@products = @searcher.retrieve_products
+	@taxonomies = Spree::Taxonomy.includes(root: :children)
+
+    
+    
+    
+
+- control counts, for paginations 
+- adding extra params for any searcher .. 
+- adding a scope for products
+
+- based on taxon
+- based on price (filters)
+- based on property 
+- on sales ?
+- promoted ?
+- top viewed ?
+
+
+
+
+
+
+
+
+	- store_controller
+
+	module Spree
+	  class StoreController < Spree::BaseController
+		include Spree::Core::ControllerHelpers::Pricing --> 
+			current_pricing_options --> 
+				Spree::Config.pricing_options_class.from_context(self)
+	
+		include Spree::Core::ControllerHelpers::Order --> 
+
+
+	- base_controller (from core)
+
+		require 'cancan'
+		require_dependency 'spree/core/controller_helpers/strong_parameters'
+
+		class Spree::BaseController < ApplicationController
+		  include Spree::Core::ControllerHelpers::Auth
+		  include Spree::Core::ControllerHelpers::Common -->
+
+					layout :get_layout
+					before_action :set_user_language
+
+		  include Spree::Core::ControllerHelpers::PaymentParameters
+		  include Spree::Core::ControllerHelpers::Search -->
+	  
+					def build_searcher(params)
+					  Spree::Config.searcher_class.new(params).tap do |searcher|
+						searcher.current_user = try_spree_current_user
+						searcher.pricing_options = current_pricing_options
+					  end
+					end
+	  
+		  include Spree::Core::ControllerHelpers::Store -->
+	  
+					def current_store
+					  @current_store ||= Spree::Config.current_store_selector_class.new(request).store <--
+					end
+	  
+		  include Spree::Core::ControllerHelpers::StrongParameters
+
+		  respond_to :html
+		end
+
+
+
+
+
+Adding new filter (products)
+----------------------------
+
+	products = searcher.retrieve_products.limit(count.to_i)
+	# products = products.includes(:possible_promotions) if products.respond_to?(:includes)
+
+	 taxon = Spree::Taxon.friendly.find(taxonomy.id)
+     searcher = build_searcher(params.merge(taxon: taxon.id, include_images: true))
+
+
+  if Spree::Property.table_exists?
+    Spree::Product.add_search_scope :fit_any do |*opts|
+      conds = opts.map {|o| ProductFilters.fit_filter[:conds][o]}.reject {|c| c.nil?}
+      scope = conds.shift
+      conds.each do |new_scope|
+        scope = scope.or(new_scope)
+      end
+      Spree::Product.with_property("fit").where(scope)
+    end
+
+    def ProductFilters.fit_filter
+      fit_property = Spree::Property.find_by_name("fit")
+      fits = Spree::ProductProperty.where(:property_id => fit_property).pluck(:value).uniq
+      pp = Spree::ProductProperty.arel_table
+      conds = Hash[*fits.map { |b| [b, pp[:value].eq(b)] }.flatten]
+      { :name   => "Fits",
+        :scope  => :fit_any,
+        :conds  => conds,
+        :labels => (fits.sort).map { |k| [k, k] }
+      }
+    end
+  end
+  
+  Spree::Taxon.class_eval do
+	  def applicable_filters
+		fs = []
+		fs << Spree::Core::ProductFilters.fit_filter if Spree::Core::ProductFilters.respond_to?(:fit_filter)
+		fs
+	  end 
+  end
+	
+--------------
+
+	def ProductFilters.ov_range_test(range1, range2)
+	  ov = Arel::Table.new("spree_option_values")
+	  cast = Arel::Nodes::NamedFunction.new "CAST", [ ov[:presentation].as("integer")]
+	  comparaisons = cast.in(range1..range2)
+	  comparaisons
+	end
+
+	Spree::Product.add_search_scope :screenSize_range_any do |*opts|
+	  conds = opts.map {|o| Spree::ProductFilters.screenSize_filter[:conds][o]}.reject {|c| c.nil?}
+	  scope = conds.shift
+	  conds.each do |new_scope|
+		scope = scope.or(new_scope)
+	  end
+	  option_values=Spree::OptionValue.where(scope).joins(:option_type).where(OptionType.table_name => {:name => "tailleEcran"}).pluck("#{OptionValue.table_name}.id")
+	  Spree::Product.where("#{Product.table_name}.id in (select product_id from #{Variant.table_name} v left join spree_option_values_variants ov on ov.variant_id = v.id where ov.option_value_id in (?))", option_values)
+	end
+
+	def ProductFilters.screenSize_filter
+	  conds = [ [ "20p ou moins",ov_range_test(0,20)],
+	  [ "20p - 30p",ov_range_test(20,30)],
+	  [ "30p - 40p" ,ov_range_test(30,40)],
+	  [ "40p ou plus",ov_range_test(40,190)]]
+	  { :name   => "taille",
+		:scope  => :screenSize_range_any,
+		:options => :tailleEcran,
+		:conds  => Hash[*conds.flatten],
+		:labels => conds.map {|k,v| [k,k]}
+	  }
+	end	
+	
+https://gist.github.com/maxivak/cc73b88699c9c6b45a95
+
+
+
+=================================================================================
+=================================================================================
+Payments
+=================================================================================
+- integration with paypal
+- PCI compliance ?!
+- adding new payment method .. 
+- Offpage 
+
+
+- How payments are processed 
+----------------------------
+- Registering new payment method 
+
+	Rails.application.config.spree.payment_methods << Spree::PaymentMethod::MyPayment
+
+Or, via engine 
+
+    initializer "spree.register.payment_methods" do |app|
+      app.config.spree.payment_methods << Spree::PaymentMethod::CashOnDelivery
+    end
+
+From admin, add a new payment method, select from list ..-> spree_payment_method table
+
+CREATE TABLE spree_payment_methods
+(
+    id INTEGER PRIMARY KEY NOT NULL,
+    type TEXT,
+    name TEXT,
+    description TEXT,
+    active INTEGER DEFAULT 1,
+    deleted_at TEXT,
+    created_at TEXT,
+    updated_at TEXT,
+    auto_capture INTEGER,
+    preferences TEXT,
+    preference_source TEXT,
+    position INTEGER DEFAULT 0,
+    available_to_users INTEGER DEFAULT 1,
+    available_to_admin INTEGER DEFAULT 1
+);
+CREATE UNIQUE INDEX index_spree_payment_methods_on_id_and_type ON spree_payment_methods (id, type);
+
+
+module Spree
+  class PaymentMethod::MyPayment < PaymentMethod
+
+    def payment_profiles_supported?
+      false # we do not want to show the confirm step
+    end
+
+    # def post_create(payment)
+    #   payment.order.adjustments.each { |a| a.destroy if a.label == I18n.t(:shipping_and_handling) }
+    #   payment.order.adjustments.create!(:amount => Spree::Config[:cash_on_delivery_charge],
+    #                            :source => payment,
+    #                            # :originator => payment,
+    #                            :label => I18n.t(:shipping_and_handling))
+    # end
+
+    def update_adjustment(adjustment, src)
+      # adjustment.update_attribute_without_callbacks(:amount, Spree::Config[:cash_on_delivery_charge])
+    end
+
+
+    def authorize(*args)
+      ActiveMerchant::Billing::Response.new(true, "", {}, {})
+    end
+
+    def capture(payment, source, gateway_options)
+      ActiveMerchant::Billing::Response.new(true, "", {}, {})
+    end
+
+    def void(*args)
+      ActiveMerchant::Billing::Response.new(true, "", {}, {})
+    end
+
+    def actions
+      %w{capture void}
+    end
+
+    def can_capture?(payment)
+      return false if payment.completed?
+      payment.order.shipments.all? do |shipment|
+        shipment.state == 'shipped'
+      end
+    end
+
+    def can_void?(payment)
+      payment.state != 'void'
+    end
+
+    def source_required?
+      false
+    end
+
+    #def provider_class
+    #  self.class
+    #end
+
+    def payment_source_class
+      nil
+    end
+
+    def method_type
+      'may_payment'			<--------------
+    end
+
+    def cash_on_delivery?
+      true
+    end
+
+    def apply_adjustment(order)
+      label = I18n.t(:charge_label, scope: :on_delivery)
+
+      order.adjustments.each { |a| a.destroy if a.label == label }
+      order.adjustments.create!(
+        amount: compute_charge.call(order),
+        label: label,
+        order: order
+      )
+      order.update!
+    end
+
+    def compute_commission(order)
+      compute_charge.call(order)
+    end
+
+    private
+
+    def compute_charge
+      # Rails.application.config.cash_on_delivery_charge if defined?(Rails)
+    end
+  end
+end
+
+- From method_type mthod, it will try to reach the partial:
+
+	spree/checkout/payment/_my_payment to show in checkout page .. 
+
+- All payment partials will be shown as accordion box inside:
+
+	spree/checkout/_payment.html.erb:
+	<%= render partial: "spree/checkout/payment/#{method.partial_name}", locals: { payment_method: method } %>
+	
+	payment_method: 		Spree::PaymentMethod::MyPayment
+	id: 5, 
+	type: "Spree::PaymentMethod::MyPayment", 
+	name: "My Payment 1", 
+	description: "Desc", 
+	active: true, 
+	deleted_at: nil, 
+	created_at: "2020-02-24 12:04:51", 
+	updated_at: "2020-02-24 12:04:51", 
+	auto_capture: nil, 
+	preferences: {
+		:server=>"test", 
+		:test_mode=>true}, 
+	preference_source: "", 
+	position: 5, 
+	available_to_users: true, 
+	available_to_admin: true
+
+- Notice this partial is part of a form container inside: spree/checkout/edit.html.erb
+
+	<%= form_for @order, url: update_checkout_path(@order.state), html: { id: "checkout_form_#{@order.state}" } do |form| %>
+	Form 	/checkout/update/payment
+	
+	<input type="radio" name="order[payments_attributes][][payment_method_id]" id="order_payments_attributes__payment_method_id_4" value="4" class="form-check-input" checked="checked">
+	<input type="radio" name="order[payments_attributes][][payment_method_id]" id="order_payments_attributes__payment_method_id_5" value="5" class="form-check-input">
+
+	
+	<input type="text" name="payment_source[4][name]" id="name_on_card_4" value="ibrahim salem" autocomplete="cc-name" class="form-control cardName col-sm-9">
+	<input type="tel" name="payment_source[4][number]" id="card_number" value="" class="required cardNumber col-9 form-control" size="19" maxlength="19" autocomplete="cc-number">
+	<input type="tel" name="payment_source[4][expiry]" id="card_expiry" value="" class="required cardExpiry col-9 form-control" placeholder="MM / YY">
+	<input type="tel" name="payment_source[4][verification_value]" id="card_code" value="" class="required cardCode col-9 form-control" size="5" autocomplete="off">
+
+	<input type="hidden" value="ibrahim" name="payment_source[4][address_attributes][firstname]" id="payment_source_4_address_attributes_firstname">
+	<input type="hidden" value="salem" name="payment_source[4][address_attributes][lastname]" id="payment_source_4_address_attributes_lastname">
+	<input type="hidden" name="payment_source[4][address_attributes][company]" id="payment_source_4_address_attributes_company">
+	<input type="hidden" value="229 SW. New Saddle St." name="payment_source[4][address_attributes][address1]" id="payment_source_4_address_attributes_address1">
+	<input type="hidden" value="" name="payment_source[4][address_attributes][address2]" id="payment_source_4_address_attributes_address2">
+	<input type="hidden" value="san luis" name="payment_source[4][address_attributes][city]" id="payment_source_4_address_attributes_city">
+	<input type="hidden" value="233" name="payment_source[4][address_attributes][country_id]" id="payment_source_4_address_attributes_country_id">
+	<input type="hidden" value="3349" name="payment_source[4][address_attributes][state_id]" id="payment_source_4_address_attributes_state_id">
+	<input type="hidden" name="payment_source[4][address_attributes][state_name]" id="payment_source_4_address_attributes_state_name">
+	<input type="hidden" name="payment_source[4][address_attributes][state_name]" id="payment_source_4_address_attributes_state_name">
+	<input type="hidden" value="7384687645" name="payment_source[4][address_attributes][phone]" id="payment_source_4_address_attributes_phone">
+	<input type="hidden" name="payment_source[4][address_attributes][alternative_phone]" id="payment_source_4_address_attributes_alternative_phone">
+	<input type="hidden" name="payment_source[4][cc_type]" id="cc_type" value="" class="ccType">
+
+Notice, this form will be submitted to 
+
+- /checkout/update/payment --> checkout/update
+
+	# Updates the order and advances to the next state (when possible.)
+    def update
+      if update_order
+
+        assign_temp_address
+
+        unless transition_forward
+          redirect_on_failure
+          return
+        end
+
+        if @order.completed?
+          finalize_order
+        else
+          send_to_next_state	<----
+        end
+
+      else
+        render :edit
+      end
+    end
+
+    def send_to_next_state
+      redirect_to checkout_state_path(@order.state)
+    end
+
+	before_action :setup_for_current_state, only: [:edit, :update]
+
+	# submitting the form from payment page .. 
+	# state here is = payment
+	def setup_for_current_state
+      method_name = :"before_#{@order.state}"
+      send(method_name) if respond_to?(method_name, true)	--> before_payment
+    end
+
+
+
+
+- When reach the page /checkout/confirm
+- All detailes related to order is ready 
+
+	<% order.payments.valid.each do |payment| %>
+		<%= render payment %><br/>
+	<% end %>
+
+
+- Form will hit /checkout/update/confirm -->
+
+* Now we need to check the payment method .. 
+* if hyperpay for example, show a page to capture payment details 
+
+	- call callback of payment method to decide .. 
+		- sucess
+		- failed
+
+	- if success, transition to next step successfully, creating a payment as paid .. 
+	- if failed, send back to choose a different payment .. (repeat) .. 
+
+Also, check payment record before, and after placing order .. 
+
+
+
+
+
+
+
+State Machine (Order, Payment, Shipping)
+===================================================================================================
+===================================================================================================
+===================================================================================================
+- https://github.com/state-machines/state_machines-activerecord
+- Check Spree:Order
+
+ - Cart
+ 
+ 	- get /cart -> orders/edit
+
+		@order = current_order || Spree::Order.incomplete.find_or_initialize_by(guest_token: cookies.signed[:guest_token])
+ 	
+		@values = Hash (35 elements)
+		 "id" => 5
+		 "number" => "R886462600"
+		 "item_total" => 15.99
+		 "total" => 15.99
+		 "state" => "address"		<--
+		 "adjustment_total" => 0	<--
+		 "user_id" => 1
+		 "completed_at" => nil
+		 "bill_address_id" => 5
+		 "ship_address_id" => 5
+		 "payment_total" => 0
+		 "shipment_state" => nil	<--
+		 "payment_state" => nil		<--
+		 "email" => "admin@example.com"
+		 "special_instructions" => nil
+		 "created_at" => "2019-12-28 14:09:38.903547"
+		 "updated_at" => "2020-01-03 18:39:21.494950"
+		 "currency" => "USD"		<--
+		 "last_ip_address" => "127.0.0.1"
+		 "created_by_id" => 1
+		 "shipment_total" => 0			<--
+		 "additional_tax_total" => 0	<--
+		 "promo_total" => 0
+		 "channel" => "spree"
+		 "included_tax_total" => 0.76
+		 "item_count" => 1
+		 "approver_id" => nil
+		 "approved_at" => nil
+		 "confirmation_delivered" => 0
+		 "guest_token" => "ndbw_8qVYKMITYB5gyOJSw"
+		 "canceled_at" => nil
+		 "canceler_id" => nil
+		 "store_id" => 1
+		 "approver_name" => nil
+		 "frontend_viewable" => 1
+
+0 - From Cart --> Address
+
+	- post /cart	--> 	orders/update
+	
+	{	"_method":"patch",
+		"authenticity_token":"i+r3yoxGjiFVewuy3CyCjfxxpltFaXDo47QzByS0c0dnYM7zYd/nDOlyIPBJfnHix6qTwKXac/VdGfpwaSgMXQ==",
+		"order[line_items_attributes][0][quantity]":"1",
+		"order[line_items_attributes][0][id]":"22",
+		"checkout":""}
+	}
+
+	- get /checkout/address
+
+1 - From Address - Delivery
+
+	- From the route .. 
+
+		# non-restful checkout stuff
+		patch '/checkout/update/:state', to: 'checkout#update', as: :update_checkout <---
+		get '/checkout/:state', to: 'checkout#edit', as: :checkout_state
+		get '/checkout', to: 'checkout#edit', as: :checkout
+
+		get '/orders/populate', to: 'orders#populate_redirect'
+		get '/orders/:id/token/:token' => 'orders#show', as: :token_order
+
+	- post /checkout/update/address --> params[:state] --> address
+	
+	{
+		"_method":"patch",
+		"authenticity_token":"l43+At4ZRGkH3y2NZU+z9Hkc1qEzrYiRYufj1y6Cxnt7B8c7M4AtRLvWBs/wHUCbQsfjOtMei4zcSiqgYx65YQ==",
+		"order[email]":"admin@example.com",
+		"order[bill_address_att	ributes][firstname]":"ibrahim",
+		"order[bill_address_attributes][lastname]":"salem",
+		"order[bill_address_attributes][address1]":"st.+387487",
+		"order[bill_address_attributes][address2]":"",
+		"order[bill_address_attributes][city]":"san+luis",
+		"order[bill_address_attributes][country_id]":"233",
+		"order[bill_address_attributes][state_id]":"3349",
+		"order[bill_address_attributes][zipcode]":"11194",
+		"order[bill_address_attributes][phone]":"7384687645",
+		"order[bill_address_attributes][id]":"5",
+		"order[use_billing]":"1",
+		"order[ship_address_attributes][id]":"5",
+		"commit":"Save+and+Continue",
+		"save_user_address":"1"}
+	}
+
+	- checkout#update --> frontend/app/controllers/spree/checkout_controller.rb
+
+		- update -> update_order -> transition_forward -> @order.next -> *
+		- Since the current state of order is address, machine state will look into 
+			the next state to transate to
+		- 		
+
+ensure_available_shipping_rates
+
+
+#<Spree::Stock::Package:0x00007ffb81a291b0 
+	@stock_location=#<Spree::StockLocation 
+		id: 1, 
+		name: "default", 
+		created_at: "2019-12-28 11:45:45", 
+		updated_at: "2019-12-28 12:47:03", 
+		default: true, address1: "", 
+		address2: "", 
+		city: "", 
+		state_id: nil, 
+		state_name: nil, 
+		country_id: nil, 
+		zipcode: "", 
+		phone: "", 
+		active: true, 
+		backorderable_default: true, 
+		propagate_all_variants: true, 
+		admin_name: "", 
+		position: 1, 
+		restock_inventory: true, 
+		fulfillable: true, 
+		code: "", 
+		check_stock_on_transfer: true>, 
+	@contents=[
+		#<Spree::Stock::ContentItem:0x00007ffb7fb3c8d8 
+			@inventory_unit=#<Spree::InventoryUnit 
+				id: nil, 
+				state: "on_hand", 
+				variant_id: 14, 
+				shipment_id: nil, 
+				created_at: nil, 
+				updated_at: nil, 
+				pending: true, 
+				line_item_id: 17, 
+				carton_id: nil>, 
+			@state=:on_hand>
+		], 
+	@shipment=#<Spree::Shipment 
+		id: nil, 
+		tracking: nil, 
+		number: nil, 
+		cost: 0.0, 
+		shipped_at: nil, 
+		order_id: 5, 
+		deprecated_address_id: nil, 
+		state: "pending", 
+		created_at: nil, 
+		updated_at: nil, 
+		stock_location_id: 1, 
+		adjustment_total: 0.0, 
+		additional_tax_total: 0.0, 
+		promo_total: 0.0, 
+		included_tax_total: 0.0>
+	>
+
+
+
+
+Orders (front)
+--------------
+/cart
+
+spree/orders/edit --> spree/orders/_form --> spree/orders/line_item'
+
+	<%= variant.options_text %>
+
+	variant_decorator.rb
+	
+From flexi .. 
+
+solidus_flexi_variants/app/overrides/add_extra_order_details_line_item_description.rb
+
+
+	Deface::Override.new(
+	  virtual_path: "spree/shared/_order_details",
+	  name: "add_extra_order_details_line_item_description",
+	  insert_bottom: "[data-hook='order_item_description']",
+	  partial: "spree/shared/extra_order_details_line_item_description"
+	)
+	
+	--> spree/shared/extra_order_details_line_item_description
+		--> solidus_flexi_variants/app/views/spree/shared/_extra_order_details_line_item_description.html.erb
+
+		<%= render partial: 'spree/shared/additional_line_item_fields', locals: {item: item} %>
+
+
+
+
+
+
+
+
+
+Orders (admin)
+======================================================================================================================
+controller: orders --> spree/admin/orders/cart
+
+--> /admin/orders/R479304087/cart -> 
+	app/views/spree/admin/orders/cart.html.erb:
+
+	<%= render partial: 'line_items_edit_form', locals: { order: @order } %>
+	
+	line_items_edit_form --> 
+	
+		<%= render partial: "spree/admin/orders/line_items", locals: { order: order } %>
+
+	# needs the related javascript files ...
+	app/assets/javascripts/spree/backend/orders/cart.js	
+	--> Spree.Views.Cart.LineItemTable
+	
+		app/assets/javascripts/spree/backend/views/cart/line_item_table.js
+		-->  var view = new Spree.Views.Cart.LineItemRow({model: line_item});
+
+			app/assets/javascripts/spree/backend/views/cart/line_item_row.js
+			render: --> 
+			app/assets/javascripts/spree/backend/templates/orders/line_item.hbs
+	
+				{{{string}}}} # --> safe_html
+
+	
+	Notice in cart.js
+	
+	Spree.Order.initCartPage = function(order_number) {
+		var order = new Spree.Models.Order.fetch(order_number)
+		var collection = order.get("line_items")
+
+	
+
+	Spree.Models.Order.fetch(order_number) 
+	GET http://store1.solidus.com:3000/api/orders/R726470905
+
+	{
+   "id":34,
+   "number":"R726470905",
+   "item_total":"456.0",
+   "total":"466.0",
+   "ship_total":"10.0",
+   "state":"complete",
+   "adjustment_total":"0.0",
+   "user_id":1,
+   "created_at":"2020-08-16T14:12:38.813Z",
+   "updated_at":"2020-08-16T16:02:28.424Z",
+   "completed_at":"2020-08-16T16:02:27.703Z",
+   "payment_total":"466.0",
+   "shipment_state":"ready",
+   "payment_state":"paid",
+   "email":"admin@example.com",
+   "special_instructions":null,
+   "channel":"spree",
+   "included_tax_total":"0.0",
+   "additional_tax_total":"0.0",
+   "display_included_tax_total":"د.ا0.000",
+   ......
+
+
+Now, we need to add the captured new field we added it for option_value .. look above .. 
+
+
+
+--> /admin/orders/R479304087/edit (shipments)
+
+	app/views/spree/admin/orders/edit.html.erb:
+	--> <%= render partial: 'form', locals: { order: @order } %>
+		
+		app/views/spree/admin/orders/_form.html.erb:
+		
+			<%= render :partial => "spree/admin/orders/shipment", collection: @order.shipments.order(:created_at), locals: { order: order } %>
+			--> spree/admin/orders/shipment --> 
+				
+				app/views/spree/admin/orders/_shipment_manifest.html.erb:
+				
+	loading flexi variants: 
+	solidus_flexi_variants/app/overrides/add_extra_order_details_line_item_description.rb
+
+
+	Deface::Override.new(
+	  virtual_path: "spree/admin/shared/_order_details",
+	  name: "add_extra_order_details_line_item_description_admin",
+	  insert_bottom: "[data-hook='order_details_line_item_row'] td:first",
+	  partial: "spree/shared/extra_order_details_line_item_description"
+	)
+
+	--> spree/shared/extra_order_details_line_item_description
+		--> solidus_flexi_variants/app/views/spree/shared/_extra_order_details_line_item_description.html.erb
+
+		<%= render partial: 'spree/shared/additional_line_item_fields', locals: {item: item} %>
+
+
+- What details I can get from order object:
+
+	order.display_order_total_after_store_credit.to_html
+	order.display_item_total.to_html
+	
+	order.currency => "USD"
+	order.total
+	order.state #
+	payment = @order.payments.last		
+	payment_method.is_a?(Spree::PaymentMethod::MyPayment)
+	
+					
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================================
+=================================================================================
+Shipping & Calculators
+=================================================================================
+- integrate with easypost 
+- flow, states .. etc
+- adding new shipping method !
+- custom calculator .. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Adding Extra Information to existing models 
+=============================================
+
+Dynamic Variants
+-------------------
+Solidus or Spree introduces the variants concept, where a product might have different 
+variants (colors, sizes), 
+
+Sometimes you might have thousands of different variations, without affecting the price
+There are two approaches to support dynamic variants 
+
+1- https://github.com/hefan/solidus_dynamic_variants
+The process of dynamic variant creation in the frontend works like this:
+
+    1 Shows all available options as dropdowns in product screen (see above).
+    *2 When product is put in cart, the correct variant is created if it doesn't exist yet.
+    3 The variant will have the price of the product plus the surcharges of its selected option values
+    4 Existence of a products variant is checked by options and price (if the price is altered a new variant will be created).
+
+...
+* 2- https://github.com/boomerdigital/solidus_flexi_variants
+
+If creating a new variant is overhead, and you don't want to either create variants, or 
+consider them as new variants .. purely dynamic, optional and customizable
+
+- You also can alter the price in each option select .. 
+
+
+
+Adding custom field to spree_line_items
+------------------------------------------------------------------------------------------
+
+- Via adding a custom field manually .. "custom"
+----------------------------------------------------
+
+CREATE TABLE spree_line_items
+(
+    id INTEGER PRIMARY KEY NOT NULL,
+    variant_id INTEGER DEFAULT NULL,	<-- which variant
+    order_id INTEGER DEFAULT NULL,		<-- which order
+    quantity INTEGER NOT NULL,
+    price REAL NOT NULL,
+    created_at TEXT DEFAULT 'NULL',
+    updated_at TEXT DEFAULT 'NULL',
+    cost_price REAL DEFAULT NULL,
+    tax_category_id INTEGER DEFAULT NULL,
+    adjustment_total REAL DEFAULT 0.0,
+    additional_tax_total REAL DEFAULT 0.0,
+    promo_total REAL DEFAULT 0.0,
+    included_tax_total REAL DEFAULT 0.0 NOT NULL,
+    
+    custom TEXT <--
+    
+);
+
+
+> rails g migration add_custom_to_line_items
+
+class AddCustomToLineItems < ActiveRecord::Migration[6.0]
+  def change
+    add_column :spree_line_items, :custom, :text, default: nil
+  end
+end
+
+- gem 'recursive-open-struct'
+
+	def to_recursive_ostruct(hash)
+      OpenStruct.new(hash.each_with_object({}) do |(key, val), memo|
+         key = 'classes' if key == 'class'
+         memo[key] = val.is_a?(Hash) ? to_recursive_ostruct(val) : val
+      end)
+    end
+
+spree.rb:
+
+	Spree::PermittedAttributes.line_item_attributes << [:custom]
+
+
+- in orders.populate ... OrdersControllerDecorator
+
+	custom = params[:custom] if params[:custom]
+	....
+	@line_item = @order.contents.add_with_custom(variant, quantity, custom)
+
+- Also, you need to add a new method to get the new value .. 
+
+app/controllers/spree/orders_controller_decorator.rb:
+OrderContentsDecorator .. check the original .. 
+
+
+
+To Add extra field to taxon :)
+------------------------------
+
+> rails generate migration AddMoreInformationToTaxons
+
+	class AddMoreInformationToTaxons < ActiveRecord::Migration[5.2]
+	  def change
+		add_column :spree_taxons, :more_information, :text
+	  end
+	end
+
+> rails db:migrate
+> Add view
+
+To add a new form field for a custom attribute to the taxon form, 
+we would want to extend app/views/spree/admin/taxons/_form.html.erb from the Solidus backend. 
+We can do that with Deface by creating a 
+file app/overrides/spree/admin/taxons/_form/add_fields.html.erb.deface.
+
+
+<!-- insert_bottom '[data-hook=admin_inside_taxon_form]' -->
+<div class="col-10">
+  <%= f.field_container :more_information do %>
+    <%= f.label :more_information %><br />
+    <%= f.text_area :more_information, class: 'fullwidth', rows: 6 %>
+  <% end %>
+</div>
+
+- Allowing Custom Attributes to be Saved
+
+config/initializers/spree.rb:
+
+	Spree::PermittedAttributes.taxon_attributes << [:more_information]
+
+
+	taxonomy = Spree::Taxonomy.find(params[:taxonomy_id])
+	taxon = taxonomy.taxons.find(params[:taxon_id])
+	if taxon.destroy_attachment(params[:attachment_definition])
+		flash[:success] = t('spree.successfully_removed', resource: params[:attachment_definition].titleize)
+	else
+		flash[:error] = t('spree.taxon_attachment_removal_error')
+	end
+	redirect_to edit_admin_taxonomy_taxon_path(taxonomy, taxon.id)
+
+
+
+!! Adding images to option values .. 
+------------------------------------------------------------
+- Add image filed to potions_values
+> rails g migration add_image_to_spree_option_values + along with paperclip integration !
+
+
+
+create a migration:
+
+class AddAvatarToUsers < ActiveRecord::Migration
+  def up
+    add_attachment :spree_option_values, :image
+  end
+ 
+  def down
+    remove_attachment :spree_option_values, :image
+  end
+end
+
+in model spree_option_value (Spree::OptionValue)
+
+  has_attached_file :image, styles: { medium: "300x300", thumb: "100x100" }
+  validates_attachment_content_type :image, content_type: /\Aimage\/.*\Z/
+
+More secured:
+
+	has_attached_file :image
+  # Validate content type
+  validates_attachment_content_type :image, content_type: /\Aimage/
+  # Validate filename
+  validates_attachment_file_name :image, matches: [/png\Z/, /jpe?g\Z/]
+  # Explicitly do not validate
+  do_not_validate_attachment_file_type :image
+
+
+
+in the form .. add
+
+ <div class="field">
+    <%= f.file_field :image %>
+  </div>
+
+
+if edit:
+
+<div class="field">
+    <%= f.file_field :image %>
+ 
+    <% if @option_value.avatar? %>
+      <%= image_tag @option_value.image.url(:thumb) %>
+    <% end %>
+  </div>
+  
+  
+
+
+
+
+
+
+
+
+
+- Static 
+
+--> /assets/images/options/[option_value]/[value].png
+
+/assets/options/color/red.png
+/assets/options/color/green.png
+/assets/options/color/black.png
+
+
+Add to cart partial, when fetching through options, (manual check of name), fetch the possible option value as an image.
+- check a tool to use images with radio buttons .. 
+
+First, 
+
+* Remember : option_value is a sub model (nested) inside option_type
+
+> rails g migration add_icon_file_name_to_option_value:
+
+	class AddIconFileNameToOptionValue < ActiveRecord::Migration[6.0]
+	  def change
+		add_column :spree_option_values, :icon_file_name, :string
+		add_column :spree_option_values, :icon_content_type, :string
+		add_column :spree_option_values, :icon_file_size, :integer
+	  end
+	end
+
+spree.rb:
+
+	Spree::PermittedAttributes.option_value_attributes << [:icon]
+
+
+app/models/spree/option_value/paperclip_attachment.rb
+
+	# frozen_string_literal: true
+
+	module Spree::OptionValue::PaperclipAttachment
+	  extend ActiveSupport::Concern
+
+	  included do
+		has_attached_file :icon,
+		  styles: { mini: '32x32>', normal: '800x800>' }, # --> ov.icon(:normal) <%= ov.try(:icon, :normal) %>
+		  default_style: :mini,
+		  url: '/spree/[option_values]/:id/:style/:basename.:extension',
+		  path: ':rails_root/public/spree/[option_values]/:id/:style/:basename.:extension',
+		  default_url: '/assets/default_option_value.png'
+
+		validates_attachment :icon,
+		  content_type: { content_type: %w[image/jpg image/jpeg image/png image/gif] }
+	  end
+
+	  def icon_present?
+		icon.present?
+	  end
+
+	  def attachment_partial_name
+		'paperclip'
+	  end
+
+	  def destroy_attachment(definition)
+		return false unless respond_to?(definition)
+
+		attached_file = send(definition)
+		return false unless attached_file.exists?
+
+		attached_file.destroy
+	  end
+	end
+
+
+app/models/spree/[option_value]_decorator.rb
+
+	# frozen_string_literal: true
+	Spree::OptionValue.class_eval do
+	  include Spree::OptionValue::PaperclipAttachment #Spree::Config.option_value_attachment_module #Spree::OptionValue::PaperclipAttachment
+	end
+
+app/views/spree/admin/[option_types]/attachment_forms/_paperclip.html.erb
+
+	<% f.object.class.attachment_definitions.each do |attachment, definition| %>
+		<%= f.label attachment %><br>
+		<%= f.file_field attachment %>
+		<% if f.object.send(attachment).exists? %>
+		  <%= image_tag f.object.send(attachment, definition[:default_style]) %>
+		  <%= link_to t('spree.actions.remove'),
+					  admin_[option_types]_attachment_path(f.object,
+															f.object.id,
+														   attachment_definition: attachment,
+														   authenticity_token: form_authenticity_token),
+					  method: :delete,
+					  class: 'btn btn-sm btn-danger' %>
+		<% end %>
+	<% end %>
+
+app/views/spree/admin/[option_types]/_[option_value]_fields.html.erb
+
+	<tr class="option_value fields" id="spree_<%= dom_id(f.object) %>"  data-hook="[option_value]">
+	  <td>
+		<% if f.object.persisted? %>
+		  <span class="handle"></span>
+		  <%= f.hidden_field :id %>
+		<% end %>
+	  </td>
+	  <td class="name"><%= f.text_field :name %></td>
+	  <td class="presentation"><%= f.text_field :presentation %></td>
+
+-->	  <td class="image">
+-->		<%= render "spree/admin/[option_types]/attachment_forms/#{f.object.attachment_partial_name}", f: f %>
+-->	  </td>
+
+	  <td class="actions"><%= link_to_remove_fields t('spree.actions.remove'), f, no_text: true %></td>
+	</tr>
+
+
+app/controllers/spree/admin/[option_values]/attachment_controller.rb
+
+	# frozen_string_literal: true
+
+	module Spree
+	  module Admin
+		module OptionValues
+		  class AttachmentController < Spree::Admin::BaseController
+			def destroy
+			  option_value = Spree::OptionValue.find(params[:option_value_id])
+			  option_type = option_value.option_type
+
+			  if option_value.destroy_attachment(params[:attachment_definition])
+				flash[:success] = t('spree.successfully_removed', resource: params[:attachment_definition].titleize)
+			  else
+				flash[:error] = t('spree.[option_value]_attachment_removal_error')
+			  end
+			  redirect_to edit_admin_[option_type]_path(option_type)
+			end
+		  end
+		end
+	  end
+	end
+
+routes.rb
+
+  Spree::Core::Engine.routes.draw do
+	.
+	.
+    namespace :admin do
+      delete "/[option_values]/attachment/:option_value_id(.:format)" => '/spree/admin/option_values/attachment#destroy', as: 'option_values_attachment'
+    end
+	.
+	.
+
+
+Voila
+
+Now, let's add images to the flexi variants option values .. 
+------------------------------------------------------------------------------------------
+Now, we know flexi variants are actually using the option_type and option_value of existing engine
+but dynamically .. yet, they do have separate views, these views are not ready for solidus globalize
+
+! We need just to copy the existing one deface views to the new ones .. 
+solidus_globalize/app/overrides/spree/admin/option_types ..
+
+Ok, just translate original option values, option types and images, flexi should start
+taking that in consideration .. 
+
+For translations .. it's ok .. 
+For images (icons), show them if they exist ... 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=================================================================================
+Translations & Globalization 
+=================================================================================
+gem 'solidus_i18n', '~> 2.0'
+gem 'rails-i18n' #, '~> 5.1'
+gem 'kaminari-i18n', '~> 0.5.0'
+gem 'routing-filter', '~> 0.6.0'
+
+> bin/rails g solidus_globalize:install
+
+(vendor/assets/javascripts/spree/backend/all.js):
+//= require spree/backend/solidus_globalize
+
+Models: Product, Promotion, OptionType, Taxonomy, Taxon, Property and ShippingMethod.
+
+- All translation files exist in config/locals
+- Keywords (yml) / locales .. supported locales .. etc
+
+	> gem install i18n_yaml_editor
+	> i18n_yaml_editor config/locales 3007
+	
+	Enjoy !
+
+
+For Settings:
+
+Spree::Frontend::Config.configure do |config|
+  config.locale = 'en'
+end
+
+Spree::Backend::Config.configure do |config|
+  config.locale = 'en'
+	...
+	
+SolidusGlobalize::Config.supported_locales = [:en, :ar]
+
+
+Rails.application.routes.draw do
+  filter :locale
+
+  mount Spree::Core::Engine, at: '/'
+end
+
+
+Configure routing-fitler in config/initializers/locale_filter.rb (optional)
+# Do not include the default locale in the URL
+RoutingFilter::Locale.include_default_locale = false
+
+Updating Translations
+
+If you want to improve the translations on your language, run the tasks:
+
+bundle exec rake solidus_i18n:update_default
+bundle exec i18n-tasks add-missing --nil-value --locale <LOCALE>
+
+
+Model Translations
+------------------
+gem 'solidus_globalize', github: 'solidusio-contrib/solidus_globalize', branch: 'master'
+
+- Localizing country names
+You can translate country names by defining spree.country_names in your own locale files. 
+For example, to have countries in Spanish do:
+
+es:
+  spree:
+    country_names:
+      US: Estados Unidos de América
+      UK: Reino Unido
+      CA: Canadá
+
+
+
+
+- To globalize an existing model .. with all views .. 
+-----------------------------------------------------
+
+Adding additional table
+------------------------
+
+- Add this to Spree::Page model .. via decoration / or directly
+
+  translates :title, :body
+
+> rails g migration add_translation_to_spree_pages
+
+	class AddTranslationToSpreePages < ActiveRecord::Migration[6.0]
+	  def change
+		reversible do |dir|
+		  dir.up do
+			Spree::Page.create_translation_table!({
+											 :title => :string,
+											 :body => :text
+										   }, {
+											 :migrate_data => true
+										   })
+		  end
+
+		  dir.down do
+			Spree::Page.drop_translation_table! :migrate_data => true
+		  end
+		end
+	  end
+	end
+
+
+> rake db:migrate --> bundle exec rails db:migrate RAILS_ENV=production
+
+- You can use the model like this:
+
+	I18n.locale = :en
+	page.title # => Globalize rocks!
+
+	I18n.locale = :he
+	page.title # => גלובאלייז2 שולט!
+	You can also set translations with mass-assignment by specifying the locale:
+
+	page.attributes = { title: 'صفحة', locale: :ar }
+
+- Notice the above migration ... 
+
+	Spree::Page.create_translation_table!(
+		{
+			:title => :string,
+			:body => :text
+		},{
+			:migrate_data => true
+		})
+
+you can .. 
+
+:body => {:type => :text, :null => false, :default => 'abc'}
+
+Remove source column !!
+
+	{
+		:migrate_data => true,
+		:remove_source_columns => true
+	}
+
+In order to use a specific locale for migrated data, you can use I18n.with_locale:
+
+    I18n.with_locale(:ar) do
+      Spree::Page.create_translation_table!({
+        :title => :string,
+        :body => :text
+      }, {
+        :migrate_data => true
+      })
+    end
+
+Adding additional fields to the translation table
+-------------------------------------------------
+	reversible do |dir|
+		dir.up do
+			Spree::Page.add_translation_fields! author: :text
+		end
+
+		dir.down do
+			remove_column :spree_page_translations, :author
+		end
+	end
+
+
+NOTE: Remember to add the new field to the model:
+
+translates :title, :body, :author
+
+Gotchas
+Because globalize uses the :locale key to specify the locale during mass-assignment, you should avoid having a locale attribute on the parent model.
+
+If you like your translated model to update if a translation changes, use the touch: true option together with translates:
+
+	translates :name, touch: true
+
+Known Issues
+If you're getting the ActiveRecord::StatementInvalid: PG::NotNullViolation: ERROR: null value in column "column_name" violates not-null constraint error, the only known way to deal with it as of now is to remove not-null constraint for the globalized columns:
+
+	class RemoveNullConstraintsFromResourceTranslations < ActiveRecord::Migration
+	  def change
+		change_column_null :resource_translations, :column_name, true
+	  end
+	end
+
+
+Adding controls & views / solidus 
+----------------------------------
+
+app/decorators/models/solidus_globalize/spree/page_decorator.rb
+
+	# frozen_string_literal: true
+
+	module SolidusGlobalize
+	  module Spree
+		module PageDecorator
+		  def self.prepended(base)
+			base.class_eval do
+			  # translates :name, :presentation, fallbacks_for_empty_translations: true
+			  translates :title, :body
+			  include SolidusGlobalize::Translatable <-- Note: Spree::Page must override Spree::Base <----
+			end
+		  end
+		  ::Spree::Page.prepend self
+		end
+	  end
+	end
+
+
+* extensions/solidus_static_content/app/models/spree/page.rb
+
+	class Spree::Page < ActiveRecord::Base -> class Spree::Page < Spree::Base
+
+app/overrides/spree/admin/pages/index/add_translation.html.erb.deface:
+
+	<!-- insert_bottom 'td.actions' -->
+	<%= link_to_with_icon 'globe', nil, spree.admin_translations_path('page', page.id), title: t(:'spree.i18n.translations'), no_text: true %>
+
+
+
+Voila ... !
+
+
+When running server 
+Several "already initialized constant" warnings when running rake commands #1096 
+------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Scaffolding - Adding new table (Example using currencies to convert prices of variants)
+=======================================================================================
+https://github.com/freego/solidus_scaffold
+
+group :development do
+  gem 'solidus_scaffold', github: 'freego/solidus_scaffold'
+end
+
+rails generate solidus_scaffold:scaffold Brand name:string description:text position:integer ...
+
+create  app/models/spree/brand.rb
+create  app/controllers/spree/admin/brands_controller.rb
+create  app/views/spree/admin/brands/index.html.erb
+create  app/views/spree/admin/brands/new.html.erb
+create  app/views/spree/admin/brands/edit.html.erb
+create  app/views/spree/admin/brands/_form.html.erb
+create  db/migrate/20140412175904_create_spree_brands.rb	<--- add [4.2]
+create  config/locales/en_brands.yml
+create  config/locales/it_brands.yml
+create  app/overrides/spree/admin/add_spree_brands_to_admin_menu.rb
+append  config/routes.rb
+
+rake db:migrate
+
+rake db:rollback
+rails destroy solidus_scaffold:scaffold Brand name:string description:text position:integer ...
+
+
+
+
+
+
+
+
+
+
+=================================================================================
+UI:
+=================================================================================
+
+The main access point to styling of frontend is:
+vendor/assets/stylesheets/spree
+
+└── frontend
+	├── all.css
+	└── slick_custom.scss
+
+all.css is based on assets pipline of rails, this will include:
+
+ *= require spree/frontend
+ *= require_self
+ *= require_tree .
+
+and the spree/frontend (in solidus master repo):
+(sass files)
+
+└── spree
+   ├── frontend
+   │   ├── _skeleton.scss     <-- containres definitions in deifferent medias
+   │   ├── _variables.scss    <-- variables !!
+   │   └── screen.css.scss    <-------------\
+   └── frontend.css:   ----- require this --/
+
+screen.css.scss: (main styling of entire front end theme store / based on skeleton UI)
+
+//= depend_on_asset "fontawesome-webfont.eot"
+//= depend_on_asset "fontawesome-webfont.woff"
+//= depend_on_asset "fontawesome-webfont.ttf"
+//= depend_on_asset "fontawesome-webfont.svg"
+//= depend_on_asset "spree/frontend/cart.png"
+
+@import 'spree/frontend/skeleton';
+@import 'spree/frontend/variables';
+@import 'font-awesome';
+
+.
+.
+.
+
+
+_skeleton.scss: http://getskeleton.com/ (theme similar to bootstrap 4)
+_variables.scss: solidus based styling / fonts 
+
+	/*--------------------------------------*/
+	/* Colors
+	/*--------------------------------------*/
+	$c_green:       #8dba53 !default;  /* Spree green    */
+	$c_red:         #e45353 !default;  /* Error red      */
+
+	$layout_background_color:   #FFFFFF !default;
+	$title_text_color:          #404042 !default;
+	$body_text_color:           #404042 !default;
+	$link_text_color:           #00ADEE !default;
+
+	$product_background_color:  #FFFFFF !default;
+	$product_title_text_color:  #404042 !default;
+	$product_body_text_color:   #404042 !default;
+	$product_price_text_color:  #252525 !default;
+	$product_link_text_color:   #BBBBBB !default;
+
+	$cart_total_background_color: $link_text_color !default;
+	$cart_total_text_color: #FFFFFF !default;
+
+	/*--------------------------------------*/
+	/* Fonts import from remote
+	/*--------------------------------------*/
+	@import url(//fonts.googleapis.com/css?family=Ubuntu:400,700,400italic,700italic|&subset=latin,cyrillic,greek,greek-ext,latin-ext,cyrillic-ext);
+
+	/*--------------------------------------*/
+	/* Font families
+	/*--------------------------------------*/
+	$ff_base:       'Ubuntu', sans-serif !default;
+
+	/*--------------------------------------
+	  | Font sizes
+	  |--------------------------------------
+	  |- Navigation                         
+	  |                                    */
+		  $header_navigation_font_size:           14px !default;
+		  $horizontal_navigation_font_size:       16px !default;
+		  $main_navigation_header_font_size:      14px !default;
+		  $main_navigation_font_size:             12px !default;
+	/*|------------------------------------
+	  |- Product Listing                         
+	  |                                  */
+		  $product_list_name_font_size:           12px !default;
+		  $product_list_price_font_size:          16px !default;
+		  $product_list_header_font_size:         20px !default;
+		  $product_list_search_font_size:         14px !default;
+	/*|------------------------------------
+	  |- Product Details
+	  |                                  */
+		  $product_detail_name_font_size:         24px !default;
+		  $product_detail_description_font_size:  12px !default;
+		  $product_detail_price_font_size:        20px !default;
+		  $product_detail_title_font_size:        14px !default;
+	/*|------------------------------------
+	  |- Basic
+	  |                                  */
+		  $heading_font_size:                     24px !default;
+		  $sub_heading_font_size:                 14px !default;
+		  $button_font_size:                      12px !default;
+		  $input_box_font_size:                   13px !default;
+		  $base_font_size:                        12px !default;
+		  $border_color:                          lighten($body_text_color, 60) !default;
+		  $default_border:                        1px solid $border_color !default;
+		  $button_border_color:                   rgba(0, 138, 189, .75) !default;
+		  $table_head_color:                      lighten($body_text_color, 60) !default;
+
+* https://github.com/solidusio/solidus/blob/master/guides/source/developers/assets/override-solidus-assets.html.md
+
+Override an image, stylesheet, or JavaScript file
+
+To replace an entire file that is provided by a gem (like solidus_frontend or solidus_backend), 
+you can create a new file in your project's app/assets directory that has a corresponding 
+filename and location. You can do this with any image, stylesheet, or JavaScript file provided by a gem.
+For example, to replace the solidus_frontend's _variables.scss at /app/assets/stylesheets/spree/frontend/_variables.scss 
+you could save the replacement to your_app/app/assets/stylesheets/spree/frontend/_variables.scss 
+with your own definitions inside.
+This is more brittle than overriding single definitions, as described above, and isn't 
+guaranteed to work in future Solidus versions.
+Note that this method completely replaces any functionality provided by the stylesheet 
+or JavaScript file.
+This same method can also be used to override files provided by third-party extensions.
+
+Bootstrap 3
+-----------
+- To install bootstrap3 on solidus !!	
+	https://github.com/2beDigital/solidus_bootstraps_frontend	
+	> rails solidus_bootstrap_frontend:install
+
+
+	
+* Bootstrap 4	
+-------------
+all.css:
+
+	*= require bootstrap	
+Or
+	@import "bootstrap/scss/bootstrap";	
+
+all.js:
+
+	//= require popper.js/dist/umd/popper-utils.min
+	//= require popper.js/dist/umd/popper.min
+	//= require bootstrap/dist/js/bootstrap.min
+
+	$(function() {
+		$('[data-toggle="tooltip"]').tooltip();
+	});
+
+	$(function () {
+		$('[data-toggle="popover"]').popover()
+	})
+
+	// If used turbo-links
+	//= require turbolinks/dist/turbolinks
+	document.addEventListener("turbolinks:load", () => {
+		$('[data-toggle="tooltip"]').tooltip()
+	})
+
+Remember, we have install bootstrap files and jquery using yarn
+
+	> yarn add bootstrap jquery popper.js --save
+	> yarn add jquery-slim --save	# to use jquery without ajax
+
+......
+
+* Remember, mostly jquery is needed for the navbar, notifications and poppers are using
+external library (popper).
+* You can use jquery-slim that does;t contain effects nor ajax APIs
+* Always consider using React or Vue, or even Angular.
+
+	
+Font-awesome
+------------
+> yarn add font-awesome #4
+> yarn add @fortawesome/fontawesome-free #5
+
+all.css:
+	*= require font-awesome	# 4
+	*= require @fortawesome/fontawesome-free # 5
+Or
+	// @import "font-awesome/scss/font-awesome.scss";
+	@import "font-awesome";
+
+all.js
+	
+	//= require @fortawesome/fontawesome-free/js/all
+
+Select
+------
+https://github.com/snapappointments/bootstrap-select	
+	> yarn add bootstrap-select
+
+all.scss
+	@import "bootstrap-select/sass/bootstrap-select";
+
+all.js
+	//= require bootstrap-select
+
+
+* Customizing Bootstrap4 + Solidus
+--------------------------------
+# In order to use bootstrap4 in solidus, refer to all.css and all.js files in frontend
+# First, we need to get rid of the old theming .... 
+
+inside vendor/assets/stylesheets/spree/
+
+└── frontend
+	├── all.css
+	├── main.scss			<-- create this file
+	└── slick_custom.scss
+
+update all.css:
+
+ * require spree/frontend	<-- disable
+ * require ./main			<-- new custom theming file
+
+ *= require_self
+ *= require_tree . (this will include the main new style file)
+
+ *= require spree/frontend/spree_static_content
+ *= require spree/frontend/solidus_blogging.css
+ * require spree/frontend/solidus_reviews
+ *= require spree/frontend/solidus_wishlist
+ *= require spree/frontend/solidus_sale_prices
+
+ *= require spree/frontend/solidus_contact_us
+
+
+main.scss:
+
+	@import url('//fonts.googleapis.com/css2?family=Poiret+One&display=swap');
+	@import "font-awesome";
+
+	$font-family-base: 'Poiret One', 'Manrope', 'Roboto Condensed', Geneva, Arial, sans-serif; // add this line first before importing bootstrap
+	$font-size-base: 1.1rem;
+	$line-height-base: 1.5;
+
+	$enable-gradients: false;
+	$primary-color: #303030;
+
+	$enable-rounded: true;
+	$enable-shadows: false;
+	$enable-gradients: false;
+	$enable-grid-classes: true;
+	$enable-print-styles: true;
+	$border-color: #e0e0e0;
+
+	$form-feedback-invalid-color: red;
+
+	$theme-colors: (
+			"primary":    #202020,
+			//"primary":    #d53939,
+	  //"secondary":  #303030,
+	  //"success":    #303030,
+	  "info":       #444444,
+	  //"warning":    #303030,
+	  //"danger":     #303030,
+			"light":      #f0f0f0,
+			"dark":       #04aace
+	);
+
+	$grid-breakpoints: (
+			xs: 0,
+			sm: 576px,
+			md: 768px,
+			lg: 992px,
+			xl: 1200px
+	);
+
+	@import "bootstrap/scss/bootstrap";
+	@import "bootstrap-select/sass/bootstrap-select";
+	@import "slick-carousel/slick/slick";
+	@import "slick-carousel/slick/slick-theme";
+	@import "../../bootstrap-image-checkbox/dist/css/bootstrap-image-checkbox";
+
+
+# To customize what components to load
+
+	/* import only the necessary Bootstrap files */
+	@import "bootstrap/scss/functions"; 
+	@import "bootstrap/scss/variables";
+	
+	/* -------begin customization-------- */
+	/* change the primary theme color to red */
+	$theme-colors: (
+	  primary: red;
+	);
+	/* -------end customization-------- */
+	
+	/* finally, import Bootstrap to set the changes! */
+	@import "bootstrap";
+
+
+- Check files: _variables.scss, _functions.scss
+
+# Extend Bootstrap classes with new custom classes (ie: row-dark)…
+
+	/* 1. import only the necessary Bootstrap files */
+	@import "bootstrap/scss/functions"; 
+	@import "bootstrap/scss/variables";
+	
+	/* 2. begin customization ---- */
+	/* --- end customization ------ */
+	
+	/* 3. import Bootstrap to set the changes! */
+	@import "bootstrap";
+
+	/* 4. add @mixin or @extend customizations here */
+	/* create new custom classes from existing classes */
+	.row-dark {
+		@extend .row;
+		background-color: #333333;
+		color: #ffffff;
+	}/* use @mixins */
+	.btn-custom {
+	  @include button-variant(red, white, red, red);
+	}
+
+
+
+Misc
+----
+
+	https://themehunt.com/items
+	https://bootstrap4.com/
+*	https://bbbootstrap.com/snippets/e-commerce-menu-header-using-html-css-21940848
+
+	https://colorlib.com/wp/free-bootstrap-4-website-templates/
+		- https://colorlib.com/preview/#onetech
+		- https://colorlib.com/demo?theme=fashe
+		- https://colorlib.com/preview/#amado
+		- https://colorlib.com/demo?theme=coloshop
+
+	Other than BT4:
+	https://bulma.io/documentation/components/navbar/#navbar-brand
+	https://github.com/jgthms/bulma
+	
+	https://material.io/components/
+	https://getmdl.io/started/index.html (material design lite)
+
+
+
+What ?
+=======
+> $ bundle --binstubs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==========================================================================================
+PRODUCTION
+
+First deployment on Jobas6a (old ubuntu)
+==========================================================================================
+==========================================================================================
+==========================================================================================
+==========================================================================================
+==========================================================================================
+Pushing code to git
+------------------------------------------------------------------------------------------
+- Setup on server
+- Setup on client
+
+Git
+------------------------------------------------------------------------------------------
+On Server
+
+$ sudo adduser git
+$ su git
+$ cd
+$ mkdir .ssh && chmod 700 .ssh
+$ touch .ssh/authorized_keys && chmod 600 .ssh/authorized_keys
+
+Add developers keys
+
+$ cat /tmp/id_rsa.john.pub >> ~/.ssh/authorized_keys
+
+Create a project
+
+$ cd ~
+$ mkdir project.git
+$ cd project.git
+$ git init --bare
+Initialized empty Git repository in project.git/
+
+On Developer's console
+
+$ cd myproject
+$ git init
+$ git add .
+$ git commit -m 'initial commit'
+$ git remote add origin git@gitserver:project.git
+$ git push origin master
+
+Others can do 
+
+$ git clone git@gitserver:project.git
+$ cd project
+$ vim README
+$ git commit -am 'fix for the README file'
+$ git push origin master
+
+
+Complex Setups
+--------------
+Adding submodules .. 
+
+$ git submodule add <url> extensions/easypost-ruby
+$ git rm --cached extensions/solidus_static_content
+
+> git submodule add https://github.com/jtapia/solidus_contact_us.git extensions/solidus_contact_us
+
+> git submodule add https://github.com/solidusio-contrib/solidus_static_content.git extensions/solidus_static_content
+
+Now, when your projects includes other folders (sub-proejcts) that point to different repos, after adding to git, you will get a warning message 
+
+> git add ./extensions/solidus-blogging
+
+hint: You've added another git repository inside your current repository.
+hint: Clones of the outer repository will not contain the contents of
+hint: the embedded repository and will not know how to obtain it.
+hint: If you meant to add a submodule, use:
+hint: 
+hint: 	git submodule add <url> extensions/solidus-blogging
+hint: 
+hint: If you added this path by mistake, you can remove it from the
+hint: index with:
+hint: 
+hint: 	git rm --cached extensions/solidus-blogging
+hint: 
+hint: See "git help submodule" for more information.
+
+- But since your folder is already cloned .. do the following
+
+> git rm --cached extensions/solidus-blogging
+> git add ./extensions/solidus_static_content/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_reviews
+> git add ./extensions/solidus_reviews/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_wishlist
+> git add ./extensions/solidus_wishlist/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_related_products
+> git add ./extensions/solidus_related_products/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_recently_viewed
+> git add ./extensions/solidus_recently_viewed/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_sale_prices
+> git add ./extensions/solidus_sale_prices/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_flexi_variants
+> git add ./extensions/solidus_flexi_variants/*
+> git commit -a -m "push ext"
+> git push origin master
+
+> git rm --cached extensions/solidus_cash_on_delivery
+> git add ./extensions/solidus_cash_on_delivery/*
+> git commit -a -m "push ext"
+> git push origin master
+
+
+> git rm --cached vendor/assets/stylesheets/spree/frontend/bootstrap-image-checkbox ...
+
+
+- To entirely remove a submodule ....
+
+
+    Delete the relevant section from the .gitmodules file.
+    Stage the .gitmodules changes git add .gitmodules
+    Delete the relevant section from .git/config.
+    Run git rm --cached path_to_submodule (no trailing slash).
+    Run rm -rf .git/modules/path_to_submodule (no trailing slash).
+    Commit git commit -m "Removed submodule "
+    Delete the now untracked submodule files rm -rf path_to_submodule
+
+
+
+
+
+
+.gitignore:
+
+# See https://help.github.com/articles/ignoring-files for more about ignoring files.
+#
+# If you find yourself ignoring temporary files generated by your text editor
+# or operating system, you probably want to add a global ignore instead:
+#   git config --global core.excludesfile '~/.gitignore_global'
+
+# Ignore bundler config.
+/.bundle
+
+# Ignore the default SQLite database.
+/db/*.sqlite3
+/db/*.sqlite3-journal
+/db/*.sqlite3-*
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore uploaded files in development.
+/storage/*
+!/storage/.keep
+
+/public/assets
+.byebug_history
+
+# Ignore master key for decrypting credentials and more.
+/config/master.key
+
+/public/packs
+/public/packs-test
+/node_modules
+/yarn-error.log
+yarn-debug.log*
+.yarn-integrity
+
+/public/ckeditor_assets
+/uploads
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------------------------
+=========================
+Pull the code first time
+=========================
+> git clone git@jobas6a.com:suits2.git
+> cd suits2
+> rvm install ruby-2.6.0
+> rvm use ruby-2.6.0@solidus --create
+> gem install bundler
+> rm -fR Gemfile.lock 
+> bundle install
+
+...
+
+-- you might get
+You must use Bundler 2 or greater with this lockfile.
+
+> gem install bundler
+> gem update --system
+> bundle update --bundler
+
+gem update --system 2.7.6
+
+gem install bundler -v 2.1.2 --default
+
+
+/ -------------------- /
+Bundler could not find compatible versions for gem "solidus_support":
+  In Gemfile:
+    solidus_editor was resolved to 1.0.0, which depends on
+      solidus_support (~> 0.5)
+
+    solidus_static_content was resolved to 1.0.0, which depends on
+      solidus_support (~> 0.4.0)
+
+
+Goto extension solidus_static_content .... check file
+
+kbeeer2/extensions/solidus_static_content/solidus_static_content.gemspec:
+
+	s.add_dependency 'solidus_support', '~> 0.4.0' --> s.add_dependency 'solidus_support', '~> 0.4'
+
+kbeeer2/extensions/solidus_globalize/solidus_globalize.gemspec:
+
+	s.add_dependency 'solidus_support', '~> 0.4.0' --> s.add_dependency 'solidus_support', '~> 0.4'
+
+- GemWrappers: Can not wrap not executable file: bundle
+> rvm repair wrappers
+
+- Error running '__rvm_with ruby-2.5.1@spree31 run_gem_wrappers regenerate',
+please read /Users/isalem/.rvm/log/1601019876_ruby-2.6.0/wrappers.regenerate.ruby-2.5.1@spree31.log
+
+Error loading RubyGems plugin "/Users/isalem/.rvm/gems/ruby-2.5.1@global/gems/executable-hooks-1.4.2/lib/rubygems_plugin.rb": dlopen(/Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle, 9): Library not loaded: /usr/local/opt/openssl/lib/libssl.1.0.0.dylib
+  Referenced from: /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle
+  Reason: image not found - /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle (LoadError)
+Error loading RubyGems plugin "/Users/isalem/.rvm/gems/ruby-2.5.1@global/gems/gem-wrappers-1.2.7/lib/rubygems_plugin.rb": dlopen(/Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle, 9): Library not loaded: /usr/local/opt/openssl/lib/libssl.1.0.0.dylib
+  Referenced from: /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle
+  Reason: image not found - /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle (LoadError)
+ERROR:  Loading command: install (LoadError)
+        dlopen(/Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle, 9): Library not loaded: /usr/local/opt/openssl/lib/libssl.1.0.0.dylib
+  Referenced from: /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle
+  Reason: image not found - /Users/isalem/.rvm/rubies/ruby-2.5.1/lib/ruby/2.5.0/x86_64-darwin15/openssl.bundle
+ERROR:  While executing gem ... (NoMethodError)
+    undefined method `invoke_with_build_args' for nil:NilClas
+    
+<<<<<<<<<<<<<<<<<<<<<<<<<< ONLY ON MAC    
+
+/ -------------------- /
+
+HEADS UP! i18n 1.1 changed fallbacks to exclude default locale.
+But that may break your application.
+
+If you are upgrading your Rails application from an older version of Rails:
+
+Please check your Rails app for 'config.i18n.fallbacks = true'.
+If you're using I18n (>= 1.1.0) and Rails (< 5.2.2), this should be
+'config.i18n.fallbacks = [I18n.default_locale]'.
+If not, fallbacks will be broken in your app by I18n 1.1.x.
+
+If you are starting a NEW Rails application, you can ignore this notice.
+
+For more info see:
+https://github.com/svenfuchs/i18n/releases/tag/v1.1.0
+
+Post-install message from acts-as-taggable-on:
+When upgrading
+
+Re-run the migrations generator
+
+    rake acts_as_taggable_on_engine:install:migrations
+
+This will create any new migrations and skip existing ones
+Version 3.5.0 has a migration for mysql adapter
+Post-install message from handlebars_assets:
+Remember to rake assets:clean or rake assets:purge on update! this is required because of handlebars updates
+Post-install message from alchemy_cms:
+-------------------------------------------------------------
+            Thank you for installing Alchemy CMS
+-------------------------------------------------------------
+
+- Complete the installation in an existing Rails application:
+
+  $ bin/rake alchemy:install
+
+- Complete the upgrade of an existing Alchemy installation:
+
+  $ bin/rake alchemy:upgrade
+
+and follow the onscreen instructions.
+
+Need help? Try:
+
+* https://stackoverflow.com/questions/tagged/alchemy-cms
+* https://slackin.alchemy-cms.com
+-------------------------------------------------------------
+
+Post-install message from paperclip:
+##################################################
+#  NOTE FOR UPGRADING FROM 4.3.0 OR EARLIER      #
+##################################################
+
+Paperclip is now compatible with aws-sdk-s3.
+
+If you are using S3 storage, aws-sdk-s3 requires you to make a few small
+changes:
+
+* You must set the `s3_region`
+* If you are explicitly setting permissions anywhere, such as in an initializer,
+  note that the format of the permissions changed from using an underscore to
+  using a hyphen. For example, `:public_read` needs to be changed to
+  `public-read`.
+
+For a walkthrough of upgrading from 4 to *5* (not 6) and aws-sdk >= 2.0 you can watch
+http://rubythursday.com/episodes/ruby-snack-27-upgrade-paperclip-and-aws-sdk-in-prep-for-rails-5
+Post-install message from ruby-graphviz:
+
+You need to install GraphViz (http://graphviz.org/) to use this Gem.
+
+For more information about Ruby-Graphviz :
+* Doc : http://rdoc.info/projects/glejeune/Ruby-Graphviz
+* Sources : https://github.com/glejeune/Ruby-Graphviz
+* Mailing List : https://groups.google.com/forum/#!forum/ruby-graphviz
+
+Last (important) changes :
+Ruby-Graphviz no longer supports Ruby < 1.9.3
+  Post-install message from solidus_auth_devise:
+NOTE: Rails 6 has removed secret_token in favor of secret_key_base, which was deprecated in
+ Rails 5.2. solidus_auth_devise will keep using secret_token, when present, as the pepper. If
+ secret_token is undefined or not available, secret_key_base will be used instead.
+
+-- To remove existing nodejs
+
+> sudo apt-get purge --auto-remove nodejs
+> sudo rm -fR /usr/local/bin/npm
+> sudo rm -fR /usr/local/bin/node
+> sudo rm -fR /usr/local/share/man/man1/node
+> sudo rm -fR /usr/local/lib/dtrace/node.d
+> sudo rm -fR ~/.npm ~/.node-gyp
+> sudo rm -fR /opt/local/bin/node
+> sudo rm -fR opt/local/include/node
+> sudo rm -fR /opt/local/lib/node_modules
+
+-- install node.js
+
+> curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+> curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+> sudo apt-get install -y nodejs
+> sudo apt-get install npm
+> sudo ln -s "$(which nodejs)" /usr/local/bin/node
+
+... issues
+
+sudo apt-get update
+sudo apt-get clean
+sudo apt-get autoremove
+If error still persists then do this
+
+sudo apt --fix-broken install
+sudo apt-get update && sudo apt-get upgrade
+sudo dpkg --configure -a
+sudo apt-get install -f
+
+-- install yarn
+
+> curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+> echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+> sudo apt update
+> sudo apt install yarn
+
+> yarn install --check-files
+
+-- create database &  migrations .. seeds
+
+> bundle exec rails db:migrate
+> bundle exec rake db:seed ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=spree123
+
+
+> bundle exec rails db:migrate RAILS_ENV=production
+> bundle exec rails db:seed RAILS_ENV=production
+> bundle exec rake db:seed ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=spree123
+
+-- prepare assets
+
+> bundle exec rails assets:clean RAILS_ENV=production
+> bundle exec rails assets:precompile RAILS_ENV=production
+
+-- add the following to environments/production.rb
+
+  # This is when you want rails to handle assets
+  config.public_file_server.enabled = true
+
+  # This is when you want nginx to handle assets
+  # config.action_controller.default_protect_from_forgery = false    
+  config.action_controller.forgery_protection_origin_check = false
+  # ! config.action_controller.default_protect_from_forgery = false
+
+  config.hosts << "jobas6a.com"
+
+-- nginx default config
+
+        listen 80 default_server;
+        listen [::]:80 default_server ipv6only=on;
+		client_max_body_size 1024M;
+
+        # root /usr/share/nginx/html;
+        # index index.html index.htm;
+
+        # Make site accessible from http://localhost/
+        server_name jobas6a.com;
+
+        location / {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                # try_files $uri $uri/ =404;
+                proxy_pass http://127.0.0.1:3001;
+                # Uncomment to enable naxsi on this location
+                # include /etc/nginx/naxsi.rules
+        }
+
+Email [admin@example.com]: 
+Password [test123]: 
+
+
+To regenerate secret file
+
+> rails server -p 80
+
+`initialize': Permission denied - bind(2) for "127.0.0.1" port 80 (Errno::EACCES)
+
+> rails server -p 3001 -e production
+
+`validate_secret_key_base': Missing `secret_key_base` for 'production' environment, set this string with `rails credentials:edit` (ArgumentError)
+
+> EDITOR="mate --wait" bin/rails credentials:edit
+> bundle exec rails credentials:edit RAILS_ENV=production
+
+`final': OpenSSL::Cipher::CipherError
+`rescue in _decrypt': ActiveSupport::MessageEncryptor::InvalidMessage (ActiveSupport::MessageEncryptor::InvalidMessage)
+
+> RAILS_ENV=production rake secret
+9546053867a8a01bcbda6d2c36fe56e1b7fb042eaa90923e655e23be937262c4b7694952a494f79c5e31e760d71e93dd5fda39ff7923933abae75733fa0f6f5e
+
+--> config/environments/production.rb
+config.secret_key_base = "9546053867a8a01bcbda6d2c36fe56e1b7fb042eaa90923e655e23be937262c4b7694952a494f79c5e31e760d71e93dd5fda39ff7923933abae75733fa0f6f5e"
+
+> EDITOR=vim rails credentials:edit
+
+
+- Adding missing roles 
+---------------------------------------------------------------------------------------
+> rails console -e production
+
+	- Spree::Role.create(name: 'blogger')
+
+
+-- Install Please install ImageMagick
+
+	> sudo apt install ImageMagick
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sending E-mails
+===============
+- Check this 
+	http://localhost:3000/rails/mailers/	
+	http://localhost:3000/rails/mailers/spree/mailer_previews/order/confirm
+
+	To change any of the templates
+	
+	- https://github.com/solidusio/solidus/blob/master/core/app/views/spree/order_mailer/confirm_email.html.erb
+
+
+	Copy files form core/app/views/spree/*_mailers + whatever you need to your local project 
+	directory respecting the relative paths.
+
+	
+
+Review emails
+-------------
+- https://dev.mikamai.com/2017/03/30/setting-an-environment-for-previewing-email-in-rails/
+
+/rails/mailers/spree/mailer_preview/order/confirm.html?locale=en
+
+
+
+
+
+
+
+
+
+

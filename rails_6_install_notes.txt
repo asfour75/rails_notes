@@ -1,0 +1,300 @@
+Ruby Installation:
+===============================================================================
+
+Pre-installed
+--------------
+> apt install curl git build-essential htop vim
+> apt install imagemagick
+> sudo apt-get install autoconf bison build-essential libssl-dev libyaml-dev libreadline-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev libsqlite3-dev
+
+- RVM
+
+1.3 Ruby Versions
+
+Rails generally stays close to the latest released Ruby version when it's released:
+
+	Rails 7 requires Ruby 
+    Rails 6 requires Ruby 2.5.0 or newer.
+    Rails 5 requires Ruby 2.2.2 or newer.
+    Rails 4 prefers Ruby 2.0 and requires 1.9.3 or newer.
+    Rails 3.2.x is the last branch to support Ruby 1.8.7.
+    Rails 3 and above require Ruby 1.8.7 or higher. Support for all of the previous Ruby versions has been dropped officially. You should upgrade as early as possible.
+
+RVM
+----
+- https://rvm.io/
+
+	> gpg2 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+	> \curl -sSL https://get.rvm.io | bash -s stable
+	> \curl -sSL https://get.rvm.io | bash -s stable --rails
+
+	> gpg --keyserver hkp://pool.sks-keyservers.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+	> \curl -sSL https://get.rvm.io | bash -s stable --ruby
+	> \curl -sSL https://get.rvm.io | bash -s stable --rails
+
+Ubuntu --- security issues ?
+----------------------------
+
+	> rvmsudo rvm get stable --auto-dotfiles
+	> rvm fix-permissions system
+	> rvm group add rvm $USER
+
+To upgrade to 6 !
+-----------------
+
+	> rails app:update
+
+	Now 6 ?
+	5 --> 6 .. using webpacker
+	> bin/rails webpacker:install
+
+Install new ruby / rails
+------------------------
+
+	> rvm install ruby-3.0.0
+	> rvm use ruby-3.0.0@[project] --create
+
+	> gem install rails
+	> rails new [project]
+	> cd [project]
+	> echo "rvm use ruby-3.0.0@[project]" > .rvmrc
+
+	> bundle
+	> rails server -p 3003 -b 0.0.0.0
+
+Rails new
+----------
+
+	> rails new app -d=sqlite3 -T --skip-coffee --webpack # --api --webpack=react 
+	> rails server -p 3003 -b 0.0.0.0
+
+	> rails new -h
+
+Usage:
+  rails new APP_PATH [options]
+
+Options:
+      [--skip-namespace], [--no-skip-namespace]              # Skip namespace (affects only isolated engines)
+      [--skip-collision-check], [--no-skip-collision-check]  # Skip collision check
+  -r, [--ruby=PATH]                                          # Path to the Ruby binary of your choice
+                                                             # Default: /home/isalem/.rvm/rubies/ruby-3.0.0/bin/ruby
+  -m, [--template=TEMPLATE]                                  # Path to some application template (can be a filesystem path or URL)
+  -d, [--database=DATABASE]                                  # Preconfigure for selected database (options: mysql/postgresql/sqlite3/oracle/sqlserver/jdbcmysql/jdbcsqlite3/jdbcpostgresql/jdbc)
+                                                             # Default: sqlite3
+  -G, [--skip-git], [--no-skip-git]                          # Skip .gitignore file
+      [--skip-keeps], [--no-skip-keeps]                      # Skip source control .keep files
+  -M, [--skip-action-mailer], [--no-skip-action-mailer]      # Skip Action Mailer files
+      [--skip-action-mailbox], [--no-skip-action-mailbox]    # Skip Action Mailbox gem
+      [--skip-action-text], [--no-skip-action-text]          # Skip Action Text gem				->>>>>>> https://trix-editor.org/	https://github.com/basecamp/trix
+  -O, [--skip-active-record], [--no-skip-active-record]      # Skip Active Record files
+      [--skip-active-job], [--no-skip-active-job]            # Skip Active Job
+      [--skip-active-storage], [--no-skip-active-storage]    # Skip Active Storage files
+  -C, [--skip-action-cable], [--no-skip-action-cable]        # Skip Action Cable files
+  -A, [--skip-asset-pipeline], [--no-skip-asset-pipeline]    # Indicates when to generate skip asset pipeline
+  -a, [--asset-pipeline=ASSET_PIPELINE]                      # Choose your asset pipeline [options: sprockets (default), propshaft]
+                                                             # Default: sprockets
+  -J, [--skip-javascript], [--no-skip-javascript]            # Skip JavaScript files
+      [--skip-hotwire], [--no-skip-hotwire]                  # Skip Hotwire integration
+      [--skip-jbuilder], [--no-skip-jbuilder]                # Skip jbuilder gem
+  -T, [--skip-test], [--no-skip-test]                        # Skip test files
+      [--skip-system-test], [--no-skip-system-test]          # Skip system test files
+      [--skip-bootsnap], [--no-skip-bootsnap]                # Skip bootsnap gem
+      [--dev], [--no-dev]                                    # Set up the application with Gemfile pointing to your Rails checkout
+      [--edge], [--no-edge]                                  # Set up the application with Gemfile pointing to Rails repository
+  --master, [--main], [--no-main]                            # Set up the application with Gemfile pointing to Rails repository main branch
+      [--rc=RC]                                              # Path to file containing extra configuration options for rails command
+      [--no-rc], [--no-no-rc]                                # Skip loading of extra configuration options from .railsrc file
+      [--api], [--no-api]                                    # Preconfigure smaller stack for API only apps
+      [--minimal], [--no-minimal]                            # Preconfigure a minimal rails app
+  -j, [--javascript=JAVASCRIPT]                              # Choose JavaScript approach [options: importmap (default), webpack, esbuild, rollup]
+                                                             # Default: importmap
+  -c, [--css=CSS]                                            # Choose CSS processor [options: tailwind, bootstrap, bulma, postcss, sass... check https://github.com/rails/cssbundling-rails]
+  -B, [--skip-bundle], [--no-skip-bundle]                    # Don't run bundle install
+
+Runtime options:
+  -f, [--force]                    # Overwrite files that already exist
+  -p, [--pretend], [--no-pretend]  # Run but do not make any changes
+  -q, [--quiet], [--no-quiet]      # Suppress status output
+  -s, [--skip], [--no-skip]        # Skip files that already exist
+
+Rails options:
+  -h, [--help], [--no-help]        # Show this help message and quit
+  -v, [--version], [--no-version]  # Show Rails version number and quit
+
+Description:
+    The 'rails new' command creates a new Rails application with a default
+    directory structure and configuration at the path you specify.
+
+    You can specify extra command-line arguments to be used every time
+    'rails new' runs in the .railsrc configuration file in your home directory,
+    or in $XDG_CONFIG_HOME/rails/railsrc if XDG_CONFIG_HOME is set.
+
+    Note that the arguments specified in the .railsrc file don't affect the
+    defaults values shown above in this help message.
+
+Example:
+    rails new ~/Code/Ruby/weblog
+
+    This generates a skeletal Rails installation in ~/Code/Ruby/weblog.
+
+Quick rails new
+----------------
+
+> rails new --help
+
+-T skip test
+-J skip javascript
+-S skip sprockets
+-C skip action cable
+-P skip puma
+-O skip models
+-M skip action mailer
+
+-d mysql/postgresql/sqlite3/oracle/frontbase/ibm_db/sqlserver/jdbcmysql/jdbcsqlite3/jdbcpostgresql/jdbc
+default sqlite3
+
+- Quick rails 6 API / React 
+
+	> rails new my_api_app --api -T
+	> rails g model / resource / scaffold
+
+	> rails new myapp --webpack	# with webpack -> adds the gem webpacker --> adds node_modules
+	> bundle
+	> bundle exec rails webpacker:install
+	Or
+	> bundle exec rake webpacker:install
+	> yarn upgrade
+
+- Now, build new app with react 
+
+	> rails new rails_react_recipe -d=postgresql -T --webpack=react --skip-coffee
+
+- install front end dependencies 
+
+	> yarn add react-router-dom bootstrap jquery popper.js
+
+  "dependencies": {
+    "@babel/preset-react": "^7.0.0",
+    "@rails/webpacker": "^4.0.7",
+    "babel-plugin-transform-react-remove-prop-types": "^0.4.24",
+    "bootstrap": "^4.3.1",	<-- added by yarn
+    "jquery": "^3.4.1",		<-- added by yarn
+    "popper.js": "^1.15.0",	<-- added by yarn
+    "prop-types": "^15.7.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-router-dom": "^5.0.1"	<-- added by yarn
+
+- add the following to layout file:
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <%= javascript_pack_tag 'Index' %>
+
+... https://www.digitalocean.com/community/tutorials/how-to-set-up-a-ruby-on-rails-project-with-a-react-frontend
+
+- spring
+
+	> spring status / start / stop
+	> bundle exec spring binstub --all
+	>  DISABLE_SPRING=true bundle exec rails server -p 3002
+	
+- new API app only 
+
+	> rails new my_api_app --api -T
+
+
+* https://www.bootrails.com/blog/rails-new-options/
+
+	> rails new myapp --minimal
+	# There's now a new way (since Rails 6.1) to create a minimalist Rails app. It build a new app in a few seconds, with only 7 gems (at the time of writing).
+	
+Awesomeness && Bootstrapers
+---------------------------
+- https://github.com/markets/awesome-ruby#file-system-listener
+
+
+Running rails
+-------------
+> rails s --binding=127.0.0.1
+> rails s -p 3001
+> rails s -e production ... # this wil require to build assets ?????
+
+rake secret -> config/initializers/secret_token.rb
+
+
+FFI Issues on mac !!!!
+----------------------
+
+dyld: lazy symbol binding failed: Symbol not found: _ffi_prep_closure_loc
+  Referenced from: /Users/isalem/.rvm/gems/ruby-2.7.0@rapidfire/gems/ffi-1.13.1/lib/ffi_c.bundle
+  Expected in: flat namespace
+
+dyld: Symbol not found: _ffi_prep_closure_loc
+  Referenced from: /Users/isalem/.rvm/gems/ruby-2.7.0@rapidfire/gems/ffi-1.13.1/lib/ffi_c.bundle
+  Expected in: flat namespace
+
+brew install libffi .. 
+
+libffi is keg-only, which means it was not symlinked into /usr/local,
+because macOS already provides this software and installing another version in
+parallel can cause all kinds of trouble.
+
+For compilers to find libffi you may need to set:
+  export LDFLAGS="-L/usr/local/opt/libffi/lib"
+  export CPPFLAGS="-I/usr/local/opt/libffi/include"
+
+For pkg-config to find libffi you may need to set:
+  export PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig"
+
+
+gem 'ffi', '~> 1.12.2'
+
+The bundle currently has ffi locked at 1.13.1.
+Try running `bundle update ffi`
+
+If you are updating multiple gems in your Gemfile at once,
+try passing them all to `bundle update`
+
+.. rm Gemfile.lock
+.. bundle install
+
+
+* The bundler 
+=============
+When installing the system first time .. 
+
+	> bundler install
+
+Ops
+
+	> gem install bundler --default -v "2.1.2" 
+
+* to upgrade to bundler 2
+
+	https://bundler.io/guides/bundler_2_upgrade.html
+
+	> bundle exec rails db:migrate RAILS_ENV=production
+
+
+Rails new 7 (esbuild)
+---------------------
+
+	> ruby 3 / rails 7
+	> rails new rails7b -js esbuild --css bootstrap	
+	# https://www.driftingruby.com/episodes/esbuild-for-rails
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	

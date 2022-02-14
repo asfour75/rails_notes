@@ -1,0 +1,1406 @@
+Rails Models, Migrations, and Associations
+==========================================================================================
+
+* More: https://edgeguides.rubyonrails.org/active_record_migrations.html
+* https://api.rubyonrails.org/classes/ActiveRecord/Migration.html
+* http://guides.rubyonrails.org/migrations.html
+* https://github.com/testdouble/good-migrations
+* https://medium.com/forest-admin/rails-migrations-tricks-guide-code-cheatsheet-included-dca935354f22
+
+
+Databases:
+============
+
+mysql 
+
+sudo apt-get install libmysqlclient-dev
+
+postgres
+
+sudo apt-get install postgres-client
+
+
+
+
+Models:
+=============
+
+Description:
+    Generates a new model. Pass the model name, either CamelCased or
+    under_scored, and an optional list of attribute pairs as arguments.
+
+    Attribute pairs are field:type arguments specifying the
+    model's attributes. Timestamps are added by default, so you don't have to
+    specify them by hand as 'created_at:datetime updated_at:datetime'.
+
+    As a special case, specifying 'password:digest' will generate a
+    password_digest field of string type, and configure your generated model and
+    tests for use with Active Model has_secure_password (assuming the default ORM
+    and test framework are being used).
+
+    You don't have to think up every attribute up front, but it helps to
+    sketch out a few so you can start working with the model immediately.
+
+    This generator invokes your configured ORM and test framework, which
+    defaults to Active Record and TestUnit.
+
+    Finally, if --parent option is given, it's used as superclass of the
+    created model. This allows you create Single Table Inheritance models.
+
+    If you pass a namespaced model name (e.g. admin/account or Admin::Account)
+    then the generator will create a module with a table_name_prefix method
+    to prefix the model's table name with the module name (e.g. admin_accounts)
+
+Available field types:
+
+    Just after the field name you can specify a type like text or boolean.
+    It will generate the column with the associated SQL type. For instance:
+
+        `bin/rails generate model post title:string body:text`
+
+    will generate a title column with a varchar type and a body column with a text
+    type. If no type is specified the string type will be used by default.
+    You can use the following types:
+
+        integer
+        primary_key
+        decimal
+        float
+        boolean
+        binary
+        string
+        text
+        date
+        time
+        datetime
+
+    You can also consider `references` as a kind of type. For instance, if you run:
+
+        `bin/rails generate model photo title:string album:references`
+
+    It will generate an `album_id` column. You should generate these kinds of fields when
+    you will use a `belongs_to` association, for instance. `references` also supports
+    polymorphism, you can enable polymorphism like this:
+
+        `bin/rails generate model product supplier:references{polymorphic}`
+
+    For integer, string, text and binary fields, an integer in curly braces will
+    be set as the limit:
+
+        `bin/rails generate model user pseudo:string{30}`
+
+    For decimal, two integers separated by a comma in curly braces will be used
+    for precision and scale:
+
+        `bin/rails generate model product 'price:decimal{10,2}'`
+
+    You can add a `:uniq` or `:index` suffix for unique or standard indexes
+    respectively:
+
+        `bin/rails generate model user pseudo:string:uniq`
+        `bin/rails generate model user pseudo:string:index`
+
+    You can combine any single curly brace option with the index options:
+
+        `bin/rails generate model user username:string{30}:uniq`
+        `bin/rails generate model product supplier:references{polymorphic}:index`
+
+    If you require a `password_digest` string column for use with
+    has_secure_password, you can specify `password:digest`:
+
+        `bin/rails generate model user password:digest`
+
+    If you require a `token` string column for use with
+    has_secure_token, you can specify `auth_token:token`:
+
+        `bin/rails generate model user auth_token:token`
+
+Examples:
+---------------
+    `bin/rails generate model account`
+
+        For Active Record and TestUnit it creates:
+
+            Model:      app/models/account.rb
+            Test:       test/models/account_test.rb
+            Fixtures:   test/fixtures/accounts.yml
+            Migration:  db/migrate/XXX_create_accounts.rb
+
+    `bin/rails generate model post title:string body:text published:boolean`
+
+        Creates a Post model with a string title, text body, and published flag.
+
+    `bin/rails generate model admin/account`
+
+        For Active Record and TestUnit it creates:
+
+            Module:     app/models/admin.rb
+            Model:      app/models/admin/account.rb
+            Test:       test/models/admin/account_test.rb
+            Fixtures:   test/fixtures/admin/accounts.yml
+            Migration:  db/migrate/XXX_create_admin_accounts.rb
+
+Database Preparations & Migrations
+===================================
+
+rake db:migrate
+rake db:rollback --> one step
+rake db:rollback STEP=n
+
+rails generate model Product name:string description:text
+
+$ rails g model wheel car:references
+$ rails g model Item name:string description:text product:references
+
+Types:
+
+	integer
+	primary_key
+	decimal
+	float
+	boolean
+	binary
+	string
+	text
+	date
+	time
+	datetime
+
+
+rails g model Contract user:references name:string social_number:string mobile:string email:string address:text
+
+rails generate model Product name:string description:text
+rails generate migration AddPartNumberToProducts
+
+rails g controller home
+
+
+---------------------------------------------------------------------------
+
+
+
+Migrations methods:
+
+    add_column
+    add_index
+    change_column
+    change_table
+    create_table
+    drop_table
+    remove_column
+    remove_index
+    rename_column
+
+Basic format YYYYMMDDHHMMSS_create_products.rb
+Supported types
+
+    :binary
+    :boolean
+    :date
+    :datetime
+    :decimal
+    :float
+    :integer
+    :primary_key
+    :string
+    :text
+    :time
+    :timestamp especial type:
+    :references
+
+create_table
+Commands to create migrations
+
+$ rails generate model Product name:string description:text
+$ rails generate migration AddPartNumberToProducts part_number:string
+$ rails generate migration RemovePartNumberFromProducts part_number:string
+$ rails generate migration AddDetailsToProducts part_number:string price:decimal
+
+change_table
+
+    add_column
+    add_index
+    add_timestamps
+    create_table
+    remove_timestamps
+    rename_column
+    rename_index
+    rename_table
+
+Running Migrations
+
+$ rake db:migrate VERSION=20080906120000
+$ rake db:rollback
+$ rake db:rollback STEP=3
+$ rake db:migrate:redo STEP=3
+$ rake db:reset  #drop database and recreate it
+$ rake db:migrate:up VERSION=20080906120000
+
+Migrations commands
+
+rake db:migrate         # Migrate the database (options: VERSION=x, VERBOSE=false).
+rake db:migrate:status  # Display status of migrations
+rake db:rollback        # Rolls the schema back to the previous version (specify steps w/ STEP=n).
+rake db:test:prepare    # Rebuild it from scratch according to the specs defined in the development database
+
+more Database commands (rake -T db)
+
+rake db:create          # Create the database from config/database.yml for the current Rails.env (use db:create:all to create all dbs in t...
+rake db:drop            # Drops the database for the current Rails.env (use db:drop:all to drop all databases)
+rake db:fixtures:load   # Load fixtures into the current environment's database.
+rake db:schema:dump     # Create a db/schema.rb file that can be portably used against any DB supported by AR
+rake db:schema:load     # Load a schema.rb file into the database
+rake db:seed            # Load the seed data from db/seeds.rb			<------------------
+rake db:setup           # Create the database, load the schema, and initialize with the seed data (use db:reset to also drop the db first)
+rake db:structure:dump  # Dump the database structure to db/structure.sql. Specify another file with DB_STRUCTURE=db/my_structure.sql
+rake db:version         # Retrieves the current schema version number
+
+Reset database
+
+
+bundle exec rake db:drop RAILS_ENV=test
+bundle exec rake db:create RAILS_ENV=test
+bundle exec rake db:schema:load RAILS_ENV=test
+
+Or
+
+bundle exec rake db:reset RAILS_ENV=test
+
+
+
+drop_table :categories
+drop_table :CATEGORY_HIERARCHIES
+drop_table :photos
+rename_table  :tags :categories
+    
+
+* Rails Cheat Sheet: Create Models, Tables and Migrations
+
+	Create a new table in Rails
+
+	bin/rails g model Supplier name:string
+	bin/rails g model Product name:string:index sku:string{10}:uniq count:integer description:text supplier:references popularity:float 'price:decimal{10,2}' available:boolean availableSince:datetime image:binary
+
+	Resulting migrations:
+
+		class CreateSuppliers < ActiveRecord::Migration
+		  def change
+			create_table :suppliers do |t|
+			  t.string :name
+
+			  t.timestamps null: false
+			end
+		  end
+		end
+
+		class CreateProducts < ActiveRecord::Migration
+		  def change
+			create_table :products do |t|
+			  t.string :name
+			  t.string :sku, limit: 10
+			  t.integer :count
+			  t.text :description
+			  t.references :supplier, index: true, foreign_key: true
+			  t.float :popularity
+			  t.decimal :price, precision: 10, scale: 2
+			  t.boolean :available
+			  t.datetime :availableSince
+			  t.binary :image
+
+			  t.timestamps null: false
+			end
+			add_index :products, :name
+			add_index :products, :sku, unique: true
+		  end
+		end
+
+	Rails migration to add a column
+
+		bin/rails g migration AddKeywordsSizeToProduct keywords:string size:string
+
+	Resulting migration:
+
+		class AddKeywordsSizeToProduct < ActiveRecord::Migration
+		  def change
+			add_column :products, :keywords, :string
+			add_column :products, :size, :string
+		  end
+		end
+
+	Rails migration to remove a column
+
+		bin/rails g migration RemoveKeywordsFromProduct keywords
+
+	Resulting migration:
+
+		class RemoveKeywordsFromProduct < ActiveRecord::Migration
+		  def change
+			remove_column :products, :keywords, :string
+		  end
+		end
+
+	Rails migration to rename a column
+
+		bin/rails g migration RenameProductPopularityToRanking
+
+	You need to add the rename_column command manually to the resulting migration:
+
+		class RenameProductPopularityToRanking < ActiveRecord::Migration
+		  def change
+			rename_column :products, :popularity, :ranking
+		  end
+		end
+
+	Rails migration to change a column type
+
+		bin/rails g migration ChangeProductPopularity
+
+	You need to add the change_column command manually to the resulting migration:
+
+		class ChangeProductPopularity < ActiveRecord::Migration
+		  def change
+			  change_column :products, :ranking, :decimal, precision: 10, scale: 2
+		  end
+		end
+
+	Running migrations
+
+		bin/rake db:migrate
+
+	In production:
+
+		bin/rake db:migrate RAILS_ENV="production" 
+
+- Using a model with view (not table)
+
+	class Customer < ActiveRecord::Base
+	  set_table_name 'existing_customers'
+	end
+
+- Specifying Primary Key
+
+	class Customer < ActiveRecord::Base
+	  set_table_name 'existing_customers'
+	  set_primary_key 'customer_id'
+	end
+
+- Foreign Keys
+
+	class Customer < ActiveRecord::Base
+	  set_table_name 'existing_customers'
+	  set_primary_key 'customer_id'
+	  has_many :orders, foreign_key: 'existing_customer_id'
+	end
+
+	class Order < ActiveRecord::Base
+	  belongs_to :customer, foreign_key: 'existing_customer_id'
+	end
+
+- Option 3: Rebuilding !!! http://tutorials.jumpstartlab.com/topics/models/legacy_databases.html
+
+Associations
+=============
+
+* https://guides.rubyonrails.org/association_basics.html
+
+belongs_to :manager, class_name: "Employee", optional: true
+has_and_belongs_to_many :parts
+belongs_to :writer, class_name: 'Author', foreign_key: 'author_id'
+belongs_to :author, touch: :books_updated_at, counter_cache: true
+
+The belongs_to association supports these options:
+--------------------------------------------------
+	:autosave
+	:class_name
+	:counter_cache
+	:dependent
+	:foreign_key
+	:primary_key
+	:inverse_of
+	:polymorphic
+	:touch
+	:validate
+	:optional
+
+Description:
+    Generates a new database migration. Pass the migration name, either
+    CamelCased or under_scored, and an optional list of attribute pairs as arguments.
+
+    A migration class is generated in db/migrate prefixed by a timestamp of the current date and time.
+
+    You can name your migration in either of these formats to generate add/remove
+    column lines from supplied attributes: AddColumnsToTable or RemoveColumnsFromTable
+
+Example:
+    `bin/rails generate migration AddSslFlag`
+
+    If the current date is May 14, 2008 and the current time 09:09:12, this creates the AddSslFlag migration
+    db/migrate/20080514090912_add_ssl_flag.rb
+
+    `bin/rails generate migration AddTitleBodyToPost title:string body:text published:boolean`
+
+    This will create the AddTitleBodyToPost in db/migrate/20080514090912_add_title_body_to_post.rb with this in the Change migration:
+
+      add_column :posts, :title, :string
+      add_column :posts, :body, :text
+      add_column :posts, :published, :boolean
+
+Migration names containing JoinTable will generate join tables for use with
+has_and_belongs_to_many associations.
+
+Example:
+    `bin/rails g migration CreateMediaJoinTable artists musics:uniq`
+
+    will create the migration
+
+    create_join_table :artists, :musics do |t|
+      # t.index [:artist_id, :music_id]
+      t.index [:music_id, :artist_id], unique: true
+    end
+
+
+- Automatic Building
+-------------------------
+
+	# In this kind of scenario, we want every customer to have an associated Detail object.
+	class Customer < ActiveRecord::Base
+	  has_one :detail
+	  after_initialize do
+		self.build_detail if detail.nil?
+	  end
+	end
+
+- Automatic Destruction
+-------------------------
+
+	has_one :detail, dependent: :destroy
+	
+- Hiding the Child Object
+-------------------------
+	Reaching through an object, talking to the object’s child, and calling methods is a violation of the "Law of Demeter" (http://avdi.org/devblog/2011/07/05/demeter-its-not-just-a-good-idea-its-the-law/). Instead, the parent object should present an interface to the child object. From the outside, we shouldn’t know the Detail object exists at all!
+	
+	To do that we use Rails’ delegate method:
+
+		class Customer < ActiveRecord::Base
+		  has_one :detail, dependent: :destroy
+
+		  delegate :birthday, :gender, :city, to: :detail	<-----------
+
+		  after_initialize do
+			self.build_detail if detail.nil?
+		  end
+		end
+
+	Then when we call Customer.find(17).city it will proxy the call to the associated Detail object, fetch it from the database if it hasn’t already been loaded, and return us the value returned from the Detail object’s method. All of this is transparent from the outside.
+	
+- Simplifying the Proxy
+-------------------------
+	One small catch here is that delegate only handles the listed methods, so if you want to have full read/write access to the child’s attributes you’d need:
+
+	delegate :birthday, :birthday=, :gender, :gender=, :city, :city=, to: :detail
+
+	Better Example:
+	---------------
+	class Detail < ActiveRecord::Base
+	  belongs_to :customer
+
+	  ATTR_METHODS = [:birthday, :birthday=, :gender, :gender=, :city, :city=]
+	end
+
+	class Customer < ActiveRecord::Base
+	  has_one :detail, dependent: :destroy
+
+	  delegate *Detail::ATTR_METHODS, to: :detail
+
+	  after_initialize do
+		self.build_detail if detail.nil?
+	  end
+	end
+
+- One-To-Many Building Child Objects
+--------------------------------------------------
+	When you create a Customer it won’t have any child Order objects. Here are three ways to create one, assuming we have a customer object:
+
+    - Order.new(customer_id: customer.id) – least preferred. It has no future flexibility if we change details like the foreign key name
+    - Order.new(customer: customer) – better. It created the object through the ActiveRecord relationship, so we can handle the details in that relationship.
+    - customer.orders.new – best. The order is built directly off the relationship, hiding all the details. 
+      We can add things like a validation on customer that they don’t have more than X open orders or whatever else applies to our domain. Note that customer.orders.build is equivalent to calling .new.
+
+- Destroying Children
+-------------------------
+	Just like the has_one relationship, we frequently want the child objects to be destroyed when the parent is destroyed. We add the same dependent option to the has_many call:
+
+	class Customer < ActiveRecord::Base
+	  has_many :orders, dependent: :destroy
+	end
+
+- Many-to-Many
+-------------------------
+	Forget about   has_and_belongs_to_many :customers
+	
+	# The new rail way 
+	
+	The solution is to add a second relationship to each of the primary models:
+
+	class Magazine < ActiveRecord::Base
+	  has_many :subscriptions
+	  has_many :customers, through: :subscriptions
+	end
+
+	class Customer < ActiveRecord::Base
+	  has_many :subscriptions
+	  has_many :magazines, through: :subscriptions
+	end
+
+
+
+
+- Polymorphism
+-------------------------
+    A Person
+    A Company
+    A PhoneNumber that can belong to a Person or a Company
+
+	# this is wrong, phonoenumber will generalized for both person and company !!!
+	class PhoneNumber < ActiveRecord::Base
+	  belongs_to :person
+	  belongs_to :company
+	end
+
+	# the model 
+	-------------------------------------------
+	|id| number       |contact_id|contact_type|
+	| 1| "2223334444" | 2        | "Person"   |
+	| 2| "5554443333" | 3        | "Person"   |
+	| 3| "6667774444" | 3        | "Company"  |
+	-------------------------------------------
+
+	# and the model
+	class Person < ActiveRecord::Base
+	  has_one :phone_number, as: :contact	--> this will look at contact_id and contact_type
+	end
+
+	class PhoneNumber < ActiveRecord::Base
+	  belongs_to :contact, polymorphic: true	--> this also
+	end
+	
+	@company.phone_number
+	@person.phone_number
+	@phone_number.contact	# Person or Company
+
+- Implementation using One-to-Many
+--------------------------------------------------
+
+	class Person < ActiveRecord::Base
+	  has_many :phone_numbers, as: :contact	--> has_many ?? yes
+	end
+
+
+
+Loading
+=============
+
+ eager_load: One query, with JOINs 
+ --------------------------------------------------
+ 
+	users = User.eager_load(:address)
+	cities = users.map do |user|
+	  user.addresses.city
+	end
+
+	users = User.eager_load(:address).where(address: { city: 'New Haven' })
+	streets = users.map do |user|
+	  user.address.street
+	end
+
+ preload: One query per table 
+ -----------------------------------------
+ 
+ includes: preload by default, eager_load if necessary
+ ---------------------------------------------------------------------------
+ 
+ joins (inner joins)
+ ------------------------
+	User.first.orders.joins(:items)
+
+	User Load (0.2ms)  SELECT  "users".* FROM "users" ORDER BY "users"."id" ASC LIMIT ?  [["LIMIT", 1]]
+	Order Load (0.4ms)  SELECT "orders".* FROM "orders" INNER JOIN "items" ON "items"."order_id" = "orders"."id" WHERE "orders"."user_id" = ?  [["user_id", 1]]
+
+
+
+Validations
+========================================================================
+# http://tutorials.jumpstartlab.com/topics/models/validations.html
+# https://api.rubyonrails.org/classes/ActiveModel/Validations/HelperMethods.html
+
+- One line
+
+	validates_presence_of :price	# old style, still valid
+	validates :price, presence: true
+
+	validates :price, presence: true, numericality: true # rails 3+
+	validates_presence_of :title, :price, :description
+	validates_numericality_of :price, only_integer: true
+
+	validates_numericality_of :price, greater_than: 0
+	validates_numericality_of :price, less_than: 1000
+	validates_numericality_of :price, greater_than: 0, less_than: 1000
+
+	validates_length_of :zipcode, is: 5
+	validates_length_of :title, minimum: "10"
+	validates_length_of :title, maximum: "1000"
+	validates_length_of :title, in: (10..1000)
+
+	validates_format_of :email, with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\Z/i
+	validates_format_of :comment, without: /(<script>|<\/script>)/
+	validates_inclusion_of :birth_year, in: (1880..2011)
+	
+- Custom Validations
+-------------------------
+
+	validate :not_spammy
+	def not_spammy
+	  if self.description.downcase.include?("enhancement")
+		errors.add(:base, "The description sounds spammy")
+	  end
+	end
+
+- Try it 
+
+	p = Product.new
+	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
+	p.valid?
+	=> false
+
+	p.errors
+	=> {title:["can't be blank"]}
+	p.errors.full_messages
+	=> ["Title can't be blank"]
+
+- Save vs. Save!
+-------------------------
+
+	p = Product.new
+	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
+	p.save
+	=> false
+	p.save!
+	ActiveRecord::RecordInvalid: Validation failed: Title can't be blank
+
+	# A call to save will return true if the save succeeds and false if it fails. In your application code, you should react to this return value to determine next steps. For example:
+	p = Product.new
+	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
+	p.save!
+	ActiveRecord::RecordInvalid: Validation failed: Title can't be blank
+
+	# When .save! succeeds it will also return true, but when it fails it will raise an exception. Well architected Ruby treats exceptions as extremely abnormal cases. For that reason, saving a model should only raise an exception when something very strange has happened, like the database has crashed. Users entering junky input is not unexpected, so we shouldn’t typically raise exceptions on a validation.
+	
+
+- Better helper method
+-------------------------
+
+	def error_messages_for(*objects)
+	  options = objects.extract_options!
+	  options[:header_message] ||= I18n.t(:"activerecord.errors.header", default: "Invalid Fields")
+	  options[:message] ||= I18n.t(:"activerecord.errors.message", default: "Correct the following errors and try again.")
+	  messages = objects.compact.map { |o| o.errors.full_messages }.flatten
+	  unless messages.empty?
+		content_tag(:div, class: "error_messages") do
+		  list_items = messages.map { |msg| content_tag(:li, msg) }
+		  content_tag(:h2, options[:header_message]) + content_tag(:p, options[:message]) + content_tag(:ul, list_items.join.html_safe)
+		end
+	  end
+	end
+
+- Custom Messages & Internationalization
+--------------------------------------------------
+
+	validates_presence_of :title for a Product
+	
+	en.yml:
+	en:
+	  activerecord:
+		errors:
+		  models:
+			product:
+			  attributes:
+				title:
+				  blank: "Please enter a title."
+
+- Database Validations
+-------------------------
+
+	# For truly bullet-proof data integrity you’ll need to implement validations at the database level, too.
+	# in your migration...
+	t.index(:title, unique: true)
+
+
+
+Transactions
+========================================================================
+
+	@account_a = Account.find_by_name("A")
+	@account_b = Account.find_by_name("B")
+	@account_a.balance -= transfer_amount
+	@account_b.balance += transfer_amount
+	
+	# Try to use fewer command inside transaction block
+	Account.transaction do
+	  raise "Transaction Failed" unless @account_a.save && @account_b.save
+	end
+
+- Callbacks
+-------------------------
+
+	There are two additional callbacks available when working with transactions.
+	after_commit
+
+	This callback fires when the transaction succeeds.
+	after_rollback
+
+	This callback fires when the transaction fails.
+
+- Full example
+-------------------------
+
+	class Account < ActiveRecord::Base
+	
+	  after_commit :transaction_success
+	  after_rollback :transaction_failed
+
+	  def transfer_funds_to(amount, target)
+		self.balance -= amount
+		target.balance += amount
+		Account.transaction do
+		  raise "Transaction Failed" unless self.save && target.save
+		end
+	  end
+
+	private
+	  def transaction_success
+		Logger.info "Transfer succeed for Account #{self.to_param}"
+	  end
+
+	  def transaction_failed
+		Logger.warn "Transfer failed for Account #{self.to_param}"
+	  end
+	end
+
+
+
+Queries (where, find_by, references, includes, joins, order, limit, pagination ... etc
+======================================================================================
+
+- Includes, references and joins
+--------------------------------------------------
+
+	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.title }
+	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
+
+	- Do joins prevent N+1 queries? NO
+	  This will run query for each comment fetched 
+	  
+	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.comments.size }
+	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
+	# SELECT COUNT(*) FROM "comments" WHERE "comments"."post_id" = $1
+	# ...
+
+	- Can joins be combined with includes, preload, and eager_load? Yes
+	- Can includes prevent N+1 queries? yes
+	
+	Post.includes(:comments).map { |post| post.comments.size }
+	# SELECT "comments".* FROM "comments" WHERE "comments"."post_id" IN (1, 3, 4, 5, 6)
+	
+	- Does includes always generate a separate query to fetch the records in the relationship? No
+	  includes will either use a separate query (like above) or a LEFT OUTER JOIN. 
+	  
+	  If you have a where or order clause that references a relationship, a LEFT OUTER JOIN is used versus a separate query.
+	
+	Post.includes(:comments).references(:comments).map { |post| post.comments.size }
+	
+	- What happens when I apply conditions to a relationship referenced via includes?
+	ActiveRecord will return all of the parent records and just the relationship records that match the condition.
+	
+	Post.includes(:comments).references(:comments).where(comments => {author: 'Derek'}).map { |post| post.comments.size }
+	
+	- Does includes prevent all N+1 queries? No
+	If you are accessing data in a nested relationship, that data isn't preloaded. 
+	For example, an additional query would be required to load the Comment#likes association for each comment:
+	
+	<% post.comments.each do |comment| %>
+	  <%= comment.likes.map { |like| like.user_avatar_url }
+	<% end %>
+
+	- Can I prevent N+1s in nested relationships? Yes. You can load nested relationships via includes:
+	
+	Post.includes(comments => :likes).references(:comments).map { |post| post.comments.size }
+	
+	- Should I always always load data from nested relationships?
+	No. It's very easy to end up initializing a significant number of records. 
+	For example, a popular Comment may have thousands of Like records, which would result in a slow query and significant memory allocations.
+	
+- preload
+-------------------------
+
+	- Should I ever use preload by itself?
+	Sometimes, but not by default. 
+	I use preload versus includes if I know using a LEFT OUTER JOIN to load a relationship is significantly slower. 
+	Otherwise, if I add where or order clauses at a later date, those clauses would trigger eager_load, which would trigger a join.
+	
+	- Is it common to combine joins with preload?	
+	If I need all relationship records - not just just those that match a relationship condition - I'll combine preload and joins. For example:
+	
+		- Find all Post records with a Comment authored by Derek
+		- Render those Post records and the total count of comments for each post
+
+	includes will only fetch Comment records authored by Derek, not all comments associated with each post.
+
+- eager_load
+-------------------------
+
+	- includes delegates to eager_load when a where or order clause references a relationship.
+	- Should I ever use eager_load by itself? Yes. 
+	If I've found includes to be slow using two queries, using eager_load will force a single query via a LEFT OUTER JOIN. 
+	Its presence in my code indicates I'm future-proofing against using two queries to fetch records.
+	
+	- Can I combine eager_load with joins? Yes. 
+	In the following example:
+
+		Post.joins(:comments).eager_load(:comments).map { |post| post.comments.size }
+
+	ActiveRecord will do the following:
+
+    - Return an Array of Post records with comments.
+    - Load the comments associated with each Post.
+
+	It's includes with an INNER JOIN vs. a LEFT OUTER JOIN.
+
+
+
+- How to use use index for mysql inside model
+--------------------------------------------------
+
+	class Issue
+	   def self.use_index(index)
+		 # update: OP fixed my mistake
+		 from("#{self.table_name} USE INDEX(#{index})")
+	   end
+	 end
+
+	 # then
+	 Issue.use_index("bla").where(some_condition: true)
+
+	- Add use_index to ActiveRecord::Relation.
+
+	config/initializers/active_record_relation.rb
+	
+		class ActiveRecord::Relation
+		  # Allow passing index hints to MySQL in case the query planner gets confused.
+		  #
+		  # Example:
+		  #   Message.first.events.use_index( :index_events_on_eventable_type_and_eventable_id )
+		  #   #=> Event Load (0.5ms)  SELECT `events`.* FROM `events` USE INDEX (index_events_on_eventable_type_and_eventable_id) WHERE `events`.`eventable_id` = 123 AND `events`.`eventable_type` = 'Message'
+		  #
+		  # MySQL documentation:
+		  #    https://dev.mysql.com/doc/refman/5.7/en/index-hints.html
+		  #
+		  # See https://github.com/rails/rails/pull/30514
+		  #
+		  def use_index( index_name )
+			self.from( "#{ self.quoted_table_name } USE INDEX ( #{ index_name } )" )
+		  end
+		end
+
+- Complex queries
+-------------------------
+# https://pganalyze.com/blog/active-record-subqueries-rails
+
+		- select count(*) from users where users.id not in (select user_id from orders);		
+		User.where(id: Order.select(:user_id).all).size
+
+		- 
+
+
+
+- Arel
+-------------------------
+
+	- Every Active Record model has arel_table on it, which allows you to build your AST for that model.
+
+	table = User.arel_table
+	
+	=> #<Arel::Table:0x0000557250a01690 @name="users", @columns=nil, @type_caster=#<ActiveRecord::TypeCaster::Map:0x0000557250a01de8 @types=User(id: integer, email: string, encrypted_password: string, reset_password_token: string, reset_password_sent_at: datetime, remember_created_at: datetime, sign_in_count: integer, current_sign_in_at: datetime, last_sign_in_at: datetime, current_sign_in_ip: string, last_sign_in_ip: string, created_at: datetime, updated_at: datetime, username: string, role: integer, avatar: string, name: string, address: text, mobile: string, note: text, gender: integer, region_id: integer, city_id: integer, country_id: integer, account_number: string, tokens: text, confirmation_token: string, confirmed_at: datetime, confirmation_sent_at: datetime, date_of_birth: datetime, last_name: string, news_letter: boolean, token: string)>, @table_alias=nil> 
+
+	Arel::Predications.instance_methods
+	[:in, :matches, :eq, :lt, :not_eq, :not_eq_any, :not_eq_all, :eq_any,
+	:eq_all, :in_any, :in_all, :not_in, :not_in_any, :not_in_all, :matches_any
+	:matches_all, :does_not_match, :does_not_match_any, :does_not_match_all,
+	:gteq, :gteq_any, :gteq_all, :gt, :gt_any, :gt_all, :lt_any, :lt_all, :lteq,
+	:lteq_any, :lteq_all, :eql_any]
+	# Rails 4.2 (Arel 6.0) adds the following
+	[:between, :not_between]
+	# Rails 5.0 (Arel 7.1) adds the following
+
+	- User.where(table[:id].eq(1)).to_sql
+	- User.where( User.arel_table[:created_at].lt( 5.days.ago ) ).to_sql	# SELECT "addresses".* FROM "addresses"  WHERE ("addresses"."created_at" < '2016-12-13 03:31:23.911914')
+	
+	
+	veg = Arel::Table.new(:vegetables)
+	
+	query = veg[:created_at].gteq( 5.days.ago ).and(
+	  veg[:color].eq("green").or(
+		veg[:gardener].eq("Susan")
+	  )
+	)
+	
+	query.to_sql
+	
+	#  "vegetables"."created_at" >= '2016-12-13 03:54:28.575342'
+	#    AND ("vegetables"."color" = 'green' OR "vegetables"."gardener" = 'Susan')
+	
+	Vegetable.where( query )
+
+	Arel::SelectManager.instance_methods - Object.methods
+	# => [:take, :join, :union, :source, :offset, :skip, :group, :lock, :from, :limit,
+	#     :on, :with, :order, :locked, :exists, :except, :orders, :froms, :distinct, :as,
+	#     :outer_join, :project, :having, :projections, :projections=, :limit=, :offset=,
+	# ...
+
+
+Callbacks
+======================================================================================
+--> https://guides.rubyonrails.org/active_record_callbacks.html
+
+- The on: :create option will just get silently ignored and do_something will get called 
+  after every save on the record, not just the initial create. Same goes for after_save.
+	
+	before_save :do_something, on: :create
+
+	This might cause some hard to trace bugs in your rails app. 
+	I just stumbled upon this today by accident, I asked around and a lot of my coworkers 
+	weren't aware either that this is how it works.
+
+	Instead users have to do:
+
+	before_create :do_something
+
+- All callbacks
+-------------------------
+
+	3.1 Creating an Object
+
+		before_validation
+		after_validation
+		before_save
+		around_save
+		before_create
+		around_create
+		after_create
+		after_save
+		after_commit / after_rollback
+
+	3.2 Updating an Object
+
+		before_validation
+		after_validation
+		before_save
+		around_save
+		before_update
+		around_update
+		after_update
+		after_save
+		after_commit / after_rollback
+
+	3.3 Destroying an Object
+
+		before_destroy
+		around_destroy
+		after_destroy
+		after_commit / after_rollback
+
+* after_save runs both on create and update, but always after the more specific callbacks after_create and after_update, no matter the order in which the macro calls were executed.
+* Avoid updating or saving attributes in callbacks. For example, don't call update(attribute: "value") within a callback. This can alter the state of the model and may result in unexpected side effects during commit. Instead, you can safely assign values directly (for example, self.attribute = "value") in before_create / before_update or earlier callbacks.
+* before_destroy callbacks should be placed before dependent: :destroy associations (or use the prepend: true option), to ensure they execute before the records are deleted by dependent: :destroy.
+
+	3.4 after_initialize and after_find
+
+		The after_initialize callback will be called whenever an Active Record object is instantiated, either by directly using new or when a record is loaded from the database. It can be useful to avoid the need to directly override your Active Record initialize method.
+
+		The after_find callback will be called whenever Active Record loads a record from the database. after_find is called before after_initialize if both are defined.
+
+		class User < ApplicationRecord
+		  after_initialize do |user|
+			puts "You have initialized an object!"
+		  end
+
+		  after_find do |user|
+			puts "You have found an object!"
+		  end
+		end
+
+	3.5 after_touch
+	
+		The after_touch callback will be called whenever an Active Record object is touched.
+
+		class User < ApplicationRecord
+		  after_touch do |user|
+			puts "You have touched an object"
+		  end
+		end
+
+		-- u = User.create(name: 'Kuldeep')
+		=> #<User id: 1, name: "Kuldeep", created_at: "2013-11-25 12:17:49", updated_at: "2013-11-25 12:17:49">
+		-- u.touch
+
+	- touch ?
+		
+		- touch is used to update updated_at field .. this is usefall to trigger certain callbacks ... 
+
+		product.touch                         # updates updated_at/on with current time
+		product.touch(time: Time.new(2015, 2, 16, 0, 0, 0)) # updates updated_at/on with specified time
+		product.touch(:designed_at)           # updates the designed_at attribute and updated_at/on
+		product.touch(:started_at, :ended_at) # updates started_at, ended_at and updated_at/on attributes
+
+		- using with belongs_to
+
+		class Employee < ApplicationRecord
+		  belongs_to :company, touch: true	--> this will trigger touch in company model
+		  after_touch do
+			puts 'An Employee was touched'
+		  end
+		end
+
+- The following methods trigger callbacks:
+--------------------------------------------------
+		create
+		create!
+		destroy
+		destroy!
+		destroy_all
+		destroy_by
+		save
+		save!
+		save(validate: false)
+		toggle!
+		touch
+		update_attribute
+		update
+		update!
+		valid?
+
+	Additionally, the after_find callback is triggered by the following finder methods:
+
+		all
+		first
+		find
+		find_by
+		find_by_*
+		find_by_*!
+		find_by_sql
+		last
+
+
+	Method				Uses Default Accessor	Saved to Database	Validations		Callbacks	Touches updated_at	Readonly check
+
+	attribute=			Yes						No					n/a				n/a			n/a					n/a
+	write_attribute		No						No					n/a				n/a			n/a					n/a
+	update_attribute	Yes						Yes					No				Yes			Yes					Yes
+	attributes=			Yes						No					n/a				n/a			n/a					n/a
+	update				Yes						Yes					Yes				Yes			Yes					Yes
+	update_column		No						Yes					No				No			No					Yes
+	update_columns		No						Yes					No				No			No					Yes
+	User::update		Yes						Yes					Yes				Yes			Yes					Yes
+	User::update_all	No						Yes					No				No			No					No
+
+
+Processor Model Design Pattern
+======================================================================================
+- Creating a Processor Object
+--------------------------------------------------
+	class MyProcessor
+	  def initialize(thing, stuff)
+		@thing = thing
+		@stuff = stuff
+	  end
+	end
+
+
+	class StudentReport
+	  attr_reader :student, :term, :report_type	# define @studant, @term, @report_type
+	  
+	  # taraaaaaam
+	  delegate :first_name, :last_name, to: :student
+	  delegate :title, :subtitle, to: :report_type
+	  delegate :start_date, :end_date, to: :term
+	end
+
+	
+
+
+Scopes
+======================================================================================
+
+	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cool stuff
+---------------------------------------------------------------------------
+
+- objects = controller_name.classify.constantize.find(:all)
+- instance_variable_set("@#{controller_name}", objects)	# @names = objects 
+
+
+- controller_path.classify	# Admin::Role
+- controller_name.classify	# Role
+
+- self.class.name.sub("Controller","").singularize	# NamesController -> Name
+
+
+
+* To change all tables + models by adding a prefix_ ?
+---------------------------------------------------------------------------
+
+
+- Dealing with json/jsonb field types:
+---------------------------------------------------
+
+
+* References
+-----------------
+https://medium.com/@codenode/10-tips-for-eager-loading-to-avoid-n-1-queries-in-rails-2bad54456a3f
+--> https://devhints.io/rails-models
+--> https://github.com/rails/arel : Arel is now bundled in the Active Record gem, and maintained in the rails/rails repository.
+
+
+
+
+* --> http://dimaspriyanto.com/2015/09/21/migrating-rails-database-from-sqlite-to-remote-mysql/
+
+
+
+Method				Uses Default Accessor	Saved to Database	Validations		Callbacks	Touches updated_at	Readonly check
+attribute=			Yes						No					n/a				n/a			n/a					n/a
+write_attribute		No						No					n/a				n/a			n/a					n/a
+update_attribute	Yes						Yes					No				Yes			Yes					Yes
+attributes=			Yes						No					n/a				n/a			n/a					n/a
+update				Yes						Yes					Yes				Yes			Yes					Yes
+update_column		No						Yes					No				No			No					Yes
+update_columns		No						Yes					No				No			No					Yes
+User::update		Yes						Yes					Yes				Yes			Yes					Yes
+User::update_all	No						Yes					No				No			No					No
+
+
+
+
+Ransack
+================================================================================================
+https://github.com/activerecord-hackery/ransack
+https://github.com/activerecord-hackery/ransack/blob/master/lib/ransack/locale/en.yml#L15
+
+gem 'ransack', github: 'activerecord-hackery/ransack'
+gem 'ransack'
+
+	def index
+	  @q = Person.ransack(params[:q])
+	  @people = @q.result(distinct: true)
+	end
+
+	or without distinct: true, for sorting on an associated table's columns (in this example, with preloading each Person's Articles and pagination):
+
+	def index
+	  @q = Person.ransack(params[:q])
+	  @people = @q.result.includes(:articles).page(params[:page])
+
+	  # or use `to_a.uniq` to remove duplicates (can also be done in the view):
+	  @people = @q.result.includes(:articles).page(params[:page]).to_a.uniq
+	end
+
+	<%= search_form_for @q do |f| %>
+
+	  # Search if the name field contains...
+	  <%= f.label :name_cont %>
+	  <%= f.search_field :name_cont %>
+
+	  # Search if an associated articles.title starts with...
+	  <%= f.label :articles_title_start %>
+	  <%= f.search_field :articles_title_start %>
+
+	  # Attributes may be chained. Search multiple attributes for one value...
+	  <%= f.label :name_or_description_or_email_or_articles_title_cont %>
+	  <%= f.search_field :name_or_description_or_email_or_articles_title_cont %>
+
+	  <%= f.submit %>
+	<% end %>
+
+----------------------------
+
+	def index
+	  @q = Person.ransack(params[:q])
+	  @people = @q.result(distinct: true)
+	end
+
+	# in whatever view you'd like users to search from
+
+	<%= form_tag search_path, method: :get do %>
+	  <%= text_field_tag :"q[name_or_description_or_id_cont]" %>
+	  <%= submit_tag "Search", data: { disable_with: "Searching..." }
+	<% end %>
+
+Or
+
+  def search
+    @ransack_params = params[:q] || {}
+    @q = Item.ransack(@ransack_params)
+    @items = @q.result.includes(:order).page(params[:page])
+
+    # render json: @items.map(&:name).uniq
+    respond_to do |format|
+      format.html {
+          render :template => "orders/search"
+      }
+      format.json {
+      }
+    end
+  end
+  
+  
+  equations:
+
+  <!-- Topbar Search -->
+    <%= form_tag search_path, method: :get, :html => {:class => "d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search w-25" } do %>
+      <div class="input-group">
+        <%= text_field_tag :"q[description_cont]", nil, :placeholder => "Search Items", :class => "form-control bg-light border-0 small" %>
+        <%#= f.input :description_cont, :label => false, wrapper: false, :input_html => {:class => "form-control bg-light border-0 small", :placeholder => "Search for...", "aria-label" => "Search", "aria-describedby" => "basic-addon2"} %>
+        <div class="input-group-append">
+          <button class="btn btn-primary" type="submit">
+            <i class="fas fa-search fa-sm"></i>
+          </button>
+        </div>
+      </div>
+
+* update_ methods don't make callbacks !!!!!
+
+Misc
+========================================================================
+
+count, size and length
+
+	count will perform an SQL COUNT query
+	length will calculate the length of the resulting array
+	size will try to pick the most appropriate of the two to avoid excessive queries
+
+But there is one more thing. We noticed a case where size acts differently to count/lengthaltogether, and I thought I'd share it since it is rare enough to be overlooked.
+If you use a :counter_cache on a has_many association, size will use the cached count directly, and not make an extra query at all.
+
+	class Image < ActiveRecord::Base
+	  belongs_to :product, counter_cache: true
+	end
+
+	class Product < ActiveRecord::Base
+	  has_many :images
+	end
+
+	> product = Product.first  # query, load product into memory
+	> product.images.size      # no query, reads the :images_count column
+	> product.images.count     # query, SQL COUNT
+	> product.images.length    # query, loads images into memory
+
+	def size
+		loaded? ? @records.length : count(:all)
+	end
+
+
+
+virtual attributes
+===================
+
+  attr_accessor :by_user
+
+  def by_user
+    @by_user
+  end
+
+  # setter
+  def by_user=(val)
+    @by_user = val
+  end
+
+
+Concerns (Mixins)
+====================
+
+	# app/models/concerns/trashable.rb
+
+	module Trashable
+	  extend ActiveSupport::Concern
+
+	  included do
+		scope :existing, -> { where(trashed: false) }
+		scope :trashed, -> { where(trashed: true) }
+	  end
+
+	  def trash
+		update_attribute :trashed, true	<------
+	  end
+	end
+
+.. then
+
+	class Song < ApplicationRecord
+	  include Trashable
+
+	  has_many :authors
+
+	  # ...
+	end
+	
+You can also do something like
+
+	module Authorable
+	  has_many :authors
+
+	  # Other useful methods that relate to authors across models.
+	  # If there are none, ditch the concern.
+	end
+
+... then
+
+
+	class Song < ApplicationRecord
+		include Trashable
+		include Authorable
+
+	  # ...
+	end
