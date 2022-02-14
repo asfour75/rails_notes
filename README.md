@@ -11,11 +11,12 @@ Quick notes, references and helper procedures on how to get things done covering
 - Quick installations for rails
 - Understanding assets setups along with sprocket, esbuild, webpack
 - How to setup vue, react and svelte with rails
-- models
-- routes
-- controllers & views
-- devise
-- activeadmin
+- Models
+- Routes
+- Controllers & views
+- Devise
+- ActiveAdmin
+- Testing
 
 ## Who can use these notes
 These notes are not that handy for beginners.
