@@ -170,7 +170,23 @@ Controllers
 
 		end
 	
+	- Also you can use a class
+	
+		class ApplicationController < ActionController::Base
+		  before_action LoginFilter	<---
+		end
 
+		class LoginFilter
+
+		  def self.before(controller)
+			unless controller.send(:logged_in?)
+			  controller.flash[:error] = "You must be logged in to access this section"
+			  controller.redirect_to controller.new_login_url
+			end
+		  end
+
+		end
+	
 
 
 
@@ -292,7 +308,7 @@ Renders & Redirects & Templates & Layouts & Partials
 
 
 
-Ajax & ejs
+Ajax & ejs	(for Rails7, check actioncable & turbo)
 ------------------------------------------------------------------------
 There are several ways to use ajax with rails applications.
 - the hard way, using jQuery directly .. or any other libraries 
@@ -307,11 +323,14 @@ There are several ways to use ajax with rails applications.
 	})
 
 	Or (recommended)
-	
-	
-- rails-ujs
+		
+- rails-ujs	# not used for rails 7
 
-	
+# Hotwire’s combination of Turbo and Stimulus deliver all the tools needed to produce fantastic user experiences that leave little to nothing on the table in contrast to single-page applications – at a fraction of the complexity. 
+
+# It’s the default choice for new Rails apps, replacing the far more limited options of Turbolinks and Rails UJS.
+
+
 
 
 
