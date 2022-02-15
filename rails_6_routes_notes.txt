@@ -4,6 +4,7 @@ Rails Routes
 - Create a route that maps a URL to the controller action
 
 	Rails.application.routes.draw do
+	  get  'homepage/index'
 	  root 'homepage#index'
 	  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 	end
@@ -18,6 +19,7 @@ Rails Routes
 		get 'welcome' => 'pages#home'
 
 		get 'photos/show'
+		
 		# The above is the same as: 
 		get 'photos/show', :to 'photos#show'
 		get 'photos/show' => 'photos#show'
@@ -26,16 +28,16 @@ Rails Routes
 
 	config/routes.rb:
 
-		resources :photos 
+		resources :photos -->
 
-	HTTP Verb 	Path 			Controller#Action 	Used for
-	GET 		/photos 		photos#index 		display a list of all photos
-	GET 		/photos_new 	photos#new 			return an HTML form for creating a new photo
-	POST 		/photos 		photos#create 		create a new photo
-	GET 		/photos/:id 		photos#show 	display a specific photo
-	GET 		/photos/:id/edit 	photos#edit 	return an HTML form for editing a photo
-	PATCH/PUT 	/photos/:id 	photos#update 		update a specific photo
-	DELETE 		/photos/:id 	photos#destroy 		delete a specific photo
+		HTTP Verb 	Path 			Controller#Action 	Used for
+		GET 		/photos 		photos#index 		display a list of all photos
+		GET 		/photos/new 	photos#new 			return an HTML form for creating a new photo
+		POST 		/photos 		photos#create 		create a new photo
+		GET 		/photos/:id 		photos#show 	display a specific photo
+		GET 		/photos/:id/edit 	photos#edit 	return an HTML form for editing a photo
+		PATCH/PUT 	/photos/:id 	photos#update 		update a specific photo
+		DELETE 		/photos/:id 	photos#destroy 		delete a specific photo
 
 - Create resources for only certain actions
 
@@ -57,8 +59,7 @@ Rails Routes
 		
 		articles GET    /articles(.:format)          {action:"index", controller:"articles"}
 
-	- https://gist.github.com/mdang
-	- Also, you can :
+	- Also, you can for one action :
 
 		resources :home, only: [:index]
 
@@ -73,6 +74,7 @@ Rails Routes
 	  get 'share', on: :member      
 	  # --> generates'/posts/:id/share' and share_post_path(@post)
 	end
+
 
 - Notice, to add new route to extsing resource ..
 
@@ -94,7 +96,7 @@ Rails Routes
 	end
 
 
-- using redirects
+- Using redirects
 
   TestApp::Application.routes.draw do
     get 'courses/:course_name' => redirect('/courses/%{course_name}/lessons'), :as => "course"
@@ -112,12 +114,12 @@ Rails Routes
 		/articles/:id(.:format)
 
 - Nested Resources
-
-	Nested resources sound like a great idea because they can build up beautiful URLs. For instance, let’s say our articles are going to have comments. For an article with ID 16 we might want to list the comments with this URL:
+		
+	- Nested resources sound like a great idea because they can build up beautiful URLs. For instance, let’s say our articles are going to have comments. For an article with ID 16 we might want to list the comments with this URL:
 
 		http://localhost:3000/articles/16/comments
 
-	To create this, we nest the comments resource inside the articles like below:
+	- To create this, we nest the comments resource inside the articles like below:
 
 		MyApp::Application.routes.draw do
 		  resources :articles do
@@ -133,6 +135,79 @@ Rails Routes
 		  end
 		end
 
+	# Remember, if you want to create a resources to a controller "messages" for example
+	
+		  resources :messages
+
+	This will generate of course:
+	
+			messages GET    /messages(.:format)                                                                               messages#index
+					 POST   /messages(.:format)                                                                               messages#create
+		 new_message GET    /messages/new(.:format)                                                                           messages#new
+		edit_message GET    /messages/:id/edit(.:format)                                                                      messages#edit
+			 message GET    /messages/:id(.:format)                                                                           messages#show
+					 PATCH  /messages/:id(.:format)                                                                           messages#update
+					 PUT    /messages/:id(.:format)                                                                           messages#update
+					 DELETE /messages/:id(.:format)                                                                           messages#destroy
+
+	- Let's add some nested (addition routes to our messages route)
+	
+		  resources	:messages
+		  resources :users do
+			resources	:messages
+		  end
+  	
+		# this will add 
+		# remember, you can always use only [:edit, create ... ] to specify which actions to incluide in which scope
+		# resources :messages, :only => [:create, :index, :new]
+
+			.....
+			   user_messages GET    /users/:user_id/messages(.:format)                                                                messages#index
+							 POST   /users/:user_id/messages(.:format)                                                                messages#create
+			new_user_message GET    /users/:user_id/messages/new(.:format)                                                            messages#new
+		   edit_user_message GET    /users/:user_id/messages/:id/edit(.:format)                                                       messages#edit
+				user_message GET    /users/:user_id/messages/:id(.:format)                                                            messages#show
+							 PATCH  /users/:user_id/messages/:id(.:format)                                                            messages#update
+							 PUT    /users/:user_id/messages/:id(.:format)                                                            messages#update
+							 DELETE /users/:user_id/messages/:id(.:format)                                                            messages#destroy
+			.....
+
+		- This shall reflect the following on models, controllers and forms ... 
+		
+			get /users/2/messages	--> retreive all messages belongs to user [2]	via path: user_messages_path
+			
+		- via helpers
+		
+			<%= user_messages_path(2) %>	--> /users/2/messages
+			<%= user_messages_url(2) %>		--> http://legion.com:3000/users/3/messages	# the domain came from development.rb:   config.hosts << "legion.com"
+
+			<%= user_message_path(2,4) %>	--> /users/2/messages/4
+			
+			# you can pass resources
+			
+				<%= user_message_path(@user,comment) %>
+
+		- via forms
+		
+			<%= form_for [@user, @comment] do |f| %>
+			
+		- delete link for example
+		
+			For example, inside a collections partial with comment_item supplied for iteration,
+
+			<%= link_to "delete", user_comment_path(@user, comment_item), :method => :delete, :confirm => "Really?" %>
+
+		- Their unit-tests will generally get/post to the simplest:
+
+			# POST /messages
+			post :create, :message => {:user_id=>42, ...}
+
+			In order to test the route that they may prefer, they need to do it this way:
+
+			# POST /articles/42/comments
+			post :create, :user_id => 42, :message => {...}
+
+
 	
 - Non-RESTful Routes
 
@@ -145,6 +220,7 @@ Rails Routes
 
 	Or, to go all in, you can use the this pattern:
 
+		# not recommended
 		match ':controller(/:action(/:id(.:format)))'
 
 - Type-able URLs
@@ -161,10 +237,6 @@ Rails Routes
 
 		login  /login(.:format)        {controller:"sessions", action:"new"}
 		logout  /logout(.:format)       {controller:"sessions", action:"destroy"}
-
-- Root Route
-
-	  root to: "articles#index"
 
 
 Cool Stuff
