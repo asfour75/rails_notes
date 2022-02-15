@@ -98,11 +98,22 @@ Rails Routes
 
 - Using redirects
 
-  TestApp::Application.routes.draw do
-    get 'courses/:course_name' => redirect('/courses/%{course_name}/lessons'), :as => "course"
-	match "/posts/:id" => redirect("/articles/%{id}")
-  end
+	- Normal usage
 
+		TestApp::Application.routes.draw do
+			get 'courses/:course_name' => redirect('/courses/%{course_name}/lessons'), :as => "course"
+			match "/posts/:id" => redirect("/articles/%{id}")
+		end
+	
+	- fetch params and req
+
+		get '/stories/:name', to: redirect { |path_params, req| "/articles/#{path_params[:name].pluralize}" }
+		get '/stories', to: redirect { |path_params, req| "/articles/#{req.subdomain}" }
+
+	- status
+	
+		get '/stories/:name', to: redirect('/articles/%{name}', status: 302)
+		
 
 - Handling Parameters and Formats
 
@@ -208,6 +219,13 @@ Rails Routes
 			post :create, :user_id => 42, :message => {...}
 
 
+		- specify a controller for a resource
+	
+			resources :photos, controller: 'images'
+
+		- resources :photos, only: [:index, :show]
+		- resources :photos, except: :destroy
+
 	
 - Non-RESTful Routes
 
@@ -223,6 +241,58 @@ Rails Routes
 		# not recommended
 		match ':controller(/:action(/:id(.:format)))'
 
+	- to define a route name, for certain controller, action and for certain methods
+	
+		match 'photos', to: 'photos#show', via: [:get, :post] # get, post, put, patch, delete
+
+		# all methods
+		match 'photos', to: 'photos#show', via: :all
+
+- Segment Constraint
+
+	- to accept only paths /photos/A12345, or
+
+		get 'photos/:id', to: 'photos#show', constraints: { id: /[A-Z]\d{5}/ }
+		get '/:id', to: 'articles#show', constraints: { id: /\d.+/ }
+
+		# only from subdomain admin
+		get 'photos', to: 'photos#index', constraints: { subdomain: 'admin' }
+
+	- similar to this
+	
+		namespace :admin do
+		  constraints subdomain: 'admin' do
+			resources :photos
+		  end
+		end
+
+	- something more advanced
+	
+		class RestrictedListConstraint
+		  def initialize
+			@ips = RestrictedList.retrieve_ips
+		  end
+
+		  def matches?(request)
+			@ips.include?(request.remote_ip)
+		  end
+		end
+
+		Rails.application.routes.draw do
+		  get '*path', to: 'restricted_list#index',
+			constraints: RestrictedListConstraint.new
+		end
+	
+	- same using lambda
+	
+		Rails.application.routes.draw do
+		  get '*path', to: 'restricted_list#index',
+			constraints: lambda { |request| RestrictedList.retrieve_ips.include?(request.remote_ip) }
+		end
+		
+	# https://guides.rubyonrails.org/routing.html
+
+
 - Type-able URLs
 
 	When an app supports authentication, you might add routes like this:
@@ -237,6 +307,310 @@ Rails Routes
 
 		login  /login(.:format)        {controller:"sessions", action:"new"}
 		logout  /logout(.:format)       {controller:"sessions", action:"destroy"}
+
+- wildcards
+
+	get 'messages/*other', to: 'messages#index'
+
+	- this will go alywas to messages#index
+	- anything comes after /messages is accepted
+	
+		/messages/a/b/4533	--> messages#index	# controller_name and action_name will remain messages, index
+		
+		# params
+		<%= params %>	{"controller"=>"messages", "action"=>"index", "other"=>"a/b/45"}
+
+	# accepts /books/any/thing/some
+	- get 'books/*section/:title', to: 'books#show'
+	
+		 GET    /messages/*other(.:format)                                                                        messages#index
+		 GET    /messages/*other/:title(.:format)                                                                 messages#index
+
+	- ordering is very important .. for example
+	
+		get 'messages/*other', to: 'messages#index'			<-- wil apply thin first
+		get 'messages/*some/:title', to: 'messages#index'
+
+		# /messages/a/b/45
+		<%= params %> -> {"controller"=>"messages", "action"=>"index", "other"=>"a/b/45"}
+
+
+		get 'messages/*some/:title', to: 'messages#index'
+		get 'messages/*other', to: 'messages#index'			<-- wil apply thin first
+
+		# /messages/a/b/45
+		<%= params %> -> {"controller"=>"messages", "action"=>"index", "some"=>"a/b", "title"=>"45"}
+
+		# /messages/45
+		<%= params %> -> {"controller"=>"messages", "action"=>"index", "some"=>"a/b", "title"=>"45"}
+
+	- how to capture for example any page, without no format (.json)
+	
+		get '*pages', to: 'pages#show', format: false
+
+		GET    /*pages                                                                                           messages#index
+
+		/messages		-> {"controller"=>"messages", "action"=>"index", "pages"=>"messages"}
+		/messages/45	-> {"controller"=>"messages", "action"=>"index", "pages"=>"messages/45"}
+
+
+
+
+- namespace vs scope
+
+	# namespace
+	############
+	
+	namespace :admin do
+		resources	:messages
+	end
+	
+	# admin will be added as prefix
+	# paths will change accordingly
+	# %= admin_messages_path %>	--> /admin/messages
+	
+
+	  admin_messages GET    /admin/messages(.:format)                                                                         admin/messages#index
+					 POST   /admin/messages(.:format)                                                                         admin/messages#create
+   new_admin_message GET    /admin/messages/new(.:format)                                                                     admin/messages#new
+  edit_admin_message GET    /admin/messages/:id/edit(.:format)                                                                admin/messages#edit
+	   admin_message GET    /admin/messages/:id(.:format)                                                                     admin/messages#show
+					 PATCH  /admin/messages/:id(.:format)                                                                     admin/messages#update
+					 PUT    /admin/messages/:id(.:format)                                                                     admin/messages#update
+					 DELETE /admin/messages/:id(.:format)                                                                     admin/messages#destroy
+		
+	
+	# there for, Rails will expect Admin::MessagesController to be located at app/controllers/admin/messages_controller.rb
+	# notice templates should be also inside "views/admin/messages"
+	
+	
+	<%= request.path %>				--> /admin/messages
+	<%= params %>					--> {"controller"=>"some/messages", "action"=>"index"}
+	<%= controller_path %>			--> some/messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> Some::MessagesController	
+	
+---
+
+	# scope
+	#############
+	# no options
+	
+	scope :admin do
+	  resources :messages
+	end
+
+	# notice, there is a prefix for generated urls, but not for helper apis
+	# controller (messages_controller) doesn;t have to be inside admin folder
+	
+			messages GET    /admin/messages(.:format)                                                                         messages#index
+					 POST   /admin/messages(.:format)                                                                         messages#create
+		 new_message GET    /admin/messages/new(.:format)                                                                     messages#new
+		edit_message GET    /admin/messages/:id/edit(.:format)                                                                messages#edit
+			 message GET    /admin/messages/:id(.:format)                                                                     messages#show
+					 PATCH  /admin/messages/:id(.:format)                                                                     messages#update
+					 PUT    /admin/messages/:id(.:format)                                                                     messages#update
+					 DELETE /admin/messages/:id(.:format)                                                                     messages#destroy
+	
+	# <%= messages_path %>	--> /admin/messages
+
+
+	<%= request.path %>				--> /admin/messages
+	<%= params %>					--> {"controller"=>"messages", "action"=>"index"}
+	<%= controller_path %>			--> messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> MessagesController	
+
+
+	module
+	--------
+	# If you want to refer to a controller inside a module (controllers/admin/users_controller.rb)
+	# and the generated path without a prefix
+	# remember, controller and views have to be located inside folder admin, controller defined insid module admin
+	
+	scope module: 'admin' do
+	  resources :messages
+	end
+	
+			messages GET    /messages(.:format)                                                                               admin/messages#index
+					 POST   /messages(.:format)                                                                               admin/messages#create
+		 new_message GET    /messages/new(.:format)                                                                           admin/messages#new
+		edit_message GET    /messages/:id/edit(.:format)                                                                      admin/messages#edit
+			 message GET    /messages/:id(.:format)                                                                           admin/messages#show
+					 PATCH  /messages/:id(.:format)                                                                           admin/messages#update
+					 PUT    /messages/:id(.:format)                                                                           admin/messages#update
+					 DELETE /messages/:id(.:format)                                                                           admin/messages#destroy
+
+	# <%= messages_path %>	--> /messages
+
+	<%= request.path %>				--> /messages
+	<%= params %>					--> {"controller"=>"some/messages", "action"=>"index"}
+	<%= controller_path %>			--> some/messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> Some::MessagesController	
+
+
+	path 
+	-----
+	# to add a prefix
+	
+	scope module: 'admin', path: 'fu' do
+	  resources :users
+	end
+
+	# this will a prefix 'fu' to controller 'admin/users_controller'
+
+		messages GET    /fu/messages(.:format)                                                                            admin/messages#index
+				 POST   /fu/messages(.:format)                                                                            admin/messages#create
+	 new_message GET    /fu/messages/new(.:format)                                                                        admin/messages#new
+	edit_message GET    /fu/messages/:id/edit(.:format)                                                                   admin/messages#edit
+		 message GET    /fu/messages/:id(.:format)                                                                        admin/messages#show
+				 PATCH  /fu/messages/:id(.:format)                                                                        admin/messages#update
+				 PUT    /fu/messages/:id(.:format)                                                                        admin/messages#update
+				 DELETE /fu/messages/:id(.:format)                                                                        admin/messages#destroy
+	
+	# <%= messages_path %>	--> /fu/messages	--> /admin/messages_controller
+
+	<%= request.path %>				--> /fu/messages
+	<%= params %>					--> {"controller"=>"some/messages", "action"=>"index"}
+	<%= controller_path %>			--> some/messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> Some::MessagesController
+
+	as
+	-----
+	# as can be used to change the name of the path method used to identify the resources.
+
+	  scope module: 'admin', path: 'fu', as: 'cool' do
+		resources :messages
+	  end	
+	
+	# cool will be added to path names
+	
+                           cool_messages GET    /fu/messages(.:format)                                                                            admin/messages#index
+                                         POST   /fu/messages(.:format)                                                                            admin/messages#create
+                        new_cool_message GET    /fu/messages/new(.:format)                                                                        admin/messages#new
+                       edit_cool_message GET    /fu/messages/:id/edit(.:format)                                                                   admin/messages#edit
+                            cool_message GET    /fu/messages/:id(.:format)                                                                        admin/messages#show
+                                         PATCH  /fu/messages/:id(.:format)                                                                        admin/messages#update
+                                         PUT    /fu/messages/:id(.:format)                                                                        admin/messages#update
+                                         DELETE /fu/messages/:id(.:format)                                                                        admin/messages#destroy
+	# Notice the name 'cool_messages'	--> cool_messages_path
+	# <%= cool_messages_path %> --> /fu/messages	and messages controller inside admin folder (module)
+	# controller names as above
+	
+
+
+	- You can also add to whcih controller for example
+	
+		scope :admin, controller: :messages do
+			get '/', action: :index
+		end
+
+	# same as 
+	
+		scope path:  "admin", controller: :messages do
+			get '/', action: :index
+		end
+
+										GET    /admin(.:format)                                                                                  messages#index
+
+	# Conclusion
+	# scope :name --> to set the prefix :name in generated urls
+	# path: to set the prefix in urls as above
+	# module: to set the module name that contains the controller
+	# as: to set the prefix in path names
+	
+
+- request object (reading from controller)
+
+	# namespace / scope cna be used in saas to set which scope (username, servicename .. etc) to run the controller actions within 
+	# to detect which scope or namespace from controller
+
+	host 			The hostname used for this request.
+	domain(n=2) 	The hostname's first n segments, starting from the right (the TLD).
+	format 			The content type requested by the client.
+	method 			The HTTP method used for the request.
+	get?, post?, patch?, put?, delete?, head? 	Returns true if the HTTP method is GET/POST/PATCH/PUT/DELETE/HEAD.
+	headers 		Returns a hash containing the headers associated with the request.
+	port 			The port number (integer) used for the request.
+	protocol 		Returns a string containing the protocol used plus "://", for example "http://".
+	query_string 	The query string part of the URL, i.e., everything after "?".
+	remote_ip 		The IP address of the client.
+	url 			The entire URL used for the request.
+
+	  scope :admin do
+		resources :messages
+	  end
+
+
+		get /admin/messages?a=b
+
+		<%= Rails.application.routes.recognize_path request.url %>	--> {:controller=>"messages", :action=>"index"}
+	
+	- read header names, values
+	
+		<% request.headers.each do |k, v| %>
+		  <%= k %> : <%= v %><br/>
+		<% end %>
+	
+	- reading params
+	
+		<%= request.params %>
+		{"a"=>"b", "controller"=>"messages", "action"=>"index"}
+		
+	<%= request.path %>				--> /admin/messages
+	<%= params %>					--> {"controller"=>"admin/messages", "action"=>"index"}
+	<%= controller_path %>			--> messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> MessagesController
+
+	
+- .:format
+
+	.:format allow us to pass extension to be used to influence the response from controller
+	- when calling /messages.json for example:
+	# check controllers_views referece
+	
+		class MessageController < ApplicationController
+			def index
+				@message = Message.find(10
+				respond_to do |format|
+				  format.html # index.html.erb
+				  format.xml  { render xml: @message }
+				  format.json { render json: @message }
+				  format.ics { render body: @message.to_ics, mime_type: Mime::Type.lookup("text/calendar")  }
+				  format.text { render :plain => "hello" }
+				end				
+			end
+		end
+	
+	supported mime types:
+	
+	text types:
+	
+		- json
+		- xml
+		- ics	# calendar
+		- html	# default
+		- css
+		- js
+		- csv
+		- yaml
+	
+	application types:
+	
+		- html
+		- js
+		- xml
+		- yaml
+		- atom
+		- json
+		- rss
+		- url_encoded_form
+
+
+	get 'photos/:id', to: 'photos#show', defaults: { format: 'jpg' }
 
 
 Cool Stuff
@@ -255,6 +629,8 @@ Cool Stuff
 {:controller => "orders", :action => "show", :id => "34"}
 
 
+resource = "users"
+resource.singularize.classify.constantize.find(id)	-> User.find
 
 
 
