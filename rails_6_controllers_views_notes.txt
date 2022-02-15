@@ -1,30 +1,8 @@
 Controllers & Views
 ==========================================================================================
-* Check routes & controller notes
 
-
-rails g scaffold Project
-rails g scaffold Project title:string body:text
-
-rails g scaffold_controller [model] // generate without fields
-rails g scaffold_controller [model]  title:string body:text // generate with fields
-
-rails g scaffold Project
-rails g scaffold Project title:string body:text
-rails g scaffold_controller [model] // generate without fields
-rails g scaffold_controller [model]  title:string body:text // generate with fields
-
-rails g controller home --> home_controller.rb (HomeController)
-
-- Now, To Check the code of any gem, 
-> bundle open jquery-rails
-
-To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
-
-bundle exec rake routes
-
-
-
+# https://guides.rubyonrails.org/
+# https://guides.rubyonrails.org/action_controller_overview.html
 
 Controllers
 ------------------------------------------------------------------------
@@ -58,22 +36,28 @@ Controllers
 	private
 
     def item_params
-      params.fetch(:item, {}).permit(:name, :id, :title, :summary, :body, :type, :status, :user_id, :info, :reference_id, :tags)
+      params.fetch(:item, {}).permit(:name, :id, :title, :summary, :body, :type, :status, :user_id, :info, :reference_id, :tags)	<------
     end
 
 	
 - Filters
-
 	
-    before_filter runs before the controller action
-    after_filter runs after the controller action
-    around_filter yields to the controller action wherever it chooses
+    before_action 	:dome_something		--> runs before the controller action
+    after_action	:dome_something 	--> runs after the controller action
+    around_action 	:dome_something		--> yields to the controller action wherever it chooses
+
+	before_action	:dome_something, :only => show	#:only, :except
+	
+
+	# using skip_
+	skip_before_action :authenticate_user! #, only: [:index]
+
 
 		before_filter do
 			@article = Article.find(params[:id]) if params[:id]
 		end
 
-		Or
+	Or
 
 		before_filter :load_article
 		# Actions...
@@ -133,6 +117,60 @@ Controllers
 				find_by_name(input)
 			end
 
+	- around_action
+		
+		# run show only within the transaction
+		
+		class ChangesController < ApplicationController
+		  around_action :wrap_in_transaction, only: :show
+
+		  private
+
+		  def wrap_in_transaction
+			ActiveRecord::Base.transaction do
+			  begin
+				yield	<---- here	this also will inlucde the view rendering
+			  ensure
+				raise ActiveRecord::Rollback
+			  end
+			end
+		  end
+		end	
+		
+		# Also
+		
+		around_action { |_controller, action| time(&action) }	# & sign is used to pass as block
+		def time
+			# read time
+			yield
+			# read time and calculate
+		end
+
+		# block example &
+
+		def print_phrase(&block)
+			block.call
+		end
+
+		# Now we pass there the block with the expression:
+		print_phrase { puts "Hello from block!" }
+
+
+
+	- another example of how to use filters
+	
+		class ApplicationController < ActionController::Base
+
+		  before_action do |controller|	<--------- *
+			unless controller.send(:logged_in?)
+			  flash[:error] = "You must be logged in to access this section"
+			  redirect_to new_login_url
+			end
+		  end
+
+		end
+	
+
 
 
 
@@ -147,7 +185,7 @@ Renders & Redirects & Templates & Layouts & Partials
 		
 	    render 'articles/new'	# render new template in views/articles folder (could be for different controller)
 	    
-		render text: "Hello, World!"	# render plain text
+		render text: "Hello, World!"	# render plain text	--> use plain: instead iof text:	--> "text/plain" so not to confused "text/html"
 		render xml: @article
 		render json: @article
 			
@@ -369,7 +407,26 @@ Other awesome libraries
 
 
 
+rails g scaffold Project
+rails g scaffold Project title:string body:text
 
+rails g scaffold_controller [model] // generate without fields
+rails g scaffold_controller [model]  title:string body:text // generate with fields
+
+rails g scaffold Project
+rails g scaffold Project title:string body:text
+rails g scaffold_controller [model] // generate without fields
+rails g scaffold_controller [model]  title:string body:text // generate with fields
+
+rails g controller home --> home_controller.rb (HomeController)
+
+- Now, To Check the code of any gem, 
+
+	> bundle open jquery-rails
+
+To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
+
+	> bundle exec rake routes
 
 
 

@@ -1,0 +1,1556 @@
+Ruby Installation:
+==================
+- RVM .. check the new virtual enviroment for ruby
+
+
+
+1.3 Ruby Versions
+
+Rails generally stays close to the latest released Ruby version when it's released:
+
+    Rails 6 requires Ruby 2.5.0 or newer.
+    Rails 5 requires Ruby 2.2.2 or newer.
+    Rails 4 prefers Ruby 2.0 and requires 1.9.3 or newer.
+    Rails 3.2.x is the last branch to support Ruby 1.8.7.
+    Rails 3 and above require Ruby 1.8.7 or higher. Support for all of the previous Ruby versions has been dropped officially. You should upgrade as early as possible.
+
+-------
+
+--> https://rvm.io/workflow/projects
+
+	echo "2.7.2" > .ruby-version
+	echo "forem" > .ruby-gemset
+
+
+
+operators
+========================================================================
+
++	Addition − Adds values on either side of the operator.	a + b will give 30
+−	Subtraction − Subtracts right hand operand from left hand operand.	a - b will give -10
+*	Multiplication − Multiplies values on either side of the operator.	a * b will give 200
+/	Division − Divides left hand operand by right hand operand.	b / a will give 2
+%	Modulus − Divides left hand operand by right hand operand and returns remainder.	b % a will give 0
+**	Exponent − Performs exponential (power) calculation on operators.
+
+==	Checks if the value of two operands are equal or not, if yes then condition becomes true.	(a == b) is not true.
+!=	Checks if the value of two operands are equal or not, if values are not equal then condition becomes true.	(a != b) is true.
+>	Checks if the value of left operand is greater than the value of right operand, if yes then condition becomes true.	(a > b) is not true.
+<	Checks if the value of left operand is less than the value of right operand, if yes then condition becomes true.	(a < b) is true.
+>=	Checks if the value of left operand is greater than or equal to the value of right operand, if yes then condition becomes true.	(a >= b) is not true.
+<=	Checks if the value of left operand is less than or equal to the value of right operand, if yes then condition becomes true.	(a <= b) is true.
+<=>	Combined comparison operator. Returns 0 if first operand equals second, 1 if first operand is greater than the second and -1 if first operand is less than the second.	(a <=> b) returns -1.
+===	Used to test equality within a when clause of a case statement.	(1...10) === 5 returns true.
+.eql?	True if the receiver and argument have both the same type and equal values.	1 == 1.0 returns true, but 1.eql?(1.0) is false.
+equal?	True if the receiver and argument have the same object id.	if aObj is duplicate of bObj then aObj == bObj is true, a.equal?bObj is false but a.equal?aObj is true.
+
+=	Simple assignment operator, assigns values from right side operands to left side operand.	c = a + b will assign the value of a + b into c
++=	Add AND assignment operator, adds right operand to the left operand and assign the result to left operand.	c += a is equivalent to c = c + a
+-=	Subtract AND assignment operator, subtracts right operand from the left operand and assign the result to left operand.	c -= a is equivalent to c = c - a
+*=	Multiply AND assignment operator, multiplies right operand with the left operand and assign the result to left operand.	c *= a is equivalent to c = c * a
+/=	Divide AND assignment operator, divides left operand with the right operand and assign the result to left operand.	c /= a is equivalent to c = c / a
+%=	Modulus AND assignment operator, takes modulus using two operands and assign the result to left operand.	c %= a is equivalent to c = c % a
+**=	Exponent AND assignment operator, performs exponential (power) calculation on operators and assign value to the left operand.	c **= a is equivalent to c = c ** a
+
+&	Binary AND Operator copies a bit to the result if it exists in both operands.	(a & b) will give 12, which is 0000 1100
+|	Binary OR Operator copies a bit if it exists in either operand.	(a | b) will give 61, which is 0011 1101
+^	Binary XOR Operator copies the bit if it is set in one operand but not both.	(a ^ b) will give 49, which is 0011 0001
+~	Binary Ones Complement Operator is unary and has the effect of 'flipping' bits.	(~a ) will give -61, which is 1100 0011 in 2's complement form due to a signed binary number.
+<<	Binary Left Shift Operator. The left operands value is moved left by the number of bits specified by the right operand.	a << 2 will give 240, which is 1111 0000
+>>	Binary Right Shift Operator. The left operands value is moved right by the number of bits specified by the right operand.	a >> 2 will give 15, which is 0000 1111
+
+and	Called Logical AND operator. If both the operands are true, then the condition becomes true.	(a and b) is true.
+or	Called Logical OR Operator. If any of the two operands are non zero, then the condition becomes true.	(a or b) is true.
+&&	Called Logical AND operator. If both the operands are non zero, then the condition becomes true.	(a && b) is true.
+||	Called Logical OR Operator. If any of the two operands are non zero, then the condition becomes true.	(a || b) is true.
+!	Called Logical NOT Operator. Use to reverses the logical state of its operand. If a condition is true, then Logical NOT operator will make false.	!(a && b) is false.
+not	Called Logical NOT Operator. Use to reverses the logical state of its operand. If a condition is true, then Logical NOT operator will make false.	not(a && b) is false.
+
+? :	Conditional Expression	If Condition is true ? Then value X : Otherwise value Y
+
+..	Creates a range from start point to end point inclusive.	1..10 Creates a range from 1 to 10 inclusive.
+...	Creates a range from start point to end point exclusive.	1...10 Creates a range from 1 to 9.
+
+defined? variable # True if variable is initialized
+
+foo = 42
+defined? foo    # => "local-variable"
+defined? $_     # => "global-variable"
+defined? bar    # => nil (undefined)
+
+defined? method_call # True if a method is defined
+
+defined? puts        # => "method"
+defined? puts(bar)   # => nil (bar is not defined here)
+defined? unpack      # => nil (not defined here)
+
+# True if a method exists that can be called with super user
+defined? super
+
+defined? super     # => "super" (if it can be called)
+defined? super     # => nil (if it cannot be)
+
+defined? yield   # True if a code block has been passed
+defined? yield    # => "yield" (if there is a block passed)
+defined? yield    # => nil (if there is no block)
+
+MR_COUNT = 0         # constant defined on main Object class
+module Foo
+   MR_COUNT = 0
+   ::MR_COUNT = 1    # set global count to 1
+   MR_COUNT = 2      # set local count to 2
+end
+puts MR_COUNT        # this is the global constant
+puts Foo::MR_COUNT   # this is the local "Foo" constant
+
+String
+========================================================================
+
+"ruby".size
+# 4
+
+"".size == 0
+# true
+
+"".empty?
+# true
+
+string = "abc123"
+string[0,3]
+# "abc"
+string[3,3]
+# "123"
+
+string = "abc123"
+string[0..-2]
+# "abc12"
+
+string[0..2] = ""
+p string
+# "123"
+
+string = "Today is Saturday"
+string.include?("Saturday")
+# true
+
+string = "Today is Sunday"
+string.index("day")
+# 2
+
+binary_string = "1101"
+binary_string.rjust(8, "0")
+# "00001101"
+
+binary_string = "1111"
+binary_string.ljust(8, "0")
+# "11110000"
+
+lang1 = "ruby"
+lang2 = "Ruby"
+lang1.upcase == lang2.upcase
+
+extra_space = "   test    "
+extra_space.strip
+# "test"
+
+string = "ruby programming"
+string.start_with? "ruby"
+# true
+
+string = "ruby programming"
+string.end_with? "programming"
+# true
+
+string = "bacon is expensive"
+string.delete_suffix(" is expensive")
+# "bacon"
+
+string = "a b c d"
+string.split
+# ["a", "b", "c", "d"]
+
+csv = "a,b,c,d"
+string.split(",")
+# ["a", "b", "c", "d"]
+
+arr = ['a', 'b', 'c']
+arr.join
+# "abc"
+
+arr = ['a', 'b', 'c']
+arr.join("-")
+# "a-b-c"
+
+"49".to_i
+
+"123".match?(/\A-?\d+\Z/)
+# true
+"123bb".match?(/\A-?\d+\Z/)
+# false
+
+string = ""
+string << "hello"
+string << " "
+string << "there"
+# "hello there"
+
+"rubyguides".each_char { |ch| puts ch }
+
+array_of_characters = "rubyguides".chars
+# ["r", "u", "b", "y", "g", "u", "i", "d", "e", "s"]
+
+"abcd".upcase
+# "ABCD"
+
+"ABCD".downcase
+# "abcd"
+
+b = <<-STRING
+aaa
+bbb
+ccc
+STRING
+
+a = %Q(aaa
+bbb
+ccc
+)
+
+string = "We have many dogs"
+string.gsub("dogs", "cats")
+# "We have many cats"
+
+string = "abccc"
+string.gsub("c", "")
+# "ab"
+
+string = "We have 3 cats"
+string.gsub(/\d+/, "5")
+# "We have 5 cats"
+
+title = "the lord of the rings"
+title.gsub(/\w+/) { |word| word.capitalize }
+# "The Lord Of The Rings"
+
+puts "What's your name?"
+name = gets
+# type something...
+name = gets.chomp	<-- remove "\n"
+
+"abcd?".chomp("?")
+# "abcd"
+
+"abc".encoding
+# Encoding:UTF-8
+
+"abc".force_encoding("UTF-8")
+
+str = "aaab"
+str.count("a")
+# 3
+str.count("b")
+# 1
+
+
+
+Hashes & Arrays
+========================================================================
+
+Arrays
+------
+array = [1, 2, 3]
+
+	array.each { |item| print “-#{item}-” }
+	-1–2–3-
+
+	array.select { |item| item > 2 }
+	[3]
+
+
+	array.map { |item| item * 2 }
+	[2, 4, 6]
+
+	array.delete_if { |item| item == 1 }
+	[2, 3]
+
+	array.reject { |item| item % 3 == 0 }
+	[1, 2]
+
+	array.count
+	array.count { |item| item % 3 == 0 }
+
+
+	numbers = [1, 2, 3, 4, 5]
+	#An array of Integers
+	 
+	words = ["See", "Spot", "run"]
+	#An array of Strings
+	 
+	mixed = ["hello", 5, true, 3.0]
+	#An array with a String, Integer, Boolean, and Float
+	 
+	empty = []
+	#An empty array4
+	
+	
+	
+Creating An Array Of Symbols
+
+	symbols = %i(a b c)
+	[:a, :b, :c]
+	
+Similar to the string version %w:
+
+	strings = %w(a b c)
+	["a", "b", "c"]
+	
+	
+	
+	
+	
+
+Hashes
+========================================================================
+
+	hash = { ‘name’ => ‘Vadim’, ‘location’ => ‘Moon’ }
+
+	hash.each do |key, value|
+		puts “key: #{key}, value: #{value}”
+	end
+
+	hash.each_key{ |key| puts “key: #{key}” }
+	
+	hash.each_value { |val| puts “val: #{val}” }
+
+	hash.select { |key, val| key == “name” }
+
+	hash.keep_if{ |key, val| key == “name” }
+
+	hash.reject { |key, val| key == “name” }
+
+	profile = {
+	  "name" => "Magnus",
+	  "profession" => "chess player"
+	  "ranking" => 1,
+	  "grandmaster?" => true
+	}
+	 
+	# "name", "profession", "ranking", and "grandmaster?" are the keys. "Magnus", "chess player", 1 and true are the values.
+	 
+	puts profile["name"] # => Magnus
+
+- Ruby Hash New
+
+	#Creating a hash through literal notation:
+	lunch = {
+	  "protein" => "chicken",
+	  "greens" => "lettuce",
+	  "organic?" => true
+	}
+	 
+	#Creating a hash through Hash.new
+	lunch = Hash.new
+	puts lunch # => {}
+
+- Ruby Hash Bracket Notation Adding Pairs
+
+	#Bracket notation applies to any hash, regardless of how it was initialized
+	teammates = Hash.new
+	teammates["forward"] = "Messi"
+	 
+	salary = {
+	  "starting" => 40000
+	}
+	salary["mid-level"] = 60000
+	
+- Ruby Multidimensional Arrays
+
+	ulti_array = [[0,1,2,3],[4.5, true, "hi"]]
+ 
+	# Accessing the array at index 1
+	puts multi_array[1] # => [4.5, true, "hi"]
+	 
+	# Accessing the element at index 0 within the array at index 1
+	puts multi_array[1][0] # => 4.5
+
+- Ruby Array Index
+
+	example = ["Car", "Boar", 45, 9.9, true]
+	 
+	#For an array named `example`, you can retrieve an item of a particular index by referencing its index.
+	 
+	puts example[2] # => 45
+	puts example[0] # => Car
+
+- Ruby Combined Comparison Operator
+
+	puts "Keanu" <=> "Adrianna" # The first letters of each word are compared in ASCII order and since "K" comes after "A", 1 is printed.
+ 
+	puts 1 <=> 2 # -1
+	 
+	puts 3 <=> 3 # 0
+	 
+	#<=> can also be used inside of a block and to sort values in descending order:
+	my_array = [3, 0, 8, 7, 1, 6, 5, 9, 4]
+	my_array.sort! { |first_num, second_num| second_num <=> first_num }
+	print my_array
+	#Output => [9, 8, 7, 6, 5, 4, 3, 1, 0]
+
+- Ruby Method Splat
+
+	#The * preceding the parameter "clubs" allows for multiple arguments to be passed into the method when you actually call it.
+	def extra_curriculars(*clubs)
+	  clubs.each { |club| puts "After school, I'm involved with #{club}" }
+	end
+	 
+	extra_curriculars("chess club", "gymnastics", "anime club", "library services")
+	 
+	#Output
+	#After school, I'm involved with chess club
+	#After school, I'm involved with gymnastics
+	#After school, I'm involved with anime club
+	#After school, I'm involved with library services
+
+- Ruby Block Parameter & each
+
+	# The block, {|i| puts i}, is passed the current array item each time it is evaluated. This block prints the item. 
+	[1, 2, 3, 4, 5].each { |i| puts i }
+
+- Ruby .collect Method
+
+	first_arr = [3, 4, 5]
+	second_arr = first_arr.collect { |num| num * 5 }
+	 
+	print second_arr #Output => [15, 20, 25]
+	 
+	# In this example, the .collect method is used to multiply each number within first_arr by 5. 
+	# The outcome is then saved inside of the second_arr variable and printed to the console. 
+	# The original first_arr is left unchanged.
+
+- concat
+
+	# declaring array
+	a = ["abc", "xyz", "dog"]
+	  
+	# declaring array
+	b = ["cow", "cat", "dog"]
+
+	# COMBINING TWO ARRAYS
+	puts "combining a and b : #{a.concat(b)}\n\n"
+
+- join
+
+	# declaring array
+	a = [18, 22, 33, nil, 5, 6]
+  
+	# join
+	puts "join : #{a.join(",")}\n\n"
+
+	--> 18,22,33,,5,6
+	
+	also
+	
+	a * ","
+
+	a * 2 --> repeat the array twice + concat
+
+- select, map & reduce
+
+	def sum(n)
+		# start with total = 0
+		(0..n).reduce(0) {|total, n| total + n ** 2}
+	end
+
+	puts sum(3) # --> 14
+
+	
+	.reduce(0){|sum, indv| sum + indv} #is the same as .reduce(:+)
+
+	
+	people = [
+	  {
+		job_title: "car enthusiast", 
+		salary: "14000" 
+	  },  
+	  {
+		job_title: "developer", 
+		salary: "12000"
+	  }
+	]
+
+	# sum all salaries of people with job title developer
+	puts people.select{|x| x[:job_title] == "developer"}.map{|y| y[:salary].to_i}.reduce(:+)
+
+- map & 
+
+	arr = "1,3,4"
+	puts arr.split(",").map(&:to_i).inspect
+
+	# [1, 3, 4]
+
+
+
+OpenStruct
+========================================================================
+
+
+	- Similar to hash
+
+	require "ostruct"
+
+	person = OpenStruct.new
+	person.name = "John Smith"
+	person.age  = 70
+
+	person.name      # => "John Smith"
+	person.age       # => 70
+	person.address   # => nil
+
+.. also
+
+	puts person.send("name")
+	puts person.send(:name)
+
+	australia = OpenStruct.new(:country => "Australia", :capital => "Canberra")
+	puts australia.send "country"
+	
+	- If two openstructs have the same keys & values .. == -> true
+
+- delete
+
+	person = OpenStruct.new(name: "John", age: 70, pension: 300)
+
+	person.delete_field("age")   # => 70
+	person                       # => #<OpenStruct name="John", pension=300>
+
+- to_h & to_json
+
+	puts australia.to_h # print as hash
+	puts australia.marshal_dump # this also
+	
+	{:country=>"Australia", :capital=>"Canberra"}
+
+	to convert to json string
+	
+	h = { foo: { bar: 1 } } # {:foo=>{:bar=>1}}
+	puts h.to_json	# {"foo":{"bar":1}}
+	
+	obj1 = OpenStruct.new(h)
+	#<OpenStruct foo={:bar=>1}>
+	
+	puts obj1.to_h.to_json
+	{"foo":{"bar":1}}
+
+	- nested openstructus 
+	obj2 = JSON.parse(h.to_json, object_class: OpenStruct)
+	#<OpenStruct foo=#<OpenStruct bar=1>>
+
+	
+	
+	
+
+
+Controls & Loops
+========================================================================
+- loops
+- if / switches
+
+	tv_show = "Bob's Burgers"
+	 
+	case tv_show
+	  when "Archer"
+		puts "I don't like the voice of Archer."
+	  when "Bob's Burgers"
+		puts "I love the voice of Bob Belcher."
+	  else
+		puts "I don't know who voices this cartoon."
+	end
+
+- respond_to?
+
+	puts "A".respond_to?(:push)
+	# => false
+	# Here, the following Ruby code will return false since .push can’t be called on a String object.
+	 
+	puts "A".respond_to?(:next)
+	# => true
+	# Here, however, the following Ruby code will return true since .next can be called on a String object. Calling .next on the letter “A” would return the letter “”.
+
+- Ruby Conditional Assignment Operator
+
+	boyfriend = nil
+ 
+	boyfriend ||= "Jimmy Jr."
+	 
+	boyfriend ||= "Josh"
+	 
+	puts boyfriend
+	# => "Jimmy Jr."
+	 
+	# In this example, since the original value of boyfriend is set to nil which is nothing, Ruby assigns it a value of "Jimmy Jr." on the following line. Once boyfriend holds this real value, another reassignment is overlooked by Ruby and the previous value holds.
+
+- Ruby .push Method Alternative
+
+	array = [1, 2, 3]
+	array << 4
+	print array
+	#Output => [1, 2, 3, 4]
+	 
+	puts "Hello," << " welcome to Codecademy."
+	#Output => Hello, welcome to Codecademy.
+
+- Ruby “next” Keyword
+
+
+	for i in 1..10
+	  next if i % 2 == 0
+	  puts i
+	end
+	 
+	#In this example, the next keyword along with a shorthand if statement is used to skip over the even numbers in the sequence.
+
+- times
+
+	5.times { puts ""Codecademy"" }
+
+- Ruby while Loop
+- Ruby Range
+- Ruby loop
+- Ruby until Loop
+- Ruby for Loop
+
+	x = 4
+	# using while loop 
+	# here condtional is x i.e. 4
+	while x >= 1
+	# statements to be executed
+	  puts "GeeksforGeeks"
+	  x = x - 1
+	# while loop ends here
+	end
+
+- break
+
+	loop do
+	 puts "GeeksforGeeks"
+	 val = '7'
+	 # using boolean expressions
+	 if val == '7'
+	  break
+	 end
+	# ending of ruby do..while loop 
+	end
+
+- next
+
+	for x  in  0..6
+		# Used condition
+		if  x+1 < 4 then
+			# Using next statement
+			next
+		end
+		# Printing values
+		puts "Value of x is : #{x}"
+	end
+
+- until
+
+	var = 7
+	  
+	# using until loop
+	# here do is optional
+	until var == 11 do
+	  
+	  # code to be executed
+	  puts var * 10
+	  var = var + 1
+		
+	# here loop ends
+	end
+
+
+
+
+Classes & Variables
+========================================================================
+
+- Ruby Class Variables
+
+	class Child
+	  @@children = 0						<---- calss variable
+	  def initialize(name, birth_year)
+		@name = name						<---- object variable
+		@birth_year = birth_year
+		@@children +=1
+	  end
+	 
+	  def self.children_added				<---- class method
+		return @@children
+	  end
+	 
+	end
+	 
+	naomi = Child.new("Naomi", 2006)
+	bertha = Child.new("Bertha", 2008)
+	 
+	puts Child.children_added # => 2
+
+- Ruby .new Method
+
+	class Fighter
+	  def initialize(name, style, division, age)
+		@name = name
+		@style = style
+		@division = division
+		@age = age
+	  end
+	end
+	 
+	conor = Fighter.new("Conor", "mixed martial arts", "Welterweight", 31)
+
+
+- Ruby Instance Variable
+
+	class Student
+	  def initialize(name, grade)
+		@name = name
+		@grade = grade
+	  end
+	end
+	 
+	# In this example, name and grade are the instance variables.
+	 
+- Ruby super Keyword
+
+	class Trip
+	  def initialize(duration, price)
+		@duration = duration
+		@price = price
+	  end
+	end
+	 
+	 
+	class Cruise < Trip
+	  def initialize(duration, price)
+		super
+	  end
+	end
+	 
+	spain_backpacking = Trip.new(14, 800.00)
+	carnival = Cruise.new(7, 2400.00)
+	 
+	#In this example, the Cruise class inherits from the Trip class and all of its attributes, including duration and price, are carried over with the super keyword.
+
+- Ruby attr_reader attr_writer Methods
+
+	class Student
+	  attr_reader :name
+	  attr_writer :name
+	  def initialize(name)
+		@name = name
+	  end
+	end
+	#In this example, Ruby is able to both read and write the @name instance variable since it was passed to attr_reader and attr_writer as a symbol.
+	 
+	top_student = Student.new("Jyothi")
+	puts top_student.name # => Jyothi
+	#In classes with attr_reader, instance variables can be accessed using . notation
+	 
+	puts top_student.name # => Jyothi
+	top_student.name = "Anika"
+	puts top_student.name # => Anika
+	#In classes with attr_writer, instance variables can be reassigned using . notation
+
+- Ruby attr_accessor Method
+
+	class CollegeStudent
+	  attr_reader :dorm
+	  attr_accessor :major
+	 
+	  def initialize(dorm, major)
+		@dorm = dorm
+			@major  major
+	  end
+	end
+	
+	attr_reader : This accessor generates the automatic Getter method for the given item.
+	attr_writer : This accessor generates the automatic Setter method for the given item.
+	attr_accessor : This accessor generates the automatic Getter & Setter method for the given item.
+	
+	So you can use:
+	
+	puts object.dorm # only
+	
+	puts object.major	# both, getter and setter
+	object.major = 444
+	
+	
+	
+
+- send
+
+  receiver        name   payload
+     |              |       |
+ __________      ______  ______
+ "a-string".send(:split, '-', 3)
+ 
+ 
+ as
+ 
+   receiver   name payload
+     |        |      |
+ __________ _____ ______
+ "a-string".split('-', 3)
+
+
+
+
+
+Modules
+======================================================================================
+
+- Define
+
+	#A Ruby module can be created using the module keyword followed by the module name written in CapitalizedCamelCase format finalized with an end.
+	 
+	module MyPizza
+	  FAVE_TOPPING = "Buffalo Chicken"
+	end
+	#In this example, myPizza is a module that holds a constant, FAVE_TOPPING, set equal to the string, Buffalo Chicken.
+
+
+- Ruby namespace
+
+	#To retrieve a constant from the Math module, the scope resolution operator (::), should be used.
+	 
+	puts Math::PI
+	# => 3.141592653589793
+	 
+	#In this example, Ruby is targetting the PI constant from the Math module using the scope resolution operator, (::), and printing its value to the console.
+
+- include
+
+	module Cream
+	  def cream?
+		true
+	  end
+	end
+
+	class Cookie
+	  include Cream
+	end
+
+	cookie = Cookie.new
+	p cookie.cream?
+
+- private & protected
+
+	module Encryption
+	  private
+
+	  def encrypt(string)
+		Digest::SHA2.hexdigest(string)
+	  end
+	end
+
+
+	Private methods
+	In Ruby, a private method (or private message handler) can only respond to a message with an implicit receiver (self).
+
+	Protected methods
+	In Ruby, a protected method (or protected message handler) can only respond to a message with an implicit/explicit receiver (object) of the same family. It also cannot respond to a message sent from outside of the protected message handler context.
+
+	* Indeed, when a message is sent by using this method, the private and protected policies are bypassed
+
+- Ruby 2.7+ allows private methods to be called with self as receiver
+	
+	puts "hello world!"            # => hello world!
+	self.puts "hello world!"       # => hello world!
+	Object.new.puts "hello world!" # NoMethodError
+
+
+include & extend
+======================================================================================
+
+* In simple words, the difference between include and extend is that ‘include’ is for adding methods only to an instance of a class and ‘extend’ is for adding methods to the class but not to its instance.
+
+
+	# Creating a module contains a method
+	module Geek
+	  def prints(x)
+		puts x
+	  end
+	end
+	   
+	class GFG
+	  
+	  # by using both include and extend
+	  # we can access them by both instances
+	  #  and class name.
+	  include Geek
+	  extend Geek
+	end
+	  
+	# access the prints() in Geek
+	# module by include in Lord class
+	GFG.new.prints("Howdy") # object access
+	   
+	# access the prints() in Geek 
+	# module by extend it in Lord class
+	GFG.prints("GeeksforGeeks!!") # class access
+
+- Ruby Mixins
+
+	# module consist 2 methods
+	module G
+		def g1
+	   end
+	   def g2
+	   end
+	end
+	  
+	# module consist 2 methods
+	module GFG
+	   def gfg1
+	   end
+	   def gfg2
+	   end
+	end
+	  
+	# Creating a class
+	class GeeksforGeeks
+	include G
+	include GFG
+	   def s1
+	   end
+	end
+	  
+	# Creating object
+	gfg = GeeksforGeeks.new
+	  
+	# Calling methods
+	gfg.g1
+	gfg.g2
+	gfg.gfg1
+	gfg.gfg2
+	gfg.s1
+
+- Polymorphism in Ruby
+
+	- Polymorphism using inheritance (class Car < Vehicle ... override same emthod)
+	- Polymorphism using Duck-Typing (pass class object to method --> delegate)
+
+- Variable Number of Parameters
+
+	def geeks (*var)
+		  
+	   # to display the total number of parameters
+	   puts "Number of parameters is: #{var.length}"
+		 
+	   # using for loop
+	   for i in 0...var.length					<--------
+		  puts "Parameters are: #{var[i]}"
+	   end
+	end
+	  
+	# calling method by passing 
+	# variable number of arguments
+	geeks "GFG", "G4G"
+	geeks "GeeksforGeeks"
+
+- super
+
+	def display a, b
+        # calling the superclass method
+        # by default it will pass 
+        # both the arguments
+        super
+          
+        # passing only one argument
+        super a
+          
+        # passing both the argument
+        super a, b
+          
+        # calling the superclass method
+        # by default it will not pass 
+        # both the arguments
+        super()
+    end
+
+
+- module can access the includer self variables
+
+	module A
+		def go
+			puts "something #{self.v}"
+		end
+	end
+
+	class B
+		include A
+		attr_accessor :v
+	end
+
+	b = B.new
+	b.v = 33
+	puts b.go
+	# something 33
+
+
+	# if we extend instead of include, the go method will be part of the class, not object
+	# and then you can't use instant variables (v) .. 
+
+	B.go
+
+
+- letting the module once its included
+
+	module A
+		def class_method
+			puts "1 class method #{v}"
+		end
+
+		def self.included(base)
+			def class_method			<------ as object method
+				puts "2 class method #{v}"
+			end
+			def base.class_method2		<------ as class method will override methods in ClassMethods
+				puts "3 class method #{v}"
+			end
+			base.extend(ClassMethods)	<------ extend class methods
+		end
+
+		module ClassMethods
+			def class_method
+				puts "C : class method"
+			end
+		end
+	end
+
+	class B
+		include A
+		attr_accessor :v
+		@@v = 0
+	end
+
+	b = B.new
+	b.v = 33
+
+	b.class_method	# 2 ....
+	B.class_method	# C : ....
+	B.class_method2 # 3...
+
+
+Blocks
+========================================================================
+https://mixandgo.com/learn/ruby-blocks
+https://www.rubyguides.com/2016/02/ruby-procs-and-lambdas/
+
+- Blocks
+
+
+	- two types
+
+		method { |i| ... }
+		
+		method do |i|
+			...
+		end
+
+	- wrap
+
+		def wrap_with(el)
+			puts el + yield + el
+		end
+
+		wrap_with("*") do		--> *My name*
+			"My name"		
+		end
+
+	OR
+	
+		wrap_with("*") { "My name" }
+
+	- wrap 2
+
+		def wrap_with(el)				<---- el will receive "*" <---\
+			puts el + yield("-") + el	----> "-" will go to w	----  |
+		end															| |
+																	| |
+				   ----------------------------------------------------
+				   |												|
+		wrap_with("*") do |w|  <------------------------------------|	
+			w + "Some" + w
+		end
+
+	- block_given?
+	
+		def wrap_with(el)
+			if block_given?			
+				puts el + yield + el
+			else
+				puts el + el
+			end
+		end 
+
+	- Passing block as a parameter
+	
+		def start_wrap(&block)
+			puts "*" + block.call + "*"
+		end
+	
+		* And you can pass args to block via block.call(args)
+		
+
+
+- Ruby .call Method
+
+	proc_test = Proc.new { puts "I am the proc method!" }
+	lambda_test = lambda { puts "I am the lambda method!"}
+	 
+	proc_test.call # => I am the proc method!
+	lambda_test.call # => I am the lambda method!
+	 
+	#The following code would result in "I am the proc method!" and "I am the lambda method!" printed to the console respectively, once the proc, proc_test, and the lambda, lambda_test, are called.
+
+- Ruby lambda
+
+	def proc_demo_method
+	  proc_demo = Proc.new { return "Only I print!" }
+	  proc_demo.call
+	  "But what about me?" # Never reached
+	end
+	 
+	puts proc_demo_method 
+	# Output 
+	# Only I print!
+	 
+	# (Notice that the proc breaks out of the method when it returns the value.)
+	 
+	def lambda_demo_method
+	  lambda_demo = lambda { return "Will I print?" }
+	  lambda_demo.call
+	  "Sorry - it's me that's printed."
+	end
+	 
+	puts lambda_demo_method
+	# Output
+	# Sorry - it's me that's printed.
+	 
+	# (Notice that the lambda returns back to the method in order to complete it.)
+
+- Ruby proc
+* Proc objects are blocks of code that can be bound to a set of local variables. You can think of a proc object as a "saved" block.
+	square = Proc.new { |x| x ** 2 }
+	# A proc is defined by calling Proc.new followed by a block.
+	 
+	[2, 4, 6].collect!(&square)
+	# When passing a proc to a method, an & is used to convert the proc into a block.
+	 
+	puts [2, 4, 6].collect!(&square)
+	# => [4, 16, 36]
+
+- 
+
+	def foo(a, b, my_proc)
+		my_proc.call(a, b)
+	end
+	add = proc {|x, y| x + y}
+	puts foo(15, 10, add)
+
+-
+
+In Ruby Programming Language ("Methods, Procs, Lambdas, and Closures"), a lambda defined using -> is called lambda literal.
+
+	succ = ->(x){ x+1 }
+	succ.call(2)
+
+	The code is equivalent to the following one.
+
+	succ = lambda { |x| x + 1 }
+	succ.call(2)
+
+- What is the difference between Block, Proc, and Lambda?
+
+	First, Proc and lambda are objects but blocks are not.
+
+	Second, a lambda checks the number of arguments passed to it, while a proc does not.
+	This means that lambda will throw an error if you pass it the wrong number of arguments, whereas a proc will ignore unexpected arguments and assign nil to any that are missing.
+
+	Block uses the keyword yield, yield is a Ruby keyword that calls a block when you use it, the code inside the block will run and do its work.
+
+	Like in the example below, they all are Ruby blocks:
+
+		def print_message
+		  yield
+		end
+		print_message { puts "Block message" }
+
+		[1,2,3,4].each { |i| puts i }
+
+		[1,2,3,4].each do |i|
+		  puts i
+		end
+
+	Third,
+	when a lambda returns, it passes control back to the calling method,
+	when a proc returns, it does immediately, without going back to the calling method.
+
+	Like in the example below:
+
+		def best_movie_proc
+		  movie = Proc.new { return "Harry Potter!" }
+		  movie.call
+		  "Lord of the rings!"
+		end
+
+		puts best_movie_proc # prints "Harry Potter!"
+
+		def best_movie_lambda
+		  movie = lambda { return "Harry Potter!" }
+		  movie.call
+		  "Lord of the rings!"
+		end
+
+		puts best_movie_lambda # prints "Lord of the rings!"
+
+	See how the proc says "Harry Potter!", this is because it returns immediately, without going back to the best_movie_proc method.
+
+	Our lambda, however, goes back into the method after being called, so the method returns the last code it evaluates: "Lord of the rings!"
+
+- Calls
+
+	* Block call
+
+		def method
+		  if block_given?
+			yield
+		  end
+		end
+		method { puts "Block message" }
+
+	In the given example, we have a block passed with yield keyword.
+
+	* Proc call
+
+		def method(proc)
+		  proc.call # or proc.()
+		end
+		my_proc = proc { puts "Proc message" }
+		method(my_proc)
+
+	In procs, we have two different syntaxes, with call and .()
+
+	* Lambda call
+
+		def method(lambda)
+		  lambda.call # or lambda.()
+		end
+		my_lambda = -> { puts "Lambda message" }
+		method(my_lambda)
+
+	Because lambdas are procs, they also have the same call syntax, but they are different to create.
+
+
+
+
+
+
+
+
+Meta Programming
+========================================================================
+
+- Booom
+
+	class Rubyist
+		define_method :hello do |my_arg|
+		  my_arg
+		end
+	end
+
+	obj = Rubyist.new
+	puts(obj.hello('Matz')) # => Matz
+
+- Methhod missing
+
+	class Rubyist
+		def method_missing(m, *args, &block)
+			str = "Called #{m} with #{args.inspect}"
+
+			if block_given?
+				# block.call
+				puts str + " and also a block: #{block}"
+			else
+				puts str
+			end
+		end
+	end
+
+	Rubyist.new.a(3)	# Called a with [34]
+
+	Rubyist.new.a do |some|	# Called a with [] and also a block: #<Proc:0x0000562178d00210 test.rb:81>
+		puts "some"
+	end
+	
+- dynamic modules
+
+	mod = Module.new do
+	  def talk; "Hi there!" end
+	end
+
+	Lemur.const_set("Talkable", mod)
+	# => Lemur::Talkable
+	
+	Lemur.const_defined?("Talkable")
+	# => true
+
+	mmmmmmmmmmmmmmmmmmmmmmmmm
+	
+- define_method
+
+	mod = Module.new
+
+	phrases = {
+	  hello: "Why hello there!",
+	  goodbye: "Fare thee well!"
+	}
+
+	mod.class_eval do
+	  phrases.each do |name, phrase|
+		define_method(name) { phrase }
+	  end
+	end
+
+	mod.instance_methods
+	=> [:hello, :goodbye]
+
+	* But this is a module! We should have used module_eval! Well, we could, but they're the same thing:
+	
+- methods size
+
+	User.new.methods.size
+	=> 366
+	
+	
+
+
+- decorators (class_eval, prepend)
+
+	- decorator: Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.
+	- But it's not inheritance :) cuz The problems with inheritance include:
+
+		- Choices are made statically.
+		- Clients can’t control how and when to decorate a component.
+		- Tight coupling.
+		- Changing the internals of the superclass means all subclasses must change.
+
+		* remember .. In Ruby, including a module is also inheritance
+
+	- Four common implementations of decorators in Ruby:
+
+		- Module + Extend + Super decorator
+		- Plain Old Ruby Object decorator
+		- Class + Method Missing decorator
+		- SimpleDelegator + Super + Getobj decorator
+
+	
+
+	- Prepending is when we take a bit of code and we put it in front of the original:
+	- A class_eval monkey-patching pattern with prepend
+
+	- prepend
+	
+		module Talkable
+		  def talk; "Hi there!" end
+		end
+
+		class Lemur
+		  # include Talkable
+		  prepend Talkable	<------ this will put talk method of Talkable first
+
+		  def talk; "I wasn't expecting you today" end	<-- will be called first without prepend
+		end
+
+		Lemur.new.talk
+		# => "Hi there!"
+
+	- when using super !!
+	
+		module Talkable
+		  def talk; "Hi there! #{super}" end	<----- call talk from Lemur
+		end
+
+		class Lemur
+		  prepend Talkable
+
+		  def talk; "I wasn't expecting you today" end
+		end
+
+		Lemur.new.talk
+		# => "Hi there! I wasn't expecting you today"
+
+
+	- prepended
+
+		class Rubyist
+			attr_accessor :b
+			@@a = 1
+			def initialize
+				@b = 2
+			end
+			def self.set_a(x)
+				@@a = x
+			end
+			def self.get_a
+				return a
+			end
+			def method(number)
+				return number * @@a;
+			end
+		end
+
+		module A
+			module B
+				def method(number)
+					return number * super	# this will call 4 * super.method = 4 * 4 * 10
+				end
+				def self.prepended(base)
+					# notice here, only class method can be be used, or you can call or include other classes, scope, relations .. etc
+					base.set_a(10)	# will set @aa to 10
+					
+					# maybe this
+					base.class_eval do
+						include Bla	<--------- see this
+					end
+				end
+				Rubyist.prepend self
+			end
+		end
+
+		puts Rubyist.new.method(4) --> 160
+
+	- class_eval ?
+	
+		# class_eval is used for adding methods and attributes to an existing class.
+	
+		array_second = <<-RUBY
+		def second
+		  self[1]
+		end
+		RUBY
+		
+		Array.class_eval(array_second)	<--------
+		
+		String.class_eval do	<-------
+		  def /(delimiter)
+			split(delimiter)
+		  end
+		end
+		
+		$> [1,2,3].second
+		 => 2
+		$> "1,2,3" / ','
+		  => ["1", "2", "3"]
+	
+	- module_eval
+	
+		# In effect, class_eval is an alias formodule_eval.
+		# module_eval is the equivalent of Module#class_eval for modules
+
+		module Commentable
+		  def add_comment(comment)
+			self.comments << comment
+		  end
+		  def comments
+			@comments ||= []
+		  end
+		end
+
+		Commentable.module_eval do
+		  def comment_count
+			comments.count
+		  end
+		end
+
+		class Post
+		  include Commentable
+		end
+
+		$> post = Post.new
+		 => #<Post:0x00007fd9ac0238b0> 
+		$> post.add_comment("Very nice !")
+		 => ["Very nice !"] 
+		$> post.comment_count
+		 => 1
+
+	- class_eval example (rails)
+	
+		# there is a class Spree::Model
+		# then create a file spree/model_decorator.rb
+		
+			Spree::Model.class_eval do
+				include ... stuff
+				def method
+					# bla bla bla
+				end
+			end
+
+	- Module + extend + super decorator
+
+		class Coffee
+		  def cost
+			2
+		  end
+		end
+
+		module Milk
+		  def cost
+			super + 0.4			# this will call the super (2) + 0.4
+		  end
+		end
+
+		coffee = Coffee.new
+		coffee.extend(Milk)
+		coffee.cost   # 2.4
+
+	
+	- The “Plain Old Ruby Object” (PORO) decorator
+
+		class Coffee
+		  def cost
+			2
+		  end
+		end
+
+		class Milk
+		  def initialize(component)
+			@component = component
+		  end
+
+		  def cost
+			@component.cost + 0.4
+		  end
+		end
+
+		coffee = Coffee.new
+		puts Milk.new(Milk.new(coffee)).cost  # 2.8
+
+
+
+
+
+
+
+
+
+
+
+Check forem and other proc gem managers !!!!
+
+
+
+
+
+
