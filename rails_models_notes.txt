@@ -10,16 +10,13 @@ Rails Models, Migrations, and Associations
 
 Databases:
 ============
+# mysql 
 
-mysql 
+	> sudo apt-get install libmysqlclient-dev
 
-sudo apt-get install libmysqlclient-dev
+# postgres
 
-postgres
-
-sudo apt-get install postgres-client
-
-
+	> sudo apt-get install postgres-client
 
 
 Models:
@@ -117,7 +114,7 @@ Available field types:
 
 Examples:
 ---------------
-    `bin/rails generate model account`
+    > bin/rails generate model account
 
         For Active Record and TestUnit it creates:
 
@@ -126,11 +123,11 @@ Examples:
             Fixtures:   test/fixtures/accounts.yml
             Migration:  db/migrate/XXX_create_accounts.rb
 
-    `bin/rails generate model post title:string body:text published:boolean`
+    > bin/rails generate model post title:string body:text published:boolean
 
         Creates a Post model with a string title, text body, and published flag.
 
-    `bin/rails generate model admin/account`
+    > bin/rails generate model admin/account
 
         For Active Record and TestUnit it creates:
 
@@ -172,13 +169,7 @@ rails g model Contract user:references name:string social_number:string mobile:s
 rails generate model Product name:string description:text
 rails generate migration AddPartNumberToProducts
 
-rails g controller home
-
-
 ---------------------------------------------------------------------------
-
-
-
 Migrations methods:
 
     add_column

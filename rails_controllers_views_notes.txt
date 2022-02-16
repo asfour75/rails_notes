@@ -6,12 +6,33 @@ Controllers & Views
 
 Controllers
 ------------------------------------------------------------------------
+- Generator
+
+	# generate mode /controller/helpers and views
+	
+	rails g scaffold Project
+	rails g scaffold Project title:string body:text
+
+	# generate controller/helpers and views from model
+
+	rails g scaffold_controller [model] // generate without fields
+	rails g scaffold_controller [model]  title:string body:text // generate with fields
+
+	rails g controller home 		--> home_controller.rb (HomeController)
+	rails g controller home index 	--> home_controller.rb (HomeController) + views/home/index.html.erb
+
+- To check available generators
+
+	rails g --help
 
 - General
+------------------------------------------------------------------------
 
 	- params is where the data 
 	- params is Hash
 
+
+	- Controller for model Article
 
 	def show
 	  @article = Article.find(params[:id])
@@ -23,6 +44,7 @@ Controllers
 
 	def create
 		@item = Item.new(item_params)
+		.....
 	end
 
 	def index
@@ -36,12 +58,172 @@ Controllers
 	private
 
     def item_params
-      params.fetch(:item, {}).permit(:name, :id, :title, :summary, :body, :type, :status, :user_id, :info, :reference_id, :tags)	<------
+      params.fetch(:item, {}).permit(:name, :id, :title, :summary, :body, :type, :status, :user_id, :info, :reference_id, :tags)	<------ control what params allowed to pass
     end
 
+
+- Request / Response Objects (reading from controller)
+------------------------------------------------------------------------
+
+- request
+
+	# namespace / scope cna be used in saas to set which scope (username, servicename .. etc) to run the controller actions within 
+	# to detect which scope or namespace from controller
+
+	host 			The hostname used for this request.
+	domain(n=2) 	The hostname's first n segments, starting from the right (the TLD).
+	format 			The content type requested by the client.
+	method 			The HTTP method used for the request.
+	get?, post?, patch?, put?, delete?, head? 	Returns true if the HTTP method is GET/POST/PATCH/PUT/DELETE/HEAD.
+	headers 		Returns a hash containing the headers associated with the request.
+	port 			The port number (integer) used for the request.
+	protocol 		Returns a string containing the protocol used plus "://", for example "http://".
+	query_string 	The query string part of the URL, i.e., everything after "?".
+	remote_ip 		The IP address of the client.
+	url 			The entire URL used for the request.
+
+	  scope :admin do
+		resources :messages
+	  end
+
+
+		get /admin/messages?a=b
+
+		<%= Rails.application.routes.recognize_path request.url %>	--> {:controller=>"messages", :action=>"index"}
 	
+	- read header names, values
+	
+		<% request.headers.each do |k, v| %>
+		  <%= k %> : <%= v %><br/>
+		<% end %>
+	
+	- reading params
+	
+		<%= request.params %>
+		{"a"=>"b", "controller"=>"messages", "action"=>"index"}
+		
+	<%= request.path %>				--> /admin/messages
+	<%= params %>					--> {"controller"=>"admin/messages", "action"=>"index"}
+	<%= controller_path %>			--> messages
+	<%= controller_name %>			--> messages
+	<%= controller.class.name %>	--> MessagesController
+
+- response
+
+	body 			This is the string of data being sent back to the client. This is most often HTML.
+	status 			The HTTP status code for the response, like 200 for a successful request or 404 for file not found.
+	location 		The URL the client is being redirected to, if any.
+	content_type 	The content type of the response.
+	charset 		The character set being used for the response. Default is "utf-8".
+	headers 		Headers used for the response.
+
+	# example
+
+	response.headers["Content-Type"] = "application/pdf"	# use content_type better
+
+
+- Params
+------------------------------------------------------------------------
+
+	# you can read params directly
+	params[:some_param]
+
+	# If you're writing a web service application, you might find yourself more comfortable accepting parameters in JSON format. If the "Content-Type" header of your request is set to "application/json", Rails will automatically load your parameters into the params hash, which you can access as you would normally.
+
+	{ "company": { "name": "acme", "address": "123 Carrot Street" } }	--> { name: "acme", address: "123 Carrot Street", company: { name: "acme", address: "123 Carrot Street" } }
+
+	# for example /messages/index?a=b
+	
+	# param includes
+	params.inspect --> #<ActionController::Parameters {"a"=>"b", "controller"=>"messages", "action"=>"index"} permitted: false>
+	
+	- permitted: false ? yup, don;t use params, instead use item_params
+	- all params will be included inside item.
+	
+
+	# Rails collects all of the parameters sent along with the request in the params hash
+	- query_parameters hash contains parameters that were sent as part of the query string
+	- request_parameters hash contains parameters sent as part of the post body
+	- path_parameters hash contains parameters that were recognized by the routing as being part of the path leading to this particular controller and action.
+
+		get 'message/:id', to: 'messages#show'
+
+
+- Strong Params
+------------------------------------------------------------------------
+
+	- to encapsulate the permissible parameters
+	- When you generate a controller, you will notice the following provate function:
+	
+	    def person_params
+			# default
+			params.fetch(:person, {}).permit(:name, :age)
+			
+			# sometimes
+			# params.require(:person).permit(:name, :age)
+
+			# According to documentation, you can't use .require when you don't have an instance of an object.
+			# Then .fetch supplies a default params for your uncreated object (#new and #create actions).
+
+		end
+	
+	- You can permit certain param					-->	params.permit(:id)
+	- permit a whole structure of a param			--> params.permit(preferences: {})
+	- To permit an entire hash of parameters, the permit! method can be used:	--> params.require(:log_entry).permit!
+	- Permit product name and the whole data has	--> params.require(:product).permit(:name, data: {})
+
+	- Nested params
+	
+		params.permit(:name, { emails: [] },
+              friends: [ :name,
+                         { family: [ :name ], hobbies: [] }])
+
+	- Using fetch
+	
+		# using `fetch` you can supply a default and use
+		# the Strong Parameters API from there.
+		params.fetch(:blog, {}).permit(:title, :author)
+
+	- To permit _destroy (delete)
+	
+		params.require(:author).permit(:name, books_attributes: [:title, :id, :_destroy])
+		
+	- When using accepts_nested_attributes_for 
+	
+		# To permit the following data:
+		# {"book" => {"title" => "Some Book",
+		#             "chapters_attributes" => { "1" => {"title" => "First Chapter"},
+		#                                        "2" => {"title" => "Second Chapter"}}}}
+
+		params.require(:book).permit(:title, chapters_attributes: [:title])
+
+- Default_url_options
+------------------------------------------------------------------------
+
+	# The ability to set default options whenever you want to generate a url
+	# FOr this example
+
+	application_controller.rb:
+	
+		def default_url_options
+			{ locale: I18n.locale }
+		end
+	
+	if you have a route:
+	
+		scope	:some do
+			resources	:messages
+		end
+	
+	then you tried to generate a url
+	
+		<%= url_for({:controller => 'messages', :a => 'f'}) %>	-> /some/messages?a=f&locale=en
+
+
+
 - Filters
-	
+------------------------------------------------------------------------
+
     before_action 	:dome_something		--> runs before the controller action
     after_action	:dome_something 	--> runs after the controller action
     around_action 	:dome_something		--> yields to the controller action wherever it chooses
@@ -186,19 +368,283 @@ Controllers
 		  end
 
 		end
+
+
+- Sessions
+------------------------------------------------------------------------
+- Your application has a session for each user in which you can store small amounts of data that will be persisted between requests.
+
+	> curl -I http://www.google.com | grep Set-Cookie
+
+	Set-Cookie: NID=67=J2xeyegolV0SSneukSOANOCoeuDQs7G1FDAK2j-nVyaoejz-4K6aouUQtyp5B_rK3Z7G-EwTIzDm7XQ3_ZUVNnFmlGfIHMAnZQNd4kM89VLzCsM0fZnr_N8-idASAfBEdS; expires=Wed, 16-Sep-2015 05:44:42 GMT; path=/; domain=.google.com; HttpOnly
+	
+	- Every time you make a request, your browser will send the cookies back to the server:
+	
+	Cookie: NID=67=J2xeyegolV0SSneukSOANOCoeuDQs7G1FDAK2j-nVyaoejz-4K6aouUQtyp5B_rK3Z7G-EwTIzDm7XQ3_ZUVNnFmlGfIHMAnZQNd4kM89VLzCsM0fZnr_N8-idASAfBEdS; expires=Wed, 16-Sep-2015 05:44:42 GMT; path=/; domain=.google.com; HttpOnly
+	
+	- Rails uses Cookies to store session data in secured fashion
+	- But, You can only store about 4kb of data in a cookie.
+	- Cookies are sent along with every request you make.
+	- If you accidentally expose your secret_key_base, your users can change the data you’ve put inside your cookie.
+	- Storing the wrong kind of data inside a cookie can be insecure.
+
+- The session is only available in the controller and the view and can use one of several of different storage mechanisms:
+
+    ActionDispatch::Session::CookieStore 		- Stores everything on the client.
+    ActionDispatch::Session::CacheStore 		- Stores the data in the Rails cache.
+    ActionDispatch::Session::ActiveRecordStore 	- Stores the data in a database using Active Record * (requires the activerecord-session_store gem).
+    ActionDispatch::Session::MemCacheStore 		- Stores the data in a memcached cluster (this is a legacy implementation; consider using CacheStore instead).
+
+- If you were keeping track of your sessions with ActiveRecord:
+
+    1- When you call session[:current_user_id] = 1 in your app, and a session doesn’t already exist:
+    2- Rails will create a new record in your sessions table with a random session ID (say, 09497d46978bf6f32265fefb5cc52264).
+    3- It’ll store {current_user_id: 1} (Base64-encoded) in the data attribute of that record.
+    4- And it’ll return the generated session ID, 09497d46978bf6f32265fefb5cc52264, to the browser using Set-Cookie.
+
+	# The next time you request a page,
+	
+    1- The browser sends that same cookie to your app, using the Cookie: header.
+	(like this: Cookie: _my_app_session=09497d46978bf6f32265fefb5cc52264; path=/; HttpOnly)
+    2- When you call session[:current_user_id]:
+    3- Your app grabs the session ID out of your cookie, and finds its record in the sessions table.
+    4- Then, it returns current_user_id out of the data attribute of that record.
+
+- So
+
+	Whether you’re storing sessions in the database, in Memcached, in Redis, or wherever else, they mostly follow this same process. Your cookie only contains a session ID, and your Rails app looks up the data in your session store using that ID.
+
+
+- Setup
+
+	- session mechanism
+	
+		Rails.application.config.session_store :active_record_store						--> use database
+		Rails.application.config.session_store :cookie_store, key: '_your_app_session'	--> set session key
+		Rails.application.config.session_store :cookie_store, key: '_your_app_session', domain: ".example.com"	--> with domain
+		
+	- Rails sets up (for the CookieStore) a secret key used for signing the session data in config/credentials.yml.enc. 
+	- This can be changed with: 
+	
+		> bin/rails credentials:edit
+
+- Accessing session
+
+	- check current user
+	
+		@_current_user ||= session[:current_user_id] && User.find_by(id: session[:current_user_id])
+
+	- create the session
+	
+		if user = User.authenticate(params[:username], params[:password])
+		  # Save the user ID in the session so it can be used in
+		  # subsequent requests
+		  session[:current_user_id] = user.id
+		  redirect_to root_url
+		end
+	
+	- destroy
+	
+		# Remove the user id from the session
+		session.delete(:current_user_id)
+		
+		# Clear the memoized current user
+		@_current_user = nil
+		redirect_to root_url
+
+- Securing sessions in cookies
+
+	config.force_ssl = true	# in production
+
+	Rails.application.config.action_dispatch.signed_cookie_digest = "SHA256"
+
+	# with rotation
+	Rails.application.config.action_dispatch.cookies_rotations.tap do |cookies|
+	  cookies.rotate :signed, digest: "SHA1"
+	end
+
+	# https://guides.rubyonrails.org/security.html
+
+	
+- Flash Messages
+------------------------------------------------------------------------
+	
+	- Before redirects / render
+
+		flash[:notice] = "You have successfully logged out."
+		redirect_to root_url
+    
+	- Within
+	
+		redirect_to root_url, notice: "You have successfully logged out."
+		redirect_to root_url, alert: "You're stuck here!"
+		redirect_to root_url, flash: { referral_code: 1234 }
+	
+	- Showing
+	
+		<% flash.each do |name, msg| -%>
+			<%= content_tag :div, msg, class: name %>
+		<% end -%>	
+
+	- You can pass anything that the session can store; you're not limited to notices and alerts:
+	
+		<% if flash[:just_signed_up] %>
+		  <p class="welcome">Welcome to our site!</p>
+		<% end %>
+
+	- If you want a flash value to be carried over to another request, use flash.keep:
+	
+		flash.keep
+		redirect_to users_url
+		    
+	- For example, if the create action fails to save a resource, and you render the new template directly, 
+	that's not going to result in a new request, but you may still want to display a message using the flash. 
+	To do this, you can use flash.now in the same way you use the normal flash:
+	
+		flash.now[:error] = "Could not save client"
+		render action: "new"
+
+
+
+Cookies
+------------------------------------------------------------------------
+
+# Your application can store small amounts of data on the client - called cookies - that will be persisted across requests and even sessions.
+
+	- basics
+
+		- cookies[:commenter_name] = @comment.author
+		- cookies.delete(:commenter_name)
+	
+	- Rails also provides a signed cookie jar and an encrypted cookie jar for storing sensitive data.
+	- These special cookie jars use a serializer to serialize the assigned values into strings and deserializes them into Ruby objects on read.
+
+		Rails.application.config.action_dispatch.cookies_serializer = :json
+		
+	- Custom
+	
+		Rails.application.config.action_dispatch.cookies_serializer = MyCustomSerializer
+
+		class CookiesController < ApplicationController
+		  def set_cookie
+			cookies.encrypted[:expiration_date] = Date.tomorrow # => Thu, 20 Mar 2014
+			redirect_to action: 'read_cookie'
+		  end
+
+		  def read_cookie
+			cookies.encrypted[:expiration_date] # => "2014-03-20"
+		  end
+		end
+
+
+
+- Forms, Request Forgery Protection
+------------------------------------------------------------------------
+- (CSRF) Cross-site request forgery is a type of attack in which a site tricks a user into making requests on another site, possibly adding, modifying, or deleting data on that site without the user's knowledge or permission.
+
+- Example:
+
+	<%= form_with model: @user do |form| %>
+	  <%= form.text_field :username %>
+	  <%= form.text_field :password %>
+	<% end %>
+
+	# will generate
+	
+	<form accept-charset="UTF-8" action="/users/1" method="post">
+		<input type="hidden"											<--- notice this
+			   value="67250ab105eb5ad10851c00a5621854a23af5489"
+			   name="authenticity_token"/>
+		<!-- fields -->
+	</form>
+
+	# you can generate this value for mnually crteated forms / ajax
+	
+		<%= form_authenticity_token %>
+
+
+- Basic Auth
+
+	class AdminsController < ApplicationController
+		http_basic_authenticate_with name: "humbaba", password: "5baa61e4"
+	end
+
+- HTTP Digest Authentication
+
+	class AdminsController < ApplicationController
+	  USERS = { "lifo" => "world" }
+
+	  before_action :authenticate
+
+	  private
+		def authenticate
+		  authenticate_or_request_with_http_digest do |username|
+			USERS[username]
+		  end
+		end
+	end
+
+- HTTP Token Authentication
+
+	class PostsController < ApplicationController
+	  TOKEN = "secret"
+
+	  before_action :authenticate
+
+	  private
+		def authenticate
+		  authenticate_or_request_with_http_token do |token, options|
+			ActiveSupport::SecurityUtils.secure_compare(token, TOKEN)
+		  end
+		end
+	end
+
+- Filter out sensitive data from logs
+
+	# check file: config/initializers/filter_parameter_logging.rb
+	
+	Or set inside environment file
+	
+		config.filter_parameters << :password
+	
+	
+- Rescue
+
+	- rescue_from
+	
+		class ApplicationController < ActionController::Base
+		  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
+		  # rescue_from User::NotAuthorized, with: :user_not_authorized
+
+		  private
+			def record_not_found
+			  render plain: "404 Not Found", status: 404
+			  # Or
+			  # flash[:error] = "You don't have access to this section."
+			  # redirect_back(fallback_location: root_path)
+			end
+		end
+	
+	- And from your controller
+	
+		  before_action :check_authorization
+		  
+		  private
+		  
+			# If the user is not authorized, just throw the exception.
+			def check_authorization
+			  raise User::NotAuthorized unless current_user.admin?
+			end
 	
 
 
-
-Renders & Redirects & Templates & Layouts & Partials
--------------------------------------------------------------------------------------------------------
+Sending & Renders & Redirects & Templates & Layouts & Partials
+========================================================================
 
 - Render and Redirects
-
+------------------------------------------------------------------------
 	    render action: :edit 	# this will go to edit template inside views/controller folder
-	    render :edit 			# same
-		redirect_to(@book) 		# redirecto to @book show page 
-		
+	    render :edit 			# same		
 	    render 'articles/new'	# render new template in views/articles folder (could be for different controller)
 	    
 		render text: "Hello, World!"	# render plain text	--> use plain: instead iof text:	--> "text/plain" so not to confused "text/html"
@@ -206,38 +652,102 @@ Renders & Redirects & Templates & Layouts & Partials
 		render json: @article
 			
 
-		# render a view based on its name along with routes
+	- render a view based on its name along with routes
 	
 			get "/home/test", to: "home#test"	--> controller home and method test --> views/home/test.html.erb 
 
-		# pass params to template (same as partial)	
-		# controller.test		
+	- pass params to template (same as partial)	
+	
 	    render :template => "home/test", :locals => {:bo => "hh"}
 
-		# test.html.erb
+	- test.html.erb
+	
 		<%= bo if !local_assigns[:bo].blank? %>
 	
-		# layouts
+	- layouts
+	
 		render :show, layout: 'top_story'
 		render :show, layout: false
 		
-		# Redirect
+	- Redirect
+
 		redirect_to articles_path
 		redirect_to 'http://rubyonrails.org'
 		redirect_to 'http://rubyonrails.org', status: 301
 		redirect_to articles_path, notice: "Article Created"
 		redirect_to login_path, alert: "You must be logged in!"
 
-		# redirect_to and render do not return
+		redirect_to(@book) 		# redirecto to @book show page 
+
+	- redirect_to and render do not return
+	
 		redirect_to login_path unless current_user.admin?
 		redirect_to articles_path, notice: "Article '#{article.title}' was deleted."
 		
-		# The redirect_to does not stop execution of the method
-		# so if you have multiple redirects, split them by conditions or use: and return
+	# The redirect_to does not stop execution of the method
+	# so if you have multiple redirects, split them by conditions or use: and return
 		
 		
+	- Streaming
+		
+		# You can render stream if data directly 
+		# Remember in controller always
+		
+		include ActionController::Live
+		
+		# this will send back a csv file 
+		def show
+			send_stream(filename: "subscribers.csv") do |stream|
+			  stream.write "email_address,updated_at\n"
+			  @subscribers.find_each do |subscriber|
+				stream.write "#{subscriber.email_address},#{subscriber.updated_at}\n"
+			  end
+			end
+		end
+		
+		
+	- Another example
+	
+		  def stream
+			response.headers['Content-Type'] = 'text/event-stream'
+			2.times {
+			  response.stream.write "hello world\n"
+			  sleep 1
+			}
+		  ensure
+			response.stream.close
+		  end	
+		
+	- Sending a file
+	
+		# This will read and stream the file 4 kB at the time, avoiding loading the entire file into memory at once. 
+		# You can turn off streaming with the :stream option or adjust the block size with the :buffer_size option.
+		# If :type is not specified, it will be guessed from the file extension specified in :filename. 
+		# If the content-type is not registered for the extension, application/octet-stream will be used.
+	
+		send_file("#{Rails.root}/files/clients/#{client.id}.pdf",
+					  filename: "#{client.name}.pdf",
+					  type: "application/pdf")	
 
+	- RESTful Downloads
+	
+		# In REST terminology, the PDF file from the example above can be considered just another representation of the client resource.
+		
+			respond_to do |format|
+			  format.html
+			  format.pdf { render pdf: generate_pdf(@client) }
+			end
+	- Add PDF typein config/initializers/mime_types.rb:
+	
+		Mime::Type.register "application/pdf", :pdf
+
+	- Then
+			
+		GET /clients/1.pdf
+
+		
 - Layouts
+------------------------------------------------------------------------
 
 	- default layout is layouts/application.html.erb
 	- specify layout at controller level
@@ -264,8 +774,8 @@ Renders & Redirects & Templates & Layouts & Partials
 			<style><%= yield :stylesheets %></style>
 		</head>
 
-
 - Partials
+------------------------------------------------------------------------
 
 	<%= render "shared/menu" %>
 	<%= render :partial => "shared/something", :locals => {:bo => "hh"}
@@ -308,36 +818,12 @@ Renders & Redirects & Templates & Layouts & Partials
 
 
 
-Ajax & ejs	(for Rails7, check actioncable & turbo)
-------------------------------------------------------------------------
-There are several ways to use ajax with rails applications.
-- the hard way, using jQuery directly .. or any other libraries 
-- the rails way .. 
-
-	Rails.ajax({
-		url: '/url',
-		type: 'get',
-		data: '',
-		success: function(data) {},
-		error: function(data) {},
-	})
-
-	Or (recommended)
-		
-- rails-ujs	# not used for rails 7
-
-# Hotwire’s combination of Turbo and Stimulus deliver all the tools needed to produce fantastic user experiences that leave little to nothing on the table in contrast to single-page applications – at a fraction of the complexity. 
-
-# It’s the default choice for new Rails apps, replacing the far more limited options of Turbolinks and Rails UJS.
-
-
-
-
 
 
 
 - Helpers
-------------------------------------------------------------------------
+========================================================================
+
 
 - Ready made helpers
 
@@ -384,7 +870,8 @@ There are several ways to use ajax with rails applications.
 
 
 - Presenter
------------------------------------------------------------------------
+========================================================================
+
 
 	# app/presenters/post_presenter.rb
 	class PostPresenter
@@ -410,42 +897,36 @@ There are several ways to use ajax with rails applications.
 
 
 
-Other awesome libraries
+
+
+Ajax & ejs	(for Rails7, check actioncable & turbo)
 ========================================================================
 
+There are several ways to use ajax with rails applications.
+- the hard way, using jQuery directly .. or any other libraries 
+- the rails way .. 
+
+	Rails.ajax({
+		url: '/url',
+		type: 'get',
+		data: '',
+		success: function(data) {},
+		error: function(data) {},
+	})
+
+	Or (recommended)
+		
+- rails-ujs	# not used for rails 7
+
+# Hotwire’s combination of Turbo and Stimulus deliver all the tools needed to produce fantastic user experiences that leave little to nothing on the table in contrast to single-page applications – at a fraction of the complexity. 
+
+# It’s the default choice for new Rails apps, replacing the far more limited options of Turbolinks and Rails UJS.
 
 
 
 
 
 
-
-
-
-
-
-
-
-rails g scaffold Project
-rails g scaffold Project title:string body:text
-
-rails g scaffold_controller [model] // generate without fields
-rails g scaffold_controller [model]  title:string body:text // generate with fields
-
-rails g scaffold Project
-rails g scaffold Project title:string body:text
-rails g scaffold_controller [model] // generate without fields
-rails g scaffold_controller [model]  title:string body:text // generate with fields
-
-rails g controller home --> home_controller.rb (HomeController)
-
-- Now, To Check the code of any gem, 
-
-	> bundle open jquery-rails
-
-To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
-
-	> bundle exec rake routes
 
 
 

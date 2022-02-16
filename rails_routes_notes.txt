@@ -521,55 +521,11 @@ Rails Routes
 	# module: to set the module name that contains the controller
 	# as: to set the prefix in path names
 	
-
-- request object (reading from controller)
-
-	# namespace / scope cna be used in saas to set which scope (username, servicename .. etc) to run the controller actions within 
-	# to detect which scope or namespace from controller
-
-	host 			The hostname used for this request.
-	domain(n=2) 	The hostname's first n segments, starting from the right (the TLD).
-	format 			The content type requested by the client.
-	method 			The HTTP method used for the request.
-	get?, post?, patch?, put?, delete?, head? 	Returns true if the HTTP method is GET/POST/PATCH/PUT/DELETE/HEAD.
-	headers 		Returns a hash containing the headers associated with the request.
-	port 			The port number (integer) used for the request.
-	protocol 		Returns a string containing the protocol used plus "://", for example "http://".
-	query_string 	The query string part of the URL, i.e., everything after "?".
-	remote_ip 		The IP address of the client.
-	url 			The entire URL used for the request.
-
-	  scope :admin do
-		resources :messages
-	  end
-
-
-		get /admin/messages?a=b
-
-		<%= Rails.application.routes.recognize_path request.url %>	--> {:controller=>"messages", :action=>"index"}
-	
-	- read header names, values
-	
-		<% request.headers.each do |k, v| %>
-		  <%= k %> : <%= v %><br/>
-		<% end %>
-	
-	- reading params
-	
-		<%= request.params %>
-		{"a"=>"b", "controller"=>"messages", "action"=>"index"}
-		
-	<%= request.path %>				--> /admin/messages
-	<%= params %>					--> {"controller"=>"admin/messages", "action"=>"index"}
-	<%= controller_path %>			--> messages
-	<%= controller_name %>			--> messages
-	<%= controller.class.name %>	--> MessagesController
-
-	
 - .:format
 
 	.:format allow us to pass extension to be used to influence the response from controller
 	- when calling /messages.json for example:
+	
 	# check controllers_views referece
 	
 		class MessageController < ApplicationController
@@ -585,32 +541,10 @@ Rails Routes
 			end
 		end
 	
-	supported mime types:
-	
-	text types:
-	
-		- json
-		- xml
-		- ics	# calendar
-		- html	# default
-		- css
-		- js
-		- csv
-		- yaml
-	
-	application types:
-	
-		- html
-		- js
-		- xml
-		- yaml
-		- atom
-		- json
-		- rss
-		- url_encoded_form
+	- supported mime types: text types: json, xml, ics	# calendar, html	# default, css, js, csv, yaml
+	- application types: html, js, xml, yaml, atom, json, rss, url_encoded_form
 
-
-	get 'photos/:id', to: 'photos#show', defaults: { format: 'jpg' }
+		get 'photos/:id', to: 'photos#show', defaults: { format: 'jpg' }
 
 
 Cool Stuff

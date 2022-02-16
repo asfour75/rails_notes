@@ -116,7 +116,7 @@ room_channel.js:
 this.$root.cable.connection.isOpen()
 consumer.connection.open()
 
-$(document).on('turbolinks:load', function() {
+$(document).on('turbolinks:load', function() {})
 
 
 
@@ -264,10 +264,8 @@ Intelligent defaults
 
 	yelling = element.value.upcase
 	morph "#foo", render(partial: "path/to/foo", locals: {message: yelling})
+
 	
-
-
-
 - https://dev.to/phawk/hotwire-best-practices-for-stimulus-40e
 
 
