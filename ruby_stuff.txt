@@ -1336,215 +1336,207 @@ Meta Programming
 	
 
 
-- decorators (class_eval, prepend)
+decorators (class_eval, prepend)
+========================================================================
 
-	- decorator: Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.
-	- But it's not inheritance :) cuz The problems with inheritance include:
+- decorator: Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.
+- But it's not inheritance :) cuz The problems with inheritance include:
 
-		- Choices are made statically.
-		- Clients can’t control how and when to decorate a component.
-		- Tight coupling.
-		- Changing the internals of the superclass means all subclasses must change.
+	- Choices are made statically.
+	- Clients can’t control how and when to decorate a component.
+	- Tight coupling.
+	- Changing the internals of the superclass means all subclasses must change.
 
-		* remember .. In Ruby, including a module is also inheritance
+	* remember .. In Ruby, including a module is also inheritance
 
-	- Four common implementations of decorators in Ruby:
+- Four common implementations of decorators in Ruby:
 
-		- Module + Extend + Super decorator
-		- Plain Old Ruby Object decorator
-		- Class + Method Missing decorator
-		- SimpleDelegator + Super + Getobj decorator
+	- Module + Extend + Super decorator
+	- Plain Old Ruby Object decorator
+	- Class + Method Missing decorator
+	- SimpleDelegator + Super + Getobj decorator
 
-	
 
-	- Prepending is when we take a bit of code and we put it in front of the original:
-	- A class_eval monkey-patching pattern with prepend
 
-	- prepend
-	
-		module Talkable
-		  def talk; "Hi there!" end
+- Prepending is when we take a bit of code and we put it in front of the original:
+- A class_eval monkey-patching pattern with prepend
+
+- prepend
+
+	module Talkable
+	  def talk; "Hi there!" end
+	end
+
+	class Lemur
+	  # include Talkable
+	  prepend Talkable	<------ this will put talk method of Talkable first
+
+	  def talk; "I wasn't expecting you today" end	<-- will be called first without prepend
+	end
+
+	Lemur.new.talk
+	# => "Hi there!"
+
+- when using super !!
+
+	module Talkable
+	  def talk; "Hi there! #{super}" end	<----- call talk from Lemur
+	end
+
+	class Lemur
+	  prepend Talkable
+
+	  def talk; "I wasn't expecting you today" end
+	end
+
+	Lemur.new.talk
+	# => "Hi there! I wasn't expecting you today"
+
+
+- prepended
+
+	class Rubyist
+		attr_accessor :b
+		@@a = 1
+		def initialize
+			@b = 2
 		end
-
-		class Lemur
-		  # include Talkable
-		  prepend Talkable	<------ this will put talk method of Talkable first
-
-		  def talk; "I wasn't expecting you today" end	<-- will be called first without prepend
+		def self.set_a(x)
+			@@a = x
 		end
-
-		Lemur.new.talk
-		# => "Hi there!"
-
-	- when using super !!
-	
-		module Talkable
-		  def talk; "Hi there! #{super}" end	<----- call talk from Lemur
+		def self.get_a
+			return a
 		end
-
-		class Lemur
-		  prepend Talkable
-
-		  def talk; "I wasn't expecting you today" end
+		def method(number)
+			return number * @@a;
 		end
+	end
 
-		Lemur.new.talk
-		# => "Hi there! I wasn't expecting you today"
-
-
-	- prepended
-
-		class Rubyist
-			attr_accessor :b
-			@@a = 1
-			def initialize
-				@b = 2
-			end
-			def self.set_a(x)
-				@@a = x
-			end
-			def self.get_a
-				return a
-			end
+	module A
+		module B
 			def method(number)
-				return number * @@a;
+				return number * super	# this will call 4 * super.method = 4 * 4 * 10
+			end
+			def self.prepended(base)
+				# notice here, only class method can be be used, or you can call or include other classes, scope, relations .. etc
+				base.set_a(10)	# will set @aa to 10
+				
+				# maybe this
+				base.class_eval do
+					include Bla	<--------- see this
+				end
+			end
+			Rubyist.prepend self
+		end
+	end
+
+	puts Rubyist.new.method(4) --> 160
+
+- class_eval ?
+
+	# class_eval is used for adding methods and attributes to an existing class.
+
+	array_second = <<-RUBY
+	def second
+	  self[1]
+	end
+	RUBY
+	
+	Array.class_eval(array_second)	<--------
+	
+	String.class_eval do	<-------
+	  def /(delimiter)
+		split(delimiter)
+	  end
+	end
+	
+	$> [1,2,3].second
+	 => 2
+	$> "1,2,3" / ','
+	  => ["1", "2", "3"]
+
+- module_eval
+
+	# In effect, class_eval is an alias formodule_eval.
+	# module_eval is the equivalent of Module#class_eval for modules
+
+	module Commentable
+	  def add_comment(comment)
+		self.comments << comment
+	  end
+	  def comments
+		@comments ||= []
+	  end
+	end
+
+	Commentable.module_eval do
+	  def comment_count
+		comments.count
+	  end
+	end
+
+	class Post
+	  include Commentable
+	end
+
+	$> post = Post.new
+	 => #<Post:0x00007fd9ac0238b0> 
+	$> post.add_comment("Very nice !")
+	 => ["Very nice !"] 
+	$> post.comment_count
+	 => 1
+
+- class_eval example (rails)
+
+	# there is a class Spree::Model
+	# then create a file spree/model_decorator.rb
+	
+		Spree::Model.class_eval do
+			include ... stuff
+			def method
+				# bla bla bla
 			end
 		end
 
-		module A
-			module B
-				def method(number)
-					return number * super	# this will call 4 * super.method = 4 * 4 * 10
-				end
-				def self.prepended(base)
-					# notice here, only class method can be be used, or you can call or include other classes, scope, relations .. etc
-					base.set_a(10)	# will set @aa to 10
-					
-					# maybe this
-					base.class_eval do
-						include Bla	<--------- see this
-					end
-				end
-				Rubyist.prepend self
-			end
-		end
+- Module + extend + super decorator
 
-		puts Rubyist.new.method(4) --> 160
+	class Coffee
+	  def cost
+		2
+	  end
+	end
 
-	- class_eval ?
-	
-		# class_eval is used for adding methods and attributes to an existing class.
-	
-		array_second = <<-RUBY
-		def second
-		  self[1]
-		end
-		RUBY
-		
-		Array.class_eval(array_second)	<--------
-		
-		String.class_eval do	<-------
-		  def /(delimiter)
-			split(delimiter)
-		  end
-		end
-		
-		$> [1,2,3].second
-		 => 2
-		$> "1,2,3" / ','
-		  => ["1", "2", "3"]
-	
-	- module_eval
-	
-		# In effect, class_eval is an alias formodule_eval.
-		# module_eval is the equivalent of Module#class_eval for modules
+	module Milk
+	  def cost
+		super + 0.4			# this will call the super (2) + 0.4
+	  end
+	end
 
-		module Commentable
-		  def add_comment(comment)
-			self.comments << comment
-		  end
-		  def comments
-			@comments ||= []
-		  end
-		end
-
-		Commentable.module_eval do
-		  def comment_count
-			comments.count
-		  end
-		end
-
-		class Post
-		  include Commentable
-		end
-
-		$> post = Post.new
-		 => #<Post:0x00007fd9ac0238b0> 
-		$> post.add_comment("Very nice !")
-		 => ["Very nice !"] 
-		$> post.comment_count
-		 => 1
-
-	- class_eval example (rails)
-	
-		# there is a class Spree::Model
-		# then create a file spree/model_decorator.rb
-		
-			Spree::Model.class_eval do
-				include ... stuff
-				def method
-					# bla bla bla
-				end
-			end
-
-	- Module + extend + super decorator
-
-		class Coffee
-		  def cost
-			2
-		  end
-		end
-
-		module Milk
-		  def cost
-			super + 0.4			# this will call the super (2) + 0.4
-		  end
-		end
-
-		coffee = Coffee.new
-		coffee.extend(Milk)
-		coffee.cost   # 2.4
-
-	
-	- The “Plain Old Ruby Object” (PORO) decorator
-
-		class Coffee
-		  def cost
-			2
-		  end
-		end
-
-		class Milk
-		  def initialize(component)
-			@component = component
-		  end
-
-		  def cost
-			@component.cost + 0.4
-		  end
-		end
-
-		coffee = Coffee.new
-		puts Milk.new(Milk.new(coffee)).cost  # 2.8
+	coffee = Coffee.new
+	coffee.extend(Milk)
+	coffee.cost   # 2.4
 
 
+- The “Plain Old Ruby Object” (PORO) decorator
 
+	class Coffee
+	  def cost
+		2
+	  end
+	end
 
+	class Milk
+	  def initialize(component)
+		@component = component
+	  end
 
+	  def cost
+		@component.cost + 0.4
+	  end
+	end
 
-
-
-
+	coffee = Coffee.new
+	puts Milk.new(Milk.new(coffee)).cost  # 2.8
 
 
 Check forem and other proc gem managers !!!!
@@ -1552,5 +1544,19 @@ Check forem and other proc gem managers !!!!
 
 
 
+Ruby 3
+------
+
+- 3 times faster - MJIT
+- Concurrency
+	- Ractor
+	- Fiber Scheduler
+- Typing (Static Analysis)
+	- RBS
+	- TypeProf
+
+
+- IRB
+------
 
 

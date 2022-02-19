@@ -3,73 +3,78 @@ Testing
 MiniTest (default)
 ========================================================================
 
+gem 'rspec-rails'
+gem 'factory_bot_rails'
+gem 'ffaker'
 
 
 RSpec and BDD
 ========================================================================
 
-rails new app -d=sqlite3 -T --skip-coffee --webpack # --api --webpack=react 
-cd app
-bundle install
+> rails new app -d=sqlite3 -T --skip-coffee --webpack # --api --webpack=react 
+> cd app
+> bundle install
 
-vim Gemfile
+> vim Gemfile
 
-group :development, :test do
-  # There may be other lines in this block already. Simply append the following after:
-  %w[rspec-core rspec-expectations rspec-mocks rspec-rails rspec-support].each do |lib|
-    gem lib, git: "https://github.com/rspec/#{lib}.git", branch: 'main' # Previously '4-0-dev' or '4-0-maintenance' branch
-  end
-end
+	group :development, :test do
+	  # There may be other lines in this block already. Simply append the following after:
+	  %w[rspec-core rspec-expectations rspec-mocks rspec-rails rspec-support].each do |lib|
+		gem lib, git: "https://github.com/rspec/#{lib}.git", branch: 'main' # Previously '4-0-dev' or '4-0-maintenance' branch
+	  end
+	end
 
 # gem install rspec
 
-rspec --init
+	> rspec --init
 
 Or
 
-rails generate rspec:install
+	> rails generate rspec:install
 
-spec/
-├── rails_helper.rb
-└── spec_helper.rb
+	spec/
+	├── rails_helper.rb
+	└── spec_helper.rb
 
-.rspec
+	.rspec
 
-add devise:
-gem 'devise'
+- add devise:
 
-bundle install
-rails generate devise:install
-rails generate devise User
-rails db:migrate
-rails g devise:views
+	gem 'devise'
 
-db/seeds.rb
+	bundle install
 
-	if !User.find_by_email("test@rapidfire.com")
-	  user = User.create(
-		:email                 => "test@rapidfire.com",
-	#		:role                   => 1,
-		:password              => "test123",
-		:password_confirmation => "test123",
-	# 		:confirmed_at => DateTime.now
+	rails generate devise:install
+	rails generate devise User
+	rails db:migrate
+	rails g devise:views
 
-	  )
-	  user.save!
-	end
+	db/seeds.rb
 
-rake db:seed
+		if !User.find_by_email("test@rapidfire.com")
+		  user = User.create(
+			:email                 => "test@rapidfire.com",
+		#		:role                   => 1,
+			:password              => "test123",
+			:password_confirmation => "test123",
+		# 		:confirmed_at => DateTime.now
 
-Setuo home controller
+		  )
+		  user.save!
+		end
 
-rails g controller Home
-mkdir app/views/home/index.html.erb
-add def index to controller
+	rake db:seed
 
-  before_action :authenticate_user!
+- Setup home controller
 
+	> rails g controller Home
+	> mkdir app/views/home/index.html.erb
+	
+	- add def index to controller
 
-Simply navigate to the /spec directory and create a folder called /controllers. It should look like this: /spec/controllers.
+		before_action :authenticate_user!
+
+# Simply navigate to the /spec directory and create a folder called /controllers. It should look like this: /spec/controllers.
 
 rspec
 
@@ -87,7 +92,7 @@ bundle install
 rspec .... great
 
 Now 
-
+----------
 
 to generate test with rails ..
 

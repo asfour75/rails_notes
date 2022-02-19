@@ -610,6 +610,41 @@ Good references
 
 Turbo
 ========================================================================
+# Turbo bundles several techniques for creating fast, modern, progressively enhanced web applications without using much JavaScript.
+
+# all the logic in front-end
+
+# With Turbo, you let the server deliver HTML directly, which means all the logic for checking permissions, interacting directly with your domain model, and everything else that goes into programming an application can happen more or less exclusively within your favorite programming language.
+
+
+# https://github.com/jasonfb/hot-glue
+
+- Drive
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
