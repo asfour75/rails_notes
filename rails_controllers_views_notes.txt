@@ -635,7 +635,198 @@ Cookies
 			def check_authorization
 			  raise User::NotAuthorized unless current_user.admin?
 			end
+
+
+
+Middlewares
+============================================================================
+# https://guides.rubyonrails.org/rails_on_rack.html
+
+> rake middleware
+
+use ActionDispatch::HostAuthorization
+use Rack::Sendfile
+use ActionDispatch::Static
+use ActionDispatch::Executor
+use ActionDispatch::ServerTiming
+use ActiveSupport::Cache::Strategy::LocalCache::Middleware
+use Rack::Runtime
+use Rack::MethodOverride
+use ActionDispatch::RequestId
+use ActionDispatch::RemoteIp
+use Sprockets::Rails::QuietAssets
+use Rails::Rack::Logger
+use ActionDispatch::ShowExceptions
+use WebConsole::Middleware
+use ActionDispatch::DebugExceptions
+use ActionDispatch::ActionableExceptions
+use ActionDispatch::Reloader
+use ActionDispatch::Callbacks
+use ActiveRecord::Migration::CheckPending
+use ActionDispatch::Cookies
+use ActionDispatch::Session::CookieStore
+use ActionDispatch::Flash
+use ActionDispatch::ContentSecurityPolicy::Middleware
+use ActionDispatch::PermissionsPolicy::Middleware
+use Rack::Head
+use Rack::ConditionalGet
+use Rack::ETag
+use Rack::TempfileReaper
+use Warden::Manager
+run Rails7e::Application.routes
+
+
+middleware/my_middleware.rb
+
+	class MyMiddleware
+	  def initialize app
+		@app = app
+	  end
+
+	  def call env
+		# do something...
+	  end
+	end
+
+- The register this middleware
+
+	module MyRailsApplication
+	  class Application < Rails::Application
+		*snip*
+
+		# config.middleware.use <class-name>, <first-argument>, <nth-argument>
+		config.middleware.use "MyMiddleware"
+
+		*snip*
+	  end
+	end
+
+
+There is this tiny caveat when mounting middleware - note that the class name is written as a string, not as a constant. If you mount a middleware class in the config/application.rb file the class name has to be a string. But, if you load the middleware class in the environment files (i.e. config/environment/development.rb) you can mount is as a constant:
+
+- To make files inside lin autoloaded
+
+	# config/initializers/extensions.rb
+	Dir["#{Rails.root}/lib/ruby_ext/*.rb"].each { |file| require file }
+	Dir["#{Rails.root}/lib/rails_ext/*.rb"].each { |file| require file }
+
+Or
+
+	application.rb:
+
+	config.autoload_paths << "#{Rails.root}/app/middlewares"
+	config.eager_load_paths << "#{Rails.root}/app/middlewares"
+
+But
+
+	require_relative '../lib/middleware/my_middleware'
+
+
+
+- You can insert yourm iddleware like:
+
+	config.middleware.insert_after ActionDispatch::Executor, Lifo::Cache, page_cache: false
+
+
+- Or swap:
+
+	# Replace ActionDispatch::ShowExceptions with Lifo::ShowExceptions
+	config.middleware.swap ActionDispatch::ShowExceptions, Lifo::ShowExceptions
 	
+- Or even delete:
+
+	config.middleware.delete Rack::Runtime
+
+
+- If you want to remove session related middleware, do the following:
+
+	# config/application.rb
+	config.middleware.delete ActionDispatch::Cookies
+	config.middleware.delete ActionDispatch::Session::CookieStore
+	config.middleware.delete ActionDispatch::Flash
+
+
+
+Much of Action Controller's functionality is implemented as Middlewares. The following list explains the purpose of each of them:
+
+	Rack::Sendfile
+
+	- Sets server specific X-Sendfile header. Configure this via config.action_dispatch.x_sendfile_header option.
+
+
+	ActionDispatch::Static
+
+	- Used to serve static files from the public directory. Disabled if config.public_file_server.enabled is false.
+
+
+Rack (middleware)
+------------------------------------------------------------------------
+
+	# Rack is the underlying technology behind nearly all of the web frameworks in the Ruby world. "Rack" is actually a few different things:
+
+	- An architecture - Rack defines a very simple interface, and any code that conforms to this interface can be used in a Rack application. This makes it very easy to build small, focused, and reusable bits of code and then use Rack to compose these bits into a larger application.
+	
+	- A Ruby gem - Rack is is distributed as a Ruby gem that provides the glue code needed to compose our code.
+
+	# https://thoughtbot.com/upcase/videos/rack
+
+	gem install rack thin
+	
+	rack1.rb:
+	
+		require "rack"
+		require "thin"
+
+		class Rack1
+		  def call(env)
+
+			puts env.inspect
+
+			[ 200, { "Content-Type" => "text/plain" }, ["Hello World"] ]
+		  end
+		end
+
+		Rack::Handler::Thin.run Rack1.new
+	
+	--> Using lambda
+	
+		require "rack"
+		require "thin"
+
+		app = -> (env) do
+		  [ 200, { "Content-Type" => "text/plain" }, env ]
+		end
+
+		Rack::Handler::Thin.run app
+
+- ANother example of Rack
+
+	config.ru:
+
+	class Application
+	 def call(env)
+		status  = 200
+		headers = { "Content-Type" => "text/html" }
+		body    = ["This is our small Rack app."]
+
+		[status, headers, body]
+	  end
+	end
+
+	run Application.new
+
+	> rackup config.ru
+
+Rack rewrite
+------------
+
+	config.middleware.insert_before(Rack::Runtime, Rack::Rewrite) do
+	 r301 %r{^/(.*)/$}, ‘/$1’
+	end
+
+
+# https://blog.engineyard.com/understanding-rack-apps-and-middleware
+
 
 
 Sending & Renders & Redirects & Templates & Layouts & Partials

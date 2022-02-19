@@ -89,8 +89,24 @@ You can now name variants on ActiveStorage instead of specifying size on every a
 	  end
 	end
 
+- Named Variants (ActiveStorage)
 
-Adding webpacker ?
+	# You can now name variants on ActiveStorage instead of specifying size on every access.
+
+	class User < ApplicationRecord
+	  has_one_attached :avatar do |attachable|
+		attachable.variant :thumb, resize: "100x100"
+	  end
+	end
+	 
+	#Call avatar.variant(:thumb) to get a thumb variant of an avatar:
+	<%= image_tag user.avatar.variant(:thumb) %>
+
+
+
+
+
+Adding webpacker ?!
 ====================================================================================
 
 	# Gemfile
@@ -184,21 +200,11 @@ So, rails assets:precompile will
 - build all sprockets assets into public/assets directory .. then will build all the webpack assets into public/packs directory 
 
 
-
-
-
-
 Future of sprockets is used in Rails 7
 ---------------------------------------
 - most likely sprockets will be replaced by Propshafta new asset pipleline library
 - much simpler
 - using Propshaft will also replace using 3rd party tools such as jsbundling-rails & cssbundling-rails
-
-
-
-
-
-
 
 
 
@@ -426,6 +432,9 @@ html:
 	  <circle cx="80" cy="60" r="10"></circle>
 	  <circle cx="120" cy="60" r="10"></circle>
 	</svg>
+
+
+
 
 
 For JS/css bundling

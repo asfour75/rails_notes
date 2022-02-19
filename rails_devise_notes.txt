@@ -1118,7 +1118,6 @@ Rails 7: Devise with HotWire
 
 	config.navigational_formats = ['*/*', :html, :turbo_stream]
 
-
 controllers/turbo_devise_controller:
 
 	class TurboDeviseController < ApplicationController
@@ -1139,6 +1138,56 @@ controllers/turbo_devise_controller:
 	  self.responder = Responder
 	  respond_to :html, :turbo_stream
 	end
+
+- When you login again, the cable will be disconnected .. (a case in StimilusReflux)
+
+
+javascript/controllers/index.js
+
+	import StimulusReflex from "stimulus_reflex"; // <-- add this
+	import { application } from "./application"
+	import { cable } from "@hotwired/turbo-rails"; // <-- add this
+	import controller from '../controllers/application_controller'
+
+	// import { eagerLoadControllersFrom } from "@hotwired/stimulus-loading";
+	// eagerLoadControllersFrom("controllers", application);
+
+	(async() => {
+		const consumer = await cable.getConsumer();
+		StimulusReflex.initialize(application, { controller, debug: true });
+		application.consumer = consumer
+		window.consumer = consumer
+	})();
+
+
+javascript/controllers/application_controller.js	<-- ganarated by stimilux refllux
+
+	export default class extends Controller {
+	  connect () {
+		if (!window.consumer.connection.isOpen()) {
+		  window.consumer.connection.open();
+		}
+		StimulusReflex.register(this)
+	  }
+	.............
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

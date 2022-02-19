@@ -257,8 +257,6 @@ Or
 
 bundle exec rake db:reset RAILS_ENV=test
 
-
-
 drop_table :categories
 drop_table :CATEGORY_HIERARCHIES
 drop_table :photos
@@ -266,13 +264,14 @@ rename_table  :tags :categories
     
 
 * Rails Cheat Sheet: Create Models, Tables and Migrations
+------------------------------------------------------------------------
 
-	Create a new table in Rails
+	- Create a new table in Rails
 
 	bin/rails g model Supplier name:string
 	bin/rails g model Product name:string:index sku:string{10}:uniq count:integer description:text supplier:references popularity:float 'price:decimal{10,2}' available:boolean availableSince:datetime image:binary
 
-	Resulting migrations:
+		# Resulting migrations:
 
 		class CreateSuppliers < ActiveRecord::Migration
 		  def change
@@ -305,11 +304,11 @@ rename_table  :tags :categories
 		  end
 		end
 
-	Rails migration to add a column
+	- Rails migration to add a column
 
 		bin/rails g migration AddKeywordsSizeToProduct keywords:string size:string
 
-	Resulting migration:
+		# Resulting migration:
 
 		class AddKeywordsSizeToProduct < ActiveRecord::Migration
 		  def change
@@ -318,11 +317,11 @@ rename_table  :tags :categories
 		  end
 		end
 
-	Rails migration to remove a column
+	- Rails migration to remove a column
 
 		bin/rails g migration RemoveKeywordsFromProduct keywords
 
-	Resulting migration:
+		# Resulting migration:
 
 		class RemoveKeywordsFromProduct < ActiveRecord::Migration
 		  def change
@@ -330,11 +329,11 @@ rename_table  :tags :categories
 		  end
 		end
 
-	Rails migration to rename a column
+	- Rails migration to rename a column
 
 		bin/rails g migration RenameProductPopularityToRanking
 
-	You need to add the rename_column command manually to the resulting migration:
+		# You need to add the rename_column command manually to the resulting migration:
 
 		class RenameProductPopularityToRanking < ActiveRecord::Migration
 		  def change
@@ -342,11 +341,11 @@ rename_table  :tags :categories
 		  end
 		end
 
-	Rails migration to change a column type
+	- Rails migration to change a column type
 
 		bin/rails g migration ChangeProductPopularity
 
-	You need to add the change_column command manually to the resulting migration:
+		# You need to add the change_column command manually to the resulting migration:
 
 		class ChangeProductPopularity < ActiveRecord::Migration
 		  def change
@@ -354,13 +353,15 @@ rename_table  :tags :categories
 		  end
 		end
 
-	Running migrations
+	- Running migrations
 
-		bin/rake db:migrate
+		# bin/rake db:migrate	--> old
+		> bin/rails db:migrate
+		
 
 	In production:
 
-		bin/rake db:migrate RAILS_ENV="production" 
+		> bin/rails db:migrate RAILS_ENV="production" 
 
 - Using a model with view (not table)
 
@@ -389,8 +390,10 @@ rename_table  :tags :categories
 
 - Option 3: Rebuilding !!! http://tutorials.jumpstartlab.com/topics/models/legacy_databases.html
 
+
+
 Associations
-=============
+=========================================================================================
 
 * https://guides.rubyonrails.org/association_basics.html
 
@@ -483,6 +486,7 @@ Example:
 		end
 
 	Then when we call Customer.find(17).city it will proxy the call to the associated Detail object, fetch it from the database if it hasn’t already been loaded, and return us the value returned from the Detail object’s method. All of this is transparent from the outside.
+
 	
 - Simplifying the Proxy
 -------------------------
@@ -508,13 +512,14 @@ Example:
 	  end
 	end
 
+
 - One-To-Many Building Child Objects
 --------------------------------------------------
 	When you create a Customer it won’t have any child Order objects. Here are three ways to create one, assuming we have a customer object:
 
-    - Order.new(customer_id: customer.id) – least preferred. It has no future flexibility if we change details like the foreign key name
-    - Order.new(customer: customer) – better. It created the object through the ActiveRecord relationship, so we can handle the details in that relationship.
-    - customer.orders.new – best. The order is built directly off the relationship, hiding all the details. 
+    - Order.new(customer_id: customer.id) 	– least preferred. It has no future flexibility if we change details like the foreign key name
+    - Order.new(customer: customer) 		– better. It created the object through the ActiveRecord relationship, so we can handle the details in that relationship.
+    - customer.orders.new 					– best. The order is built directly off the relationship, hiding all the details. 
       We can add things like a validation on customer that they don’t have more than X open orders or whatever else applies to our domain. Note that customer.orders.build is equivalent to calling .new.
 
 - Destroying Children
@@ -542,8 +547,6 @@ Example:
 	  has_many :subscriptions
 	  has_many :magazines, through: :subscriptions
 	end
-
-
 
 
 - Polymorphism
@@ -588,8 +591,37 @@ Example:
 
 
 
+
+
+
+
+
+- inverse_of
+--------------------------------------------------
+# It's a hint to ActiveRecord to use already loaded data instead of fetching it again through a relationship.
+
+	class Dungeon < ActiveRecord::Base
+	  has_many :traps, :inverse_of => :dungeon
+	  has_one :evil_wizard, :inverse_of => :dungeon
+	end
+
+	class Trap < ActiveRecord::Base
+	  belongs_to :dungeon, :inverse_of => :traps
+	end
+
+	class EvilWizard < ActiveRecord::Base
+	  belongs_to :dungeon, :inverse_of => :evil_wizard
+	end
+
+
+
+
+
 Loading
-=============
+==========================================================================
+
+# Query Mothds
+# https://api.rubyonrails.org/v7.0.2.2/classes/ActiveRecord/QueryMethods.html
 
  eager_load: One query, with JOINs 
  --------------------------------------------------
@@ -719,11 +751,18 @@ Validations
 				  blank: "Please enter a title."
 
 - Database Validations
--------------------------
+--------------------------------------------------
 
 	# For truly bullet-proof data integrity you’ll need to implement validations at the database level, too.
 	# in your migration...
 	t.index(:title, unique: true)
+
+
+
+
+
+
+
 
 
 
@@ -830,6 +869,7 @@ Queries (where, find_by, references, includes, joins, order, limit, pagination .
 	No. It's very easy to end up initializing a significant number of records. 
 	For example, a popular Comment may have thousands of Like records, which would result in a slow query and significant memory allocations.
 	
+	
 - preload
 -------------------------
 
@@ -909,7 +949,25 @@ Queries (where, find_by, references, includes, joins, order, limit, pagination .
 		- select count(*) from users where users.id not in (select user_id from orders);		
 		User.where(id: Order.select(:user_id).all).size
 
-		- 
+
+
+
+- async loading / Rails 7
+-------------------------
+
+	# carefully used
+	# config/application.rb:
+	
+	config.active_record.async_query_executor = :global_thread_pool
+
+	# controller
+	def PostsController
+	  def index
+		@posts = Post.load_async
+		@categories = Category.load_async
+	  end
+	end
+
 
 
 
@@ -1104,8 +1162,130 @@ Callbacks
 	User::update_all	No						Yes					No				No			No					No
 
 
+
+
+Scopes
+======================================================================================
+
+	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
+
+
+
+
+
+
+
+
+Nested Attributes
+======================================================================================
+- Nested attributes allow you to save attributes on associated records through the parent.
+- By default nested attribute updating is turned off and you can enable it using the accepts_nested_attributes_for class method.
+
+	class Book < ActiveRecord::Base
+	  has_one :author
+	  has_many :pages
+
+	  accepts_nested_attributes_for :author, :pages
+	end
+
+	# Two methods will be generated
+
+		- author_attributes=(attributes)
+		- pages_attributes=(attributes).
+
+
+1-1
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_one :avatar
+	  accepts_nested_attributes_for :avatar	
+		# , update_only: true -> you don;t need to provide the id
+		# , allow_destroy: true
+	end
+
+	params = { member: { name: 'Jack', avatar_attributes: { icon: 'smiling' } } }
+	member = Member.create(params[:member])
+	member.avatar.id # => 2
+	member.avatar.icon # => 'smiling'
+
+	- update
+	
+	params = { member: { avatar_attributes: { id: '2', icon: 'sad' } } }
+	member.update params[:member]
+	member.avatar.icon # => 'sad'
+
+	- allow_destroy: true
+	
+	member.avatar_attributes = { id: '2', _destroy: '1' }
+
+1-*
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_many :posts
+	  accepts_nested_attributes_for :posts
+	end
+
+
+	params = { member: {
+	  name: 'joe', posts_attributes: [
+		{ title: 'Kari, the awesome Ruby documentation browser!' },
+		{ title: 'The egalitarian assumption of the modern citizen' },
+		{ title: '', _destroy: '1' } # this will be ignored
+	  ]
+	}}
+
+	member = Member.create(params[:member])
+	member.posts.length # => 2
+	member.posts.first.title # => 'Kari, the awesome Ruby documentation browser!'
+	member.posts.second.title # => 'The egalitarian assumption of the modern citizen'
+
+	- validation
+	
+	accepts_nested_attributes_for :posts, reject_if: proc { |attributes| attributes['title'].blank? }
+	accepts_nested_attributes_for :posts, reject_if: :new_record?
+	
+	accepts_nested_attributes_for :posts, reject_if: :reject_posts
+
+	  def reject_posts(attributes)
+		attributes['title'].blank?
+	  end
+
+	- If the hash contains an id key that matches an already associated record, the matching record will be modified:
+
+	  posts_attributes: [
+		{ id: 1, title: '[UPDATED] An, as of yet, undisclosed awesome Ruby documentation browser!' },
+		{ id: 2, title: '[UPDATED] other post' }
+	  ]
+	
+	- allow_desotry
+	
+		class Member < ActiveRecord::Base
+		  has_many :posts
+		  accepts_nested_attributes_for :posts, allow_destroy: true	<-------------
+		end
+
+		params = { member: {
+		  posts_attributes: [{ id: '2', _destroy: '1' }]
+		}}
+
+		member.attributes = params[:member]
+		member.posts.detect { |p| p.id == 2 }.marked_for_destruction? # => true
+		member.posts.length # => 2
+		member.save
+		member.reload.posts.length # => 1
+	
+
+
+
+
+
+
+
 Processor Model Design Pattern
 ======================================================================================
+
 - Creating a Processor Object
 --------------------------------------------------
 	class MyProcessor
@@ -1124,94 +1304,6 @@ Processor Model Design Pattern
 	  delegate :title, :subtitle, to: :report_type
 	  delegate :start_date, :end_date, to: :term
 	end
-
-	
-
-
-Scopes
-======================================================================================
-
-	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Cool stuff
----------------------------------------------------------------------------
-
-- objects = controller_name.classify.constantize.find(:all)
-- instance_variable_set("@#{controller_name}", objects)	# @names = objects 
-
-
-- controller_path.classify	# Admin::Role
-- controller_name.classify	# Role
-
-- self.class.name.sub("Controller","").singularize	# NamesController -> Name
-
-
-
-* To change all tables + models by adding a prefix_ ?
----------------------------------------------------------------------------
-
-
-- Dealing with json/jsonb field types:
----------------------------------------------------
-
-
-* References
------------------
-https://medium.com/@codenode/10-tips-for-eager-loading-to-avoid-n-1-queries-in-rails-2bad54456a3f
---> https://devhints.io/rails-models
---> https://github.com/rails/arel : Arel is now bundled in the Active Record gem, and maintained in the rails/rails repository.
-
-
-
-
-* --> http://dimaspriyanto.com/2015/09/21/migrating-rails-database-from-sqlite-to-remote-mysql/
-
-
-
-Method				Uses Default Accessor	Saved to Database	Validations		Callbacks	Touches updated_at	Readonly check
-attribute=			Yes						No					n/a				n/a			n/a					n/a
-write_attribute		No						No					n/a				n/a			n/a					n/a
-update_attribute	Yes						Yes					No				Yes			Yes					Yes
-attributes=			Yes						No					n/a				n/a			n/a					n/a
-update				Yes						Yes					Yes				Yes			Yes					Yes
-update_column		No						Yes					No				No			No					Yes
-update_columns		No						Yes					No				No			No					Yes
-User::update		Yes						Yes					Yes				Yes			Yes					Yes
-User::update_all	No						Yes					No				No			No					No
-
 
 
 
@@ -1302,6 +1394,11 @@ Or
       </div>
 
 * update_ methods don't make callbacks !!!!!
+
+
+
+
+
 
 Misc
 ========================================================================
@@ -1395,3 +1492,107 @@ You can also do something like
 
 	  # ...
 	end
+
+
+
+
+Thin Controller, Fat Model ??? Use PORO
+========================================================================
+
+	# app/models/user.rb
+	class User < ApplicationRecord
+	  has_many :sessions, dependent: :destroy
+	  ...
+	  # model method to verify session of user
+	  def session_valid?(token)
+			..... too much stuff
+	  end
+	end
+
+- instead
+
+	# app/models/users/valid.rb
+	module Users
+	  class Valid
+		# attr_reader to access without @ in class
+		attr_reader :token
+		attr_reader :user
+
+		# delegate what attributes of the user to be used in class
+		delegate :sessions, to: :user
+
+		# initialize the class with token and user to be used in class
+		def initialize(token, user)
+		  @token = token
+		  @user = user
+		end
+
+		# call the valid function for the user initialized
+		def call
+			# you have access to token and user
+			# you also can access to sessions (delegated to user)
+		end
+	  end
+	end
+
+- Use
+
+	# app/models/user.rb
+	class User < ApplicationRecord
+	  has_many :sessions, dependent: :destroy
+	  ...
+	  def session_valid?(token)
+		Users::Valid.new(token, self).call	<-----------
+	  end
+	end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cool stuff
+======================================================================================
+
+- objects = controller_name.classify.constantize.find(:all)
+- instance_variable_set("@#{controller_name}", objects)	# @names = objects 
+
+
+- controller_path.classify	# Admin::Role
+- controller_name.classify	# Role
+
+- self.class.name.sub("Controller","").singularize	# NamesController -> Name
+
+
+
+* To change all tables + models by adding a prefix_ ?
+---------------------------------------------------------------------------
+
+
+- Dealing with json/jsonb field types:
+---------------------------------------------------
+
+
+* References
+-----------------
+https://medium.com/@codenode/10-tips-for-eager-loading-to-avoid-n-1-queries-in-rails-2bad54456a3f
+--> https://devhints.io/rails-models
+--> https://github.com/rails/arel : Arel is now bundled in the Active Record gem, and maintained in the rails/rails repository.
+* --> http://dimaspriyanto.com/2015/09/21/migrating-rails-database-from-sqlite-to-remote-mysql/
+
+
+

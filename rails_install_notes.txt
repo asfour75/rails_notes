@@ -65,7 +65,7 @@ Install new ruby / rails
 Rails new
 ----------
 
-	> rails new app -d=sqlite3 -T --skip-coffee --webpack # --api --webpack=react 
+	> rails new app -d=sqlite3 -T --skip-coffee # --api --webpack=react 
 	> rails server -p 3003 -b 0.0.0.0
 
 	> rails new -h
@@ -259,8 +259,12 @@ try passing them all to `bundle update`
 .. bundle install
 
 
+
+
+
+
 * The bundler 
-=============
+===========================================================================================
 When installing the system first time .. 
 
 	> bundler install
@@ -276,8 +280,15 @@ Ops
 	> bundle exec rails db:migrate RAILS_ENV=production
 
 
+
+
+
+
+
+
+
 Rails new 7 (esbuild)
----------------------
+===========================================================================================
 
 	> ruby 3 / rails 7
 	> rails new rails7b -js esbuild --css bootstrap	
