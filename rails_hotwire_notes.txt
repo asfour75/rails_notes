@@ -1,8 +1,4 @@
-Hotewire
-=========================================================================
-
-
-channels (action cable)
+Channels (Action Cable)
 ========================================================================
 
 > rails g channel room
@@ -109,6 +105,8 @@ room_channel.js:
 			channel: "RoomChannel"
 		})
 	});
+
+
 
 
 
@@ -339,13 +337,24 @@ Stimulus
 	# https://www.betterstimulus.com/interaction/controller-dom-mapper.html
 
 
-	** be aware of the  Turbolinks’ preview cache
+	#### be aware of the  Turbolinks’ preview cache
 	*********************************************
 	[D]uring standard navigation (via Application Visits), Turbolinks will immediately restore the page from cache and display it as a preview while simultaneously loading a fresh copy from the network. This gives the illusion of instantaneous page loads for frequently accessed locations.
 
 	when dealing with action generated from a link with href="#" .. use in action fun:
 	
 		event.preventDefault()
+
+	You can disable preview
+		
+		<meta name="turbo-cache-control" content="no-preview">
+	
+	Or disable caching completely 
+	
+		<meta name="turbo-cache-control" content="no-cache">
+
+	Set these meta data for certain pages, or all pages except --> use content_for
+
 
 
 	# Callbacks
@@ -611,16 +620,25 @@ Good references
 Turbo
 ========================================================================
 # Turbo bundles several techniques for creating fast, modern, progressively enhanced web applications without using much JavaScript.
-
 # all the logic in front-end
-
 # With Turbo, you let the server deliver HTML directly, which means all the logic for checking permissions, interacting directly with your domain model, and everything else that goes into programming an application can happen more or less exclusively within your favorite programming language.
 
+- Turbo Drive accelerates links and form submissions by negating the need for full page reloads.
+- Turbo Frames decompose pages into independent contexts, which scope navigation and can be lazily loaded.
+- Turbo Streams deliver page changes over WebSocket, SSE or in response to form submissions using just HTML and a set of CRUD-like actions.
+- Turbo Native lets your majestic monolith form the center of your native iOS and Android apps, with seamless transitions between web and native sections.
 
-# https://github.com/jasonfb/hot-glue
+** It's all done by sending HTML over the wire. And for those instances when that's not enough, you can reach for the other side of Hotwire, and finish the job with Stimulus.
+
+# https://github.com/jasonfb/hot-glue	(commercial)
 
 - Drive
 
+	- Turbo Drive gives you that same speed by using the same persistent-process model, but without requiring you to craft your entire application around the paradigm. 
+	- There’s no client-side router to maintain, there’s no state to carefully manage. 
+	- The persistent process is managed by Turbo, and you write your server-side code as though you were living back in the early aughts – blissfully isolated from the complexities of today’s SPA monstrosities!
+
+	
 	
 
 
@@ -667,6 +685,7 @@ CableReady
 
 	- https://optimism.leastbad.com/
 	- https://github.com/stimulusreflex/futurism	--> part of StimilusReflex
+	
 
 
 

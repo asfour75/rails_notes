@@ -1,0 +1,154 @@
+Rails 7 Whats New:
+======================================================================================================
+
+https://rubyonrails.org/2021/12/15/Rails-7-fulfilling-a-vision
+
+Asstes
+--------
+- Using importmap instead of webpack (webpack instroduced in rails 6, before it was Sprockets)
+- Rails 7 replaces Webpacker with importmapped Hotwire as default JavaScript setup
+
+
+Fortunately, the web now is making it possible to reduce some of the tension surrounding Javascript development in Rails.
+
+	- The first major shift is major browser support for ES6. This completes removes the need for transpiling.
+	- The second crucial change is HTTP2. With HTTP2, there is no longer a need to pay a large penalty for sending many small files instead of one big file. A single connection can multiplex all the responses needed. Further reducing the need for one large Javascript bundle file.
+	- Finally, we have the era of import maps, which allow the use of logical references for modules in ES6. Previously, every Javascript file after compilation would look something like “main-a6d26cef87d241eba5fa.js”, basically the filename with a digest at the end. This means that every time any small change occurred in that file, it needs to be compiled all over again and create a new digest so that the browser recognizes the update. The answer to this problem is import-maps.
+
+* https://github.com/wicg/import-maps
+
+New options:
+------------
+
+rails new produces a skeleton configured with importmap-rails, turbo-rails, and stimulus-rails. No Webpack, no Yarn, no package.json, no node. All the integration setup is done through adding the gems, then running importmap:install, turbo:install, stimulus:install tasks.
+
+rails new —skip-hotwire a skeleton-like above but with just importmap-rails configured.
+rails new —skip-javascript no JavaScript setup of any kind is configured.
+rails new —webpack is essentially what we had on Rails 6.2, with the exception that the default Turbolinks configuration is replaced with Hotwire (both Turbo and Stimulus). This of course includes setting up package.json, Yarn, etc.
+
+rails new —webpack —skip-hotwire is the same as above, minus the default configuration of Hotwire.
+
+
+Others:
+-------
+- Encryption at Database Layer
+- Asynchronous Querying
+- Zeitwerk Mode for Rails 7
+- Retry Jobs Unlimited Times
+- Named Variants
+You can now name variants on ActiveStorage instead of specifying size on every access.
+
+- Hash to HTML Attributes
+
+	<input <%= tag.attributes(type: :text, aria: { label: "Search" }) %>> => <input type="text" aria-label="Search">
+
+- Assert a Single Record with sole
+
+	When querying records, you can now call sole or find_sole_by (instead of first or find_by) when you want to assert that the query should only match a single record.
+
+	Product.where(["price = %?", price]).sole
+	# => ActiveRecord::RecordNotFound      (if no Product with given price)
+	# => #<Product ...>                    (if one Product with given price)
+	# => ActiveRecord::SoleRecordExceeded  (if more than one Product with given price)
+
+	user.api_keys.find_sole_by(key: key)
+	# as above
+
+- Check Presence/Absence of an Association
+
+	# Before:
+	account.users.joins(:contact).where.not(contact_id: nil)
+
+	# After:
+	account.users.where.associated(:contact)
+
+- Stream Generated Files from Controller Actions
+
+	send_stream(filename: "subscribers.csv") do |stream|
+	  stream.write "email_address,updated_at\n"
+
+	  @subscribers.find_each do |subscriber|
+		stream.write "#{subscriber.email_address},#{subscriber.updated_at}\n"
+	  end
+	end
+
+- Named Variants (ActiveStorage)
+
+	# You can now name variants on ActiveStorage instead of specifying size on every access.
+
+	class User < ApplicationRecord
+	  has_one_attached :avatar do |attachable|
+		attachable.variant :thumb, resize: "100x100"
+	  end
+	end
+	 
+	#Call avatar.variant(:thumb) to get a thumb variant of an avatar:
+	<%= image_tag user.avatar.variant(:thumb) %>
+
+
+
+Extra
+====================================================================================================================================
+
+ActionText
+------------
+
+	> bin/rails action_text:install
+	> bundle
+	> rails db:migrate
+	
+	// application.js
+	import "trix"
+	import "@rails/actiontext"
+
+	bin/rails generate model Message content:rich_text
+	
+	# app/models/message.rb
+	class Message < ApplicationRecord
+	  has_rich_text :content
+	end
+
+	<%# app/views/messages/_form.html.erb %>
+	<%= form_with model: message do |form| %>
+	  <div class="field">
+		<%= form.label :content %>
+		<%= form.rich_text_area :content %>
+	  </div>
+	<% end %>
+	
+	- And finally, display the sanitized rich text on a page:
+	
+	<%= @message.content %>
+
+
+	-To accept the rich text content, all you have to do is permit the referenced attribute:
+	
+	class MessagesController < ApplicationController
+	  def create
+		message = Message.create! params.require(:message).permit(:title, :content)
+		redirect_to message
+	  end
+	end
+
+	- By default, the Action Text editor and content are styled by the Trix defaults.
+	- If you want to change these defaults, remove the // require "actiontext.scss" line from your application.scss to omit the contents of that file.
+
+	- By default, Action Text will render rich text content into an element that declares the .trix-content class:
+
+	<%# app/views/layouts/action_text/contents/_content.html.erb %>
+	<div class="trix-content">
+	  <%= yield %>
+	</div>
+
+	- Rendering attachments
+	In addition to attachments uploaded through Active Storage, Action Text can embed anything that can be resolved by a Signed GlobalID.
+
+	# https://guides.rubyonrails.org/action_text_overview.html
+
+
+
+
+
+
+
+

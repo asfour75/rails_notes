@@ -68,9 +68,18 @@ Rails new
 	> rails new app -d=sqlite3 -T --skip-coffee # --api --webpack=react 
 	> rails server -p 3003 -b 0.0.0.0
 
+	# postgres
+	> rails new spree3 --database=postgresql
+	> cd spree3
+	> Gemfile:
+		
+		gem 'pg'
+
+
 	> rails new -h
 
 Usage:
+
   rails new APP_PATH [options]
 
 Options:
@@ -208,9 +217,29 @@ default sqlite3
 	> rails new myapp --minimal
 	# There's now a new way (since Rails 6.1) to create a minimalist Rails app. It build a new app in a few seconds, with only 7 gems (at the time of writing).
 	
+	A minimal rails stack to get you started, everything that is excluded:
+
+	skip_action_cable
+	skip_action_mailbox
+	skip_action_mailer
+	skip_action_text
+	skip_active_job
+	skip_active_storage
+	skip_bootsnap
+	skip_jbuilder
+	skip_spring
+	skip_system_tests
+	skip_turbolinks
+	skip_webpack
+	Sprockets should have JavaScript folders by default
+	rails new --minimal webpack=react works
+	
+	
+	
 Awesomeness && Bootstrapers
 ---------------------------
 - https://github.com/markets/awesome-ruby#file-system-listener
+
 
 
 Running rails
@@ -263,31 +292,8 @@ try passing them all to `bundle update`
 
 
 
-* The bundler 
-===========================================================================================
-When installing the system first time .. 
 
-	> bundler install
-
-Ops
-
-	> gem install bundler --default -v "2.1.2" 
-
-* to upgrade to bundler 2
-
-	https://bundler.io/guides/bundler_2_upgrade.html
-
-	> bundle exec rails db:migrate RAILS_ENV=production
-
-
-
-
-
-
-
-
-
-Rails new 7 (esbuild)
+Rails new 7 (esbuild) + Propshaft
 ===========================================================================================
 
 	> ruby 3 / rails 7

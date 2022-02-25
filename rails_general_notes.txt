@@ -105,43 +105,49 @@ Rails Notes (rails command and rake)
 	end
 
 
-
-Gem & Bundles
+Rails Components
 ========================================================================
-	- Now, To Check the code of any gem, 
 
-		> bundle open jquery-rails
+Action Pack
+------------
+# https://guides.rubyonrails.org/action_controller_overview.html
 
-	To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
+- Action Pack is a framework for handling and responding to web requests. 
+- It provides mechanisms for routing (mapping request URLs to actions), defining controllers that implement actions, and generating responses. 
+- In short, Action Pack provides the controller layer in the MVC paradigm.
 
-		> bundle exec rake routes
+- It consists of several modules:
 
+	- Action Dispatch, which parses information about the web request, handles routing as defined by the user, and does advanced processing related to HTTP such as MIME-type negotiation, decoding parameters in POST, PATCH, or PUT bodies, handling HTTP caching logic, cookies and sessions.
 
-
-
-
-
-
-
+	- Action Controller, which provides a base controller class that can be subclassed to implement filters and actions to handle requests. The result of an action is typically content generated from views.
 
 
-M, [--skip-action-mailer], [--no-skip-action-mailer]      # Skip Action Mailer files
-      [--skip-action-mailbox], [--no-skip-action-mailbox]    # Skip Action Mailbox gem
-      [--skip-action-text], [--no-skip-action-text]          # Skip Action Text gem
-  -O, [--skip-active-record], [--no-skip-active-record]      # Skip Active Record files
-      [--skip-active-job], [--no-skip-active-job]            # Skip Active Job
-      [--skip-active-storage], [--no-skip-active-storage]    # Skip Active Storage files
-  -P, [--skip-puma], [--no-skip-puma]                        # Skip Puma related files
-  -C, [--skip-action-cable], [--no-skip-action-cable]        # Skip Action Cable files
-  -S, [--skip-sprockets], [--no-skip-sprockets]              # Skip Sprockets files
-      [--skip-spring], [--no-skip-spring]                    # Don't install Spring application preloader
-      [--skip-listen], [--no-skip-listen]                    # Don't generate configuration that depends on the listen gem
-  -J, [--skip-javascript], [--no-skip-javascript]            # Skip JavaScript files
-      [--skip-turbolinks], [--no-skip-turbolinks]            # Skip turbolinks gem
-      [--skip-jbuilder], [--no-skip-jbuilder]                # Skip jbuilder gem
-  -T, [--skip-test], [--no-skip-test]                        # Skip test files
-      [--skip-system-test], [--no-skip-system-test]          # Skip system test files
-      [--skip-bootsnap], [--no-skip-bootsnap]                # Skip bootsnap gem
+
+
+
+
+
+
+
+
+
+
+
+actioncable (7.0.1)
+actionmailbox (7.0.1)
+actionmailer (7.0.1)
+actionpack (7.0.1)
+actiontext (7.0.1)
+actionview (7.0.1)
+activejob (7.0.1)
+activemodel (7.0.1)
+activerecord (7.0.1)
+activestorage (7.0.1)
+activesupport (7.0.1)
+rails (7.0.1)
+railties (7.0.1)
+
 
 
 
@@ -295,93 +301,16 @@ https://github.com/discourse/discourse
 
 
 
+# https://codeburst.io/ruby-on-rails-concepts-explained-with-real-world-use-cases-588dc85d8e96
 
 
 
+trailblazer
+====================================================================================
+The Advanced Business Logic Framework
 
+https://trailblazer.to/2.0/index.html
 
-
-
-
-Real Example RapidFire Engine
-================================
-- Rails 6.0.X Ruby 2.7.0 (Sprockets + Webpacks)
-- Vue
-- Devise ready
-
-- Survey Engine (rapidfire)
-- CMS: Refinery
-
-- Activeadmin + theme + ancestry (tree gem table) tool
-- sp-admin theme
-- Ancestry (not awesome_nestedt_set) + UI in activeadmin
-
-- File uploader / Manager -- activestorage
-	- upload multiple images
-	- vue-based file manager !! or rails
-	
-- File system listener !! (listener gem) https://github.com/markets/awesome-ruby#file-system-listener
-- God: The Ruby Framework for Process Management / https://github.com/rtomayko/posix-spawn
-
-
-Questions:
-----------
-- max number of users in linux system (with details) .. LDAP ?
-- searching file names
-- searching file contents
-- searching files for certain user !!
-
-Steps:
-------
-> rails g model Node name:string title:string summary:string body:text parent_id:integer user:references info:text --force
-
-- rails generate scaffold Node name:string title:string summary:string body:text parent_id:integer user:references info:text
-
-
-	class CreateNodes < ActiveRecord::Migration[6.0]
-	  def change
-		create_table :nodes do |t|
-		  t.string :name
-		  t.string :title
-		  t.string :summary
-		  t.text :body
-*		  t.integer :parent_id
-		  t.references :user, null: false, foreign_key: true
-		  t.text :info
-
-		  t.timestamps
-		end
-	  end
-	end
-
-node.rb
-
-class Node < ApplicationRecord
-  belongs_to :user
-end
-
----
-rails new myapp
-cd myapp
-rails g model todo title:string
-rails db:migrate
-rails g scaffold_controller api::todo --api
----
-
-> rails db:migrate
-> rails g scaffold_controller Node
-
-> routes.rb
-
-	resources :nodes
-
-- To add user check .. (nodes_controller)
-
-	before_action :authenticate_user! #, :except => [:index, :vue]
-	
-See https://gist.github.com/alexpchin/b1baa37bd2b4856cc445
-
-> rails generate active_admin:resource Node
 
 
 

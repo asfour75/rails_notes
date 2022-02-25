@@ -221,6 +221,9 @@ So in App.jsx for example
  
  * https://www.digitalocean.com/community/tutorials/how-to-set-up-a-ruby-on-rails-project-with-a-react-fronten
 		
+		
+		
+
 Back to the traditional way (react + webnpack ....)
 --------------------------------------------------------------------------------------------------------------
 
@@ -386,8 +389,9 @@ Make sure to:
 
 	
 
-
-
+React via ESBuild
+------------------------------------------------------------------------------------------
+# https://www.strictmode.io/articles/setting-up-rails-7-for-typescript-and-react
 
 
 

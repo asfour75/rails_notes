@@ -224,7 +224,7 @@ $ rake db:migrate VERSION=20080906120000
 $ rake db:rollback
 $ rake db:rollback STEP=3
 $ rake db:migrate:redo STEP=3
-$ rake db:reset  #drop database and recreate it
+$ rake db:reset  #drop database and recreate it	--> this will execute db:seed
 $ rake db:migrate:up VERSION=20080906120000
 
 Migrations commands
@@ -239,15 +239,25 @@ more Database commands (rake -T db)
 rake db:create          # Create the database from config/database.yml for the current Rails.env (use db:create:all to create all dbs in t...
 rake db:drop            # Drops the database for the current Rails.env (use db:drop:all to drop all databases)
 rake db:fixtures:load   # Load fixtures into the current environment's database.
+
 rake db:schema:dump     # Create a db/schema.rb file that can be portably used against any DB supported by AR
 rake db:schema:load     # Load a schema.rb file into the database
+
 rake db:seed            # Load the seed data from db/seeds.rb			<------------------
 rake db:setup           # Create the database, load the schema, and initialize with the seed data (use db:reset to also drop the db first)
 rake db:structure:dump  # Dump the database structure to db/structure.sql. Specify another file with DB_STRUCTURE=db/my_structure.sql
+rake db:structure:load                                 # Recreates the databases from the structure.sql file
+rake db:sync_templates                                 # Sync theme templates with database
+
+rake db:schema:cache:clear                             # Clears a db/schema_cache.yml file
+rake db:schema:cache:dump                              # Creates a db/schema_cache.yml file
+
+
 rake db:version         # Retrieves the current schema version number
 
-Reset database
 
+
+Reset database
 
 bundle exec rake db:drop RAILS_ENV=test
 bundle exec rake db:create RAILS_ENV=test
@@ -699,6 +709,23 @@ Validations
 	=> {title:["can't be blank"]}
 	p.errors.full_messages
 	=> ["Title can't be blank"]
+
+
+>>>> in form 
+
+<% if p.errors.any? %>
+	<div id="error_explanation">
+	  <h2><%= pluralize(p.errors.count, "error") %> prohibited this article from being saved:</h2>
+
+	  <ul>
+		<% p.errors.each do |error| %>
+		  <li><%= error.full_message %></li>
+		<% end %>
+	  </ul>
+	</div>
+<% end %>
+
+
 
 - Save vs. Save!
 -------------------------
@@ -1277,8 +1304,119 @@ Nested Attributes
 		member.reload.posts.length # => 1
 	
 
+seed
+-------------------------------------------------------------------------------------
+- triggered by
+	
+	rails db:reset and rails db:setup
+	
+	- setup will create the database first and warn you if ithey are exist .. 
+	- reset will drop and recreat the databases
+
+- create directly
+
+	User.create(name: 'Matz')
+
+- seeding from csv
+
+	require 'csv'
+	require_relative './data/users.csv'
+	def seed_users
+	  csv_file_path = '/[project_path]/db/data/users.csv'
+	  puts 'Seeding users from #{csv_file_path}...'
+	  f = File.new(csv_file_path, 'r')
+	  csv = CSV.new(f)
+	  headers = csv.shift
+	  
+	  csv.each do |row|
+		user_information = {
+		  name: row[0],
+		  age: row[1]
+		}
+		inv = User.create(user_information)
+	  end
+	  puts 'Seeding users from #{csv_file_path} done.'
+	end
+
+- best to execute first specially for testing 
+
+	Model.destroy_all
+
+- for dates
+
+	use helpers such as : 1.week.ago	
+	
+- check results from acommand
+
+	rails runner 'p Movie.pluck :title'
+	
+- Using a custom Rails task to seed actual data
+
+	rails g task movies seed_genres	--> lib/tasks/movies.rake:
+	
+		namespace :movies do
+		  desc "Seeds genres"
+		  task seed_genres: :environment do
+			# add then this .. 
+			Genre.create!([{
+			  name: "Action"
+			},
+			{
+			  name: "Sci-Fi"
+			},
+			{
+			  name: "Adventure"
+			}])
+
+			p "Created #{Genre.count} genres"
+		  end
+		end
+
+		> rails -T movies
+		> rails movies:seed_genres
+		
+- loading seeds from the console
+
+	> Rails.application.load_seed
+
+- loops & faker --> (gem 'faker'
+
+	Movie.destroy_all
+
+	100.times do |index|
+	  Movie.create!(title: Faker::Lorem.sentence(word_count: 3, supplemental: false, random_words_to_add: 0).chop,
+					director: Faker::Name.name,
+					storyline: Faker::Lorem.paragraph,
+					watched_on: Faker::Time.between(from: 4.months.ago, to: 1.week.ago))
+	end
+
+	p "Created #{Movie.count} movies"
+
+- creating a seed file from existing data 
+
+	lib/tasks/export_data.rake:
+	
+	namespace :export do
+	  desc "Export users" 
+	  task :export_to_seeds => :environment do
+		User.all.each do |users| 
+		  excluded_keys = [‘created_at’, ‘updated_at’, ‘id’] 
+		  serialized = country
+			.serializable_hash
+			.delete_if{|key,value| excluded_keys.include?(key)} 
+		  puts “User.create(#{serialized})”
+		end 
+	  end
+	end
 
 
+	> rails export:export_to_seed > db/seeds.rb
+
+- creating existing record
+
+	user = User.create({....
+
+	user.errors.inspect --> #<ActiveModel::Errors [#<ActiveModel::Error attribute=email, type=taken, options={:allow_blank=>true, :if=>:will_save_change_to_email?, :value=>"admin@d1g.com"}>]>
 
 
 

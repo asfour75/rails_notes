@@ -1154,7 +1154,9 @@ GraphQL - Client Side
 
 
 
-
+Rails 7 + Vite for Vue
+------------------------------------------------------------------------
+# https://www.bootrails.com/blog/vitejs-rails-a-wonderful-combination/
 
 
 

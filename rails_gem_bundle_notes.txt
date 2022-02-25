@@ -1,0 +1,32 @@
+Gem & Bundles
+========================================================================
+	- Now, To Check the code of any gem, 
+
+		> bundle open jquery-rails
+
+	To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
+
+		> bundle exec rake routes
+
+
+
+
+
+
+When installing the system first time .. 
+
+	> bundler install
+
+Ops
+
+	> gem install bundler --default -v "2.1.2" 
+
+* to upgrade to bundler 2
+
+	https://bundler.io/guides/bundler_2_upgrade.html
+
+	> bundle exec rails db:migrate RAILS_ENV=production
+
+
+
+

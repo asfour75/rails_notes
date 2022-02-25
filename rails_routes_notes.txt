@@ -355,6 +355,23 @@ Rails Routes
 
 
 
+- singular resource (no ID)
+
+	get 'profile', to: 'users#show'
+	get 'profile', action: :show, controller: 'users'
+
+	- This resourceful route:
+	
+	resource :geocoder
+	resolve('Geocoder') { [:geocoder] }
+
+	GET 		/geocoder/new 	geocoders#new 		return an HTML form for creating the geocoder
+	POST 		/geocoder 		geocoders#create 	create the new geocoder
+	GET 		/geocoder 		geocoders#show 		display the one and only geocoder resource
+	GET 		/geocoder/edit 	geocoders#edit 		return an HTML form for editing the geocoder
+	PATCH/PUT 	/geocoder 		geocoders#update 	update the one and only geocoder resource
+	DELETE 		/geocoder 		geocoders#destroy 	delete the geocoder resource
+
 
 - namespace vs scope
 
@@ -389,6 +406,11 @@ Rails Routes
 	<%= controller_path %>			--> some/messages
 	<%= controller_name %>			--> messages
 	<%= controller.class.name %>	--> Some::MessagesController	
+	
+- Forms	
+	
+	form_with model: [:admin, @article]			--> admin_article_path(@article)
+	form_with model: [:admin, :management, @article]
 	
 ---
 

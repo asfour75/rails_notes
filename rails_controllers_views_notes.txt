@@ -537,107 +537,6 @@ Cookies
 		end
 
 
-
-- Forms, Request Forgery Protection
-------------------------------------------------------------------------
-- (CSRF) Cross-site request forgery is a type of attack in which a site tricks a user into making requests on another site, possibly adding, modifying, or deleting data on that site without the user's knowledge or permission.
-
-- Example:
-
-	<%= form_with model: @user do |form| %>
-	  <%= form.text_field :username %>
-	  <%= form.text_field :password %>
-	<% end %>
-
-	# will generate
-	
-	<form accept-charset="UTF-8" action="/users/1" method="post">
-		<input type="hidden"											<--- notice this
-			   value="67250ab105eb5ad10851c00a5621854a23af5489"
-			   name="authenticity_token"/>
-		<!-- fields -->
-	</form>
-
-	# you can generate this value for mnually crteated forms / ajax
-	
-		<%= form_authenticity_token %>
-
-
-- Basic Auth
-
-	class AdminsController < ApplicationController
-		http_basic_authenticate_with name: "humbaba", password: "5baa61e4"
-	end
-
-- HTTP Digest Authentication
-
-	class AdminsController < ApplicationController
-	  USERS = { "lifo" => "world" }
-
-	  before_action :authenticate
-
-	  private
-		def authenticate
-		  authenticate_or_request_with_http_digest do |username|
-			USERS[username]
-		  end
-		end
-	end
-
-- HTTP Token Authentication
-
-	class PostsController < ApplicationController
-	  TOKEN = "secret"
-
-	  before_action :authenticate
-
-	  private
-		def authenticate
-		  authenticate_or_request_with_http_token do |token, options|
-			ActiveSupport::SecurityUtils.secure_compare(token, TOKEN)
-		  end
-		end
-	end
-
-- Filter out sensitive data from logs
-
-	# check file: config/initializers/filter_parameter_logging.rb
-	
-	Or set inside environment file
-	
-		config.filter_parameters << :password
-	
-	
-- Rescue
-
-	- rescue_from
-	
-		class ApplicationController < ActionController::Base
-		  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
-		  # rescue_from User::NotAuthorized, with: :user_not_authorized
-
-		  private
-			def record_not_found
-			  render plain: "404 Not Found", status: 404
-			  # Or
-			  # flash[:error] = "You don't have access to this section."
-			  # redirect_back(fallback_location: root_path)
-			end
-		end
-	
-	- And from your controller
-	
-		  before_action :check_authorization
-		  
-		  private
-		  
-			# If the user is not authorized, just throw the exception.
-			def check_authorization
-			  raise User::NotAuthorized unless current_user.admin?
-			end
-
-
-
 Middlewares
 ============================================================================
 # https://guides.rubyonrails.org/rails_on_rack.html
@@ -834,107 +733,617 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 
 - Render and Redirects
 ------------------------------------------------------------------------
-	    render action: :edit 	# this will go to edit template inside views/controller folder
-	    render :edit 			# same		
-	    render 'articles/new'	# render new template in views/articles folder (could be for different controller)
-	    
-		render text: "Hello, World!"	# render plain text	--> use plain: instead iof text:	--> "text/plain" so not to confused "text/html"
-		render xml: @article
-		render json: @article
-			
+
+- basic
+
+	render action: :edit 	# this will go to edit template inside views/controller folder
+	render :edit 			# same		
+	render 'articles/new'	# render new template in views/articles folder (could be for different controller)
 
 	- render a view based on its name along with routes
-	
-			get "/home/test", to: "home#test"	--> controller home and method test --> views/home/test.html.erb 
+	get "/home/test", to: "home#test"	--> controller home and method test --> views/home/test.html.erb 
+		
+	render xml: @article
+	render json: @article
+	render js: "alert('Hello Rails');"
 
-	- pass params to template (same as partial)	
-	
-	    render :template => "home/test", :locals => {:bo => "hh"}
 
-	- test.html.erb
-	
-		<%= bo if !local_assigns[:bo].blank? %>
-	
-	- layouts
-	
-		render :show, layout: 'top_story'
-		render :show, layout: false
-		
-	- Redirect
+	render html: helpers.tag.strong('Not Found')
+	render body: "raw"		# raw content
 
-		redirect_to articles_path
-		redirect_to 'http://rubyonrails.org'
-		redirect_to 'http://rubyonrails.org', status: 301
-		redirect_to articles_path, notice: "Article Created"
-		redirect_to login_path, alert: "You must be logged in!"
+	- render with status
+	render :edit, status: :unprocessable_entity
 
-		redirect_to(@book) 		# redirecto to @book show page 
+- options
 
-	- redirect_to and render do not return
+
+    :content_type
+    :layout
+    :location
+    :status
+    :formats
+    :variants
+
+
+
+- render text
+
+	# this is depricated 
+	render text: "Hello, World!"	
+
+	# render plain text	--> use plain: instead iof text:	--> "text/plain" so not to confuse with "text/html"
+	render :plain => "hello"
 	
-		redirect_to login_path unless current_user.admin?
-		redirect_to articles_path, notice: "Article '#{article.title}' was deleted."
-		
-	# The redirect_to does not stop execution of the method
-	# so if you have multiple redirects, split them by conditions or use: and return
-		
-		
-	- Streaming
-		
-		# You can render stream if data directly 
-		# Remember in controller always
-		
-		include ActionController::Live
-		
-		# this will send back a csv file 
-		def show
-			send_stream(filename: "subscribers.csv") do |stream|
-			  stream.write "email_address,updated_at\n"
-			  @subscribers.find_each do |subscriber|
-				stream.write "#{subscriber.email_address},#{subscriber.updated_at}\n"
-			  end
-			end
+	- You can do 
+	render plain: "<h1>Hello, World!</h1>", content_type: 'text/plain'
+	render plain: "<h1>Hello, World!</h1>", content_type: 'text/html'	--> goes as html
+
+	# By default, if you use the :plain option, the text is rendered without using the current layout. 
+	If you want Rails to put the text into the current layout, you need to add the layout: true option and use the .text.erb extension for the layout file.
+
+		application.text.html
+
+	- inline
+	render inline: "<% products.each do |p| %><p><%= p.name %></p><% end %>"
+	- xml ?	
+	render inline: "xml.p {'Horrid coding practice!'}", type: :builder
+
+
+- render_to_string
+	
+	# ActionController::Base.new.render_to_string	# if not used inside controller
+	
+	html = render_to_string action: :test, layout: false, :formats => [:html]		# render page test, use test.text.erb and return result as string
+	html = render_to_string partial: 'home/sendus'
+
+- render a template & pass params to template (same as partial)	
+
+	render :template => "home/test", :locals => {:bo => "hh"}
+	
+	test.html.erb:
+	<%= bo if !local_assigns[:bo].blank? %>
+
+- layouts
+
+	render :show, layout: 'top_story'
+	render :show, layout: false
+	
+- Redirect
+
+	redirect_to articles_path
+	redirect_to 'http://rubyonrails.org'
+	redirect_to 'http://rubyonrails.org', status: 301
+	redirect_to articles_path, notice: "Article Created"
+	redirect_to login_path, alert: "You must be logged in!"
+
+	redirect_to(@book) 		# redirecto to @book show page 
+
+- redirect_to and render do not return
+
+	redirect_to login_path unless current_user.admin?
+	redirect_to articles_path, notice: "Article '#{article.title}' was deleted."
+	
+# The redirect_to does not stop execution of the method
+# so if you have multiple redirects, split them by conditions or use: and return
+	
+	
+- Streaming
+	
+	# You can render stream if data directly 
+	# Remember in controller always
+	
+	include ActionController::Live
+	
+	# this will send back a csv file 
+	def show
+		send_stream(filename: "subscribers.csv") do |stream|
+		  stream.write "email_address,updated_at\n"
+		  @subscribers.find_each do |subscriber|
+			stream.write "#{subscriber.email_address},#{subscriber.updated_at}\n"
+		  end
 		end
-		
-		
-	- Another example
+	end
 	
-		  def stream
-			response.headers['Content-Type'] = 'text/event-stream'
-			2.times {
-			  response.stream.write "hello world\n"
-			  sleep 1
-			}
-		  ensure
-			response.stream.close
-		  end	
-		
-	- Sending a file
 	
-		# This will read and stream the file 4 kB at the time, avoiding loading the entire file into memory at once. 
-		# You can turn off streaming with the :stream option or adjust the block size with the :buffer_size option.
-		# If :type is not specified, it will be guessed from the file extension specified in :filename. 
-		# If the content-type is not registered for the extension, application/octet-stream will be used.
-	
-		send_file("#{Rails.root}/files/clients/#{client.id}.pdf",
-					  filename: "#{client.name}.pdf",
-					  type: "application/pdf")	
+- Another example
 
-	- RESTful Downloads
+	  def stream
+		response.headers['Content-Type'] = 'text/event-stream'
+		2.times {
+		  response.stream.write "hello world\n"
+		  sleep 1
+		}
+	  ensure
+		response.stream.close
+	  end	
 	
-		# In REST terminology, the PDF file from the example above can be considered just another representation of the client resource.
-		
-			respond_to do |format|
-			  format.html
-			  format.pdf { render pdf: generate_pdf(@client) }
-			end
+- Sending a file
+
+	# This will read and stream the file 4 kB at the time, avoiding loading the entire file into memory at once. 
+	# You can turn off streaming with the :stream option or adjust the block size with the :buffer_size option.
+	# If :type is not specified, it will be guessed from the file extension specified in :filename. 
+	# If the content-type is not registered for the extension, application/octet-stream will be used.
+
+	render file: "#{Rails.root}/public/404.html", layout: false
+	# send_file is often a faster and better option if a layout isn't required.
+
+	send_file("#{Rails.root}/files/clients/#{client.id}.pdf",
+				  filename: "#{client.name}.pdf",
+				  type: "application/pdf")	
+
+
+- RESTful Downloads
+
+	# In REST terminology, the PDF file from the example above can be considered just another representation of the client resource.
+	
+		respond_to do |format|
+		  format.html
+		  format.pdf { render pdf: generate_pdf(@client) }
+		end
+
 	- Add PDF typein config/initializers/mime_types.rb:
-	
+
 		Mime::Type.register "application/pdf", :pdf
 
 	- Then
-			
+		
 		GET /clients/1.pdf
+
+- Rendering Objects
+
+	render MyRenderable.new
+
+
+
+
+Links
+------------------------------------------------------------------------
+
+- example
+
+	<td><%= link_to "Show", book %></td>
+	<td><%= link_to "Edit", edit_book_path(book) %></td>
+	<td><%= link_to "Destroy", book, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %></td>
+
+
+
+
+
+
+
+
+- Forms, and Request Forgery Protection
+------------------------------------------------------------------------
+- Generic form
+
+	<%= form_with url: "/search", method: :get do |form| %>
+	  <%= form.label :query, "Search for:" %>
+	  <%= form.text_field :query %>
+	  <%= form.submit "Search" %>
+	<% end %>
+
+	<form action="/search" method="get" accept-charset="UTF-8" >
+	  <label for="query">Search for:</label>
+	  <input id="query" name="query" type="text" />
+	  <input name="commit" type="submit" value="Search" data-disable-with="Search" />
+	</form>
+
+	- for other controls
+	
+	<%= form.radio_button :age, "child" %>	>> <input type="radio" id="age_child" name="age" value="child" />
+	<%= form.radio_button :age, "adult" %>	>> <input type="radio" id="age_adult" name="age" value="adult" />
+
+	<%= form.check_box :pet_dog %>			>> <input type="checkbox" id="pet_dog" name="pet_dog" value="1" />
+	
+	- Other helpers
+	
+	<%= form.text_area :message, size: "70x5" %>				>> <textarea name="message" id="message" cols="70" rows="5"></textarea>		
+	<%= form.hidden_field :parent_id, value: "foo" %>			>> <input type="hidden" name="parent_id" id="parent_id" value="foo" />
+	<%= form.password_field :password %>						>> <input type="password" name="password" id="password" />
+	<%= form.number_field :price, in: 1.0..20.0, step: 0.5 %>	>> <input type="number" name="price" id="price" step="0.5" min="1.0" max="20.0" />
+	<%= form.range_field :discount, in: 1..100 %>				>> <input type="range" name="discount" id="discount" min="1" max="100" />
+	<%= form.date_field :born_on %>								>> <input type="date" name="born_on" id="born_on" />
+	<%= form.time_field :started_at %>							>> <input type="time" name="started_at" id="started_at" />
+	<%= form.datetime_local_field :graduation_day %>			>> <input type="datetime-local" name="graduation_day" id="graduation_day" />
+	<%= form.month_field :birthday_month %>						>> <input type="month" name="birthday_month" id="birthday_month" />
+	<%= form.week_field :birthday_week %>						>> <input type="week" name="birthday_week" id="birthday_week" />
+	<%= form.search_field :name %>								>> <input type="search" name="name" id="name" />
+	<%= form.email_field :address %>							>> <input type="email" name="address" id="address" />
+	<%= form.telephone_field :phone %>							>> <input type="tel" name="phone" id="phone" />
+	<%= form.url_field :homepage %>								>> <input type="url" name="homepage" id="homepage" />
+	<%= form.color_field :favorite_color %>						>> <input type="color" name="favorite_color" id="favorite_color" value="#000000" />
+
+	- without form
+	
+	<%= check_box_tag "accept" %>	--> <input type="checkbox" name="accept" id="accept" value="1" />
+	
+
+
+- Bind it to an active model
+
+	@article = Article.find(42)
+
+	<%= form_with model: @article do |form| %>
+	  <%= form.text_field :title %>
+	  <%= form.text_area :body, size: "60x10" %>
+	  <%= form.submit %>
+	<% end %>
+
+	# there for all fields names will be formed as : article[field_name]
+	<form action="/articles/42" method="post" accept-charset="UTF-8" >
+	  <input name="authenticity_token" type="hidden" value="..." />
+	  <input type="text" name="article[title]" id="article_title" value="My Title" />
+	  <textarea name="article[body]" id="article_body" cols="60" rows="10">
+		My Body
+	  </textarea>
+	  <input type="submit" name="commit" value="Update Article" data-disable-with="Update Article">
+	</form>
+
+	- Notice form_with(model: @article) is the same for creating new records, or editing existing one
+	
+		form_with(model: @article, url: articles_path)								>> in case as new .. auto generated 
+		form_with(model: @article, url: article_path(@article), method: "patch")	>> in case of existing one .. auto generated
+
+- fields_for
+
+	# if you had a Person model with an associated ContactDetail model
+
+	<%= form_with model: @person do |person_form| %>
+	  <%= person_form.text_field :name %>
+	  <%= fields_for :contact_detail, @person.contact_detail do |contact_detail_form| %>
+		<%= contact_detail_form.text_field :phone_number %>
+	  <% end %>
+	<% end %>
+
+	# has many
+	
+	<%= form_with model: @person do |person_form| %>
+	  <%= person_form.text_field :name %>
+	  <% @person.addresses.each do |address| %>
+		<%= person_form.fields_for address, index: address.id do |address_form| %>
+		  <%= address_form.text_field :city %>
+		<% end %>
+	  <% end %>
+	<% end %>
+	
+	<form accept-charset="UTF-8" action="/people/1" method="post">			
+	  <input name="_method" type="hidden" value="patch" />
+	  <input id="person_name" name="person[name]" type="text" />
+	  <input id="person_address_23_city" name="person[address][23][city]" type="text" />
+	  <input id="person_address_45_city" name="person[address][45][city]" type="text" />
+	</form>
+
+	--> {'person' => {'name' => 'Bob', 'address' => {'23' => {'city' => 'Paris'}, '45' => {'city' => 'London'}}}}
+
+	# notice 
+	<%= person_form.fields_for address, index: address.id do |address_form| %>
+	is
+	<%= fields_for 'person[address][primary]', address, index: address.id do |address_form| %>
+	and
+	<%= fields_for 'person[address][primary][]', address do |address_form| %>
+
+	model:
+	
+	class Person < ApplicationRecord
+	  has_many :addresses, inverse_of: :person
+	  accepts_nested_attributes_for :addresses	--> this will change the params structure **
+	end
+	class Address < ApplicationRecord
+	  belongs_to :person
+	end
+	
+	- when creating new form
+	def new
+	  @person = Person.new
+	  2.times { @person.addresses.build }
+	end
+
+	** params structure 
+
+	{
+	  'person' => {
+		'name' => 'John Doe',
+		'addresses_attributes' => {
+		  '0' => {
+			'kind' => 'Home',
+			'street' => '221b Baker Street'
+		  },
+		  '1' => {
+			'kind' => 'Office',
+			'street' => '31 Spooner Street'
+		  }
+		}
+	  }
+	}
+
+	- therefor controller:
+	
+	def create
+	  @person = Person.new(person_params)
+	  # ...
+	end
+
+	private
+	  def person_params
+		params.require(:person).permit(:name, addresses_attributes: [:id, :kind, :street])
+	  end
+
+	- remove
+		- model
+			
+			accepts_nested_attributes_for :addresses, allow_destroy: true
+	
+		- form
+		
+			<li>
+				<%= addresses_form.check_box :_destroy %>
+				<%= addresses_form.label :kind %>
+				<%= addresses_form.text_field :kind %>
+				...
+			</li>		
+
+		- controller
+		
+				def person_params
+				  params.require(:person).
+					permit(:name, addresses_attributes: [:id, :kind, :street, :_destroy])
+				end
+		
+	- prevent empty records
+	
+	  accepts_nested_attributes_for :addresses, reject_if: lambda {|attributes| attributes['kind'].blank?}
+	
+	
+- dealing with namespaces
+
+	form_with model: [:admin, @article]			--> admin_article_path(@article)
+	form_with model: [:admin, :management, @article]
+	
+- methods
+
+	form_with(url: search_path, method: "patch")	>> <form accept-charset="UTF-8" action="/search" method="post">
+	
+	- field method override form method
+	
+	<%= form_with url: "/posts/1", method: :patch do |form| %>
+		<%= form.button "Delete", formmethod: :delete, data: { confirm: "Are you sure?" } %>
+		<%= form.button "Update" %>
+	<% end %>
+
+- select boxes 
+
+	<%= form.select :city, ["Berlin", "Chicago", "Madrid"] %>	>> <select name="city" id="city"><option value="Berlin">Berlin</option> ... 
+	<%= form.select :city, [["Berlin", "BE"], ["Chicago", "CHI"], ["Madrid", "MD"]] %>	[name, value]
+	<%= form.select :city, [["Berlin", "BE"], ["Chicago", "CHI"], ["Madrid", "MD"]], selected: "CHI" %>
+	
+	- Option Groups
+	<%= form.select :city,
+		  {
+			"Europe" => [ ["Berlin", "BE"], ["Madrid", "MD"] ],
+			"North America" => [ ["Chicago", "CHI"] ],
+		  },
+		  selected: "CHI" %>
+
+	- with models
+	@person = Person.new(city: "MD")
+	<%= form_with model: @person do |form| %>
+	  <%= form.select :city, [["Berlin", "BE"], ["Chicago", "CHI"], ["Madrid", "MD"]] %>	>> <select name="person[city]" id="person_city"> ...
+	<% end %>
+
+	- Dates / Times
+	<%= form.time_zone_select :time_zone %>		--> {"created_at(1i)"=>"2022", "created_at(2i)"=>"2", "created_at(3i)"=>"18"}
+	<%= form.date_select :created_at %>			--> {"created_at(1i)"=>"2022", "created_at(2i)"=>"2", "created_at(3i)"=>"18"}
+	<%= select_year 1999, prefix: "party" %>	>> <select name="party[year]" id="party_year">	--> "party"=>{"year"=>"1999"}
+	
+- collections
+
+	<%= form.collection_select :city_id, City.order(:name), :id, :name %>			>> <select name="city_id" id="city_id"> <option value="3">Berlin</option> ...
+	<%= form.collection_radio_buttons :city_id, City.order(:name), :id, :name %>	>> <input type="radio" name="city_id" value="3" id="city_id_3">...
+	<%= form.collection_check_boxes :city_id, City.order(:name), :id, :name %>		>> <input type="checkbox" name="city_id[]" value="3" id="city_id_3">...
+
+- uploading files
+
+	<%= form_with url: "/uploads", multipart: true do |form| %>		--> multipart must be set 
+	  <%= file_field_tag :picture %>
+	<% end %>
+
+	and this goes to controller:
+	
+	def upload
+	  uploaded_file = params[:picture]	<---
+	  File.open(Rails.root.join('public', 'uploads', uploaded_file.original_filename), 'wb') do |file|
+		file.write(uploaded_file.read)
+	  end
+	end
+
+- Other helpers and custoimizations	(ActionView::Helpers::FormBuilder.)
+
+	<%= form_with model: @person do |form| %>
+		<%= text_field_with_label form, :first_name %>
+
+	- can be replaced by 
+	
+	<%= form_with model: @person, builder: LabellingFormBuilder do |form| %>
+		<%= form.text_field :first_name %>
+
+	- using class
+	
+	class LabellingFormBuilder < ActionView::Helpers::FormBuilder
+	  def text_field(attribute, options={})
+		label(attribute) + super
+	  end
+	end
+
+- param structure
+
+	<input id="person_name" name="person[name]" type="text" value="Henry"/>							--> {'person' => {'name' => 'Henry'}}
+	<input id="person_address_city" name="person[address][city]" type="text" value="New York"/>		--> {'person' => {'address' => {'city' => 'New York'}}}
+
+	<input name="person[phone_number][]" type="text"/> --> params[:person][:phone_number] 			--> "person"=>{"phone_number"=>["", "", ""]}
+	<input name="person[phone_number][]" type="text"/>
+
+	<input name="person[addresses][][line1]" type="text"/>	--> "person"=>{"addresses"=>[{"line1"=>"", "line2"=>"", "city"=>""}]}
+	<input name="person[addresses][][line2]" type="text"/>
+	<input name="person[addresses][][city]" type="text"/>
+
+
+- remote forms !!
+
+	# check config.action_view.form_with_generates_remote_forms: false
+	# :local - By default form submits are remote and unobtrusive XHRs. Disable remote submits with local: true.
+	# In Rails 6.0 and 5.2, all forms using form_with implement remote: true by default. These forms will submit data using an XHR (Ajax) request. To disable this include local: true. To dive deeper see Working with JavaScript in Rails guide.
+
+
+
+    <%= form_with(
+          local: false,
+          data: {
+            controller: "request",
+            request_target: "form",
+            request_target_value: "#some_dom_id",
+          }) do |form| %>
+
+    <% end %>
+
+	<form 
+		data-controller="request" 
+		data-request-target="form" 
+		data-request-target-value="#some_dom_id" 
+		action="/home/show" 
+		accept-charset="UTF-8" 
+		data-remote="true" 				--> local = false
+		method="post">
+		<input type="hidden" name="authenticity_token" value="5pb3r03YakCh-920ltp8ICzYOlNPF0Bt9WLdVDjP1z6o9wD4M45GXmvSn5VCdqVN4jsdnT4iCq6_qVdhWrgslQ" autocomplete="off">
+	</form>
+
+
+	<form 
+		data-controller="request" 
+		data-request-target="form" 
+		data-request-target-value="#some_dom_id" 
+		 method="post"><input type="hidden" name="authenticity_token" value="V_ykRPEuUQ7dw2pPEXYkCx4xbYORmBN4at7NX9O5ocQZnVMTj3h9EBfqKG7F2v1m0NJKTeCtWbsgFUdqsc5abw" autocomplete="off">
+
+	</form>
+
+
+
+
+
+- (CSRF) Cross-site request forgery is a type of attack in which a site tricks a user into making requests on another site, possibly adding, modifying, or deleting data on that site without the user's knowledge or permission.
+
+- Example:
+
+	<%= form_with model: @user do |form| %>
+	  <%= form.text_field :username %>
+	  <%= form.text_field :password %>
+	<% end %>
+
+	# will generate
+	
+	<form accept-charset="UTF-8" action="/users/1" method="post">
+		<input type="hidden"											<--- notice this
+			   value="67250ab105eb5ad10851c00a5621854a23af5489"
+			   name="authenticity_token"/>
+		<!-- fields -->
+	</form>
+
+	# you can generate this value for mnually crteated forms / ajax
+	
+		<%= form_authenticity_token %>
+
+
+- Basic Auth
+
+	class AdminsController < ApplicationController
+		http_basic_authenticate_with name: "humbaba", password: "5baa61e4"
+	end
+
+- HTTP Digest Authentication
+
+	class AdminsController < ApplicationController
+	  USERS = { "lifo" => "world" }
+
+	  before_action :authenticate
+
+	  private
+		def authenticate
+		  authenticate_or_request_with_http_digest do |username|
+			USERS[username]
+		  end
+		end
+	end
+
+- HTTP Token Authentication
+
+	class PostsController < ApplicationController
+	  TOKEN = "secret"
+
+	  before_action :authenticate
+
+	  private
+		def authenticate
+		  authenticate_or_request_with_http_token do |token, options|
+			ActiveSupport::SecurityUtils.secure_compare(token, TOKEN)
+		  end
+		end
+	end
+
+- Filter out sensitive data from logs
+
+	# check file: config/initializers/filter_parameter_logging.rb
+	
+	Or set inside environment file
+	
+		config.filter_parameters << :password
+	
+	
+- Rescue
+
+	- rescue_from
+	
+		class ApplicationController < ActionController::Base
+		  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
+		  # rescue_from User::NotAuthorized, with: :user_not_authorized
+
+		  private
+			def record_not_found
+			  render plain: "404 Not Found", status: 404
+			  # Or
+			  # flash[:error] = "You don't have access to this section."
+			  # redirect_back(fallback_location: root_path)
+			end
+		end
+	
+	- And from your controller
+	
+		  before_action :check_authorization
+		  
+		  private
+		  
+			# If the user is not authorized, just throw the exception.
+			def check_authorization
+			  raise User::NotAuthorized unless current_user.admin?
+			end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 		
 - Layouts
