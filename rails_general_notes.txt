@@ -124,16 +124,6 @@ Action Pack
 
 
 
-
-
-
-
-
-
-
-
-
-
 actioncable (7.0.1)
 actionmailbox (7.0.1)
 actionmailer (7.0.1)
@@ -260,6 +250,22 @@ So let’s make our service object behave more like a proc!
 		TweetCreator.call(params[:message])
 	  end
 	end
+
+
+Make lib autploaded
+------------------------------------------------------------------------
+
+application.rb
+
+    config.autoload_paths << "#{Rails.root}/lib"
+
+
+
+
+
+
+
+
 
 
 

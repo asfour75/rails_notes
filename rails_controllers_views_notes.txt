@@ -736,16 +736,16 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 
 - basic
 
-	render action: :edit 	# this will go to edit template inside views/controller folder
+	render action: :edit 	# this will go to edit template inside views/controller folder		--> views/controller_name/view.html.erb
 	render :edit 			# same		
 	render 'articles/new'	# render new template in views/articles folder (could be for different controller)
 
 	- render a view based on its name along with routes
 	get "/home/test", to: "home#test"	--> controller home and method test --> views/home/test.html.erb 
 		
-	render xml: @article
-	render json: @article
-	render js: "alert('Hello Rails');"
+	render xml: @article					# will use content type: application/xml
+	render json: @article					# will use content type: application/json 
+	render js: "alert('Hello Rails');"		# you need to disable forgery protection here, depricated in rails 7
 
 
 	render html: helpers.tag.strong('Not Found')
@@ -754,8 +754,16 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 	- render with status
 	render :edit, status: :unprocessable_entity
 
-- options
+	render content_type: 'text/plain', layout: false			# render the page .html.erb as text/plain without layout
 
+	render action: :test, layout: true, content_type: 'text/html', :formats => [:text]		# render the page .text.erb using application.text.erb layout as text/plain with content-type html
+	
+    render :xml => message.to_xml, :status => :created, :location => message_url(message)
+	- if you check response location header field --> Location: http://legion.com:3000/messages/1
+	- status is :created (201)
+	- content type will be automatically set --> Content-Type: application/xml; charset=utf-8
+	
+- options
 
     :content_type
     :layout
@@ -763,6 +771,29 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
     :status
     :formats
     :variants
+
+
+- variants
+
+	# for example, set variant based on browser type (using gem browser)
+	class ApplicationController < ActionController::Base
+	  before_action do
+		if browser.tablet?
+		  request.variant = :tablet
+		elsif browser.mobile?
+		  request.variant = :phone
+		end
+	  end
+	end
+
+	# in your action method
+	respond_to do |format|
+      format.html do |html|
+        html.phone do	<--------------------------------------
+          # Do something specific for phones here.
+        end
+      end
+    end	
 
 
 
@@ -803,10 +834,43 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 	test.html.erb:
 	<%= bo if !local_assigns[:bo].blank? %>
 
-- layouts
+- render rss
+
+	render template: "feed", content_type: "application/rss"
+
+
+= rendering js:
+	
+	# All depricated in Rails 7 due to security concerns 
+	# you need to disable forgery protection here, 
+	
+	respond_to do |format|
+		format.js { :location => path_to_controller_method_url(argument) }
+	end
+
+	respond_to do |format|
+		format.js {
+		   render :template => "classrooms/create_differently.js.erb", :layout => false
+		}
+	end	
+
+	respond_to do |format|
+		format.js { render :file => "/path/to/save.js.erb" }
+	end
+
+	- to call .js file from ajax link
+	
+	<%= link_to 'Display a name', home_test_path(format: :js), local: false %>
+
+
+
+- with layouts
 
 	render :show, layout: 'top_story'
 	render :show, layout: false
+
+	# for plain outputs, make sure to have application.text.erb as layout when enabling layout return
+
 	
 - Redirect
 
@@ -889,12 +953,245 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 		
 		GET /clients/1.pdf
 
+
+
+- Using renderes outside application controller (ActionController::Base)
+
+	# render template
+	ApplicationController.render 'templates/name'
+	# render action
+	FooController.render :index
+	# render file
+	ApplicationController.render file: 'path'
+	# render inline
+	ApplicationController.render inline: 'erb content'
+
+	ApplicationController.render(
+	  assigns: { foo: 'bar' },
+	  inline: 'hello <%= @foo %>'
+	) # => 'hello bar'
+
+
+- request.env
+
+	# All Rails requests have the environment context in which they perform.
+	# You can access the environment as request.env in a Rails action
+	# A typical web request carries its own environment with it. We usually handle this environment using request.env in controllers. Certain gems like devise depends on env hash for information such as warden token.
+	
+	
+	- renderer defaults: ApplicationController.renderer.defaults
+	{:http_host=>"example.org", :https=>false, :method=>"get", :script_name=>"", :input=>""}
+	
+	{
+	  "REQUEST_METHOD" => "GET",
+	  "HTTP_HOST"      => "evilmartians.com",
+	  "SERVER_PORT"    => "443",
+	  "PATH_INFO"      => "/feedback",
+	  "QUERY_STRING"   => "source=blog",
+	  "HTTPS"          => "on"
+	   #...
+	}
+
+	request.env['REQUEST_METHOD]	# GET
+	request.env['action_dispatch.request.formats]	# text/html
+
+	- you can customize it to 
+
+	renderer = ApplicationController.renderer.new(
+	  http_host: 'evilmartians.com',
+	  https:      true,
+	  method: 'post
+	)
+
+	Then use it
+
+	renderer.render inline: '<%= messages_url %>' --> https://evilmartians.com/messages
+	renderer.render template: 'show', locals: { order: Order.last }
+
+
+
 - Rendering Objects
 
-	render MyRenderable.new
+	# https://medium.com/rubyinside/disassembling-rails-template-rendering-2-a99214c6fde8
+
+	- The default view class ActionView::Base
+	- The view class must have the following methods:
+		
+		- View.new(lookup_context, assigns, controller) — Create a new ActionView instance for a controller and we can also pass the arguments.
+		- View#render(option) — Returns String with the rendered template.
+
+    lookup_context = ActionView::LookupContext.new(ActionController::Base.view_paths)
+    context = ActionView::Base.with_empty_template_cache.new(lookup_context, {}, nil)    
+    renderer = ActionView::Renderer.new(lookup_context)
+
+    @template = renderer.render(context, { file: Rails.root.join('app/views/home/_overview.html.erb'), :formats => :html, :handlers => :erb, :variants => :html})
+
+	- then
+	
+	<%=  @template.html_safe %>
+	
+	- how to inject something in the fly
+	
+	action_view = ActionView::Base.new(ActionController::Base.view_paths, {})
+	action_view.class.send(:include, ApplicationHelper)
+	action_view.render(file: "example/path", locals: { foo: 1, bar: "hello world" })	# example/path will have access to ApplicationHelper
+	
+	- example
+	
+	    @template = ApplicationController.renderer.new(
+		  'action_dispatch.request.path_parameters' => {
+			controller: 'messages',
+			action:     'index'
+		  }
+		).render inline: '<%= url_for page: 2 %> <%= bar %>', locals: { foo: 1, bar: "hello world" }
+
+		==> /messages?page=2 hello world
 
 
 
+
+
+
+
+
+
+
+- Builder
+
+
+
+
+
+
+
+
+
+
+
+		
+- Layouts
+------------------------------------------------------------------------
+
+	- default layout is layouts/application.html.erb
+	- specify layout at controller level
+	
+		  layout "application"
+
+	- specify layout at method level
+	
+		    render :template => "home/test", :layout => "application"
+		    render :template => "home/test", :layout => false
+
+	- content_for
+
+		# app/views/layouts/static_pages.html.erb
+		<% content_for :stylesheets do %>
+			#navbar {display: none}
+		<% end %>
+		 
+		Then your application.html.erb layout needs to be set up to catch that content and use it, for instance by adding this #yield line:
+
+		# app/views/layouts/application.html.erb
+		...
+		<head>
+			<style><%= yield :stylesheets %></style>
+		</head>
+
+
+- Partials
+------------------------------------------------------------------------
+
+	<%= render "shared/menu" %>
+	<%= render "shared/menu", {:some => "value} %>				# check in partial local_assigns[:some]
+	
+	<%= render :partial => "shared/something", :locals => {:bo => "hh"}
+	<%= render partial: "link_area", layout: "graybar" %>
+
+	# Within the customer partial, the customer variable will refer to @new_customer from the parent view.
+	<%= render partial: "customer", object: @new_customer %>
+
+	# Assuming that the @customer instance variable contains an instance of the Customer model, 
+	# this will use _customer.html.erb to render it and will pass the local variable customer 
+	# into the partial which will refer to the @customer instance variable in the parent view.
+	<%= render @customer %>
+
+	# this will render _product.html.erb (same folder)
+	# and wil fetch each product as --> <p>Product Name: <%= product.name %></p>	
+	<%= render partial: "product", collection: @products %> --> 
+	<%= render partial: "product", collection: @products, as: :item %> --> 
+
+	# also this will render index.html.erb
+	<%= render @products %>
+
+	- partials can be rendered inside methods as well when using ajax
+
+	- spacers
+	# Rails will render the _product_ruler partial (with no data passed in to it) between each pair of _product partials.
+	<%= render partial: @products, spacer_template: "product_ruler" %>
+
+	# using collections with layout
+	<%= render partial: "product", collection: @products, layout: "special_layout" %>
+	
+	# magical partial
+	# this
+	<%= render partial: 'comments' %>
+	# could be written
+	<%= render 'comments' %>
+	
+	# this will iterate throught _article.html.erb partial
+	<ul id='articles'><%= render @articles %></ul>
+
+
+
+- Rendering Objects
+
+	- The default view class ActionView::Base
+	- The view class must have the following methods:
+		
+		- View.new(lookup_context, assigns, controller) — Create a new ActionView instance for a controller and we can also pass the arguments.
+		- View#render(option) — Returns String with the rendered template.
+
+	view = ActionView::Base.new(ActionController::Base.view_paths, {})
+	view.assign(schedule: @schedule)
+	view.render(file: 'posts/show.html.erb')
+	
+	
+- Builder
+
+	- The Builder gem is a dependency of the rails ActionView component.
+	- It provides a simple way to programatically build XML documents and fragments. 
+	- Builder design pattern in Ruby
+	
+		class User
+		  attr_accessor :first_name, :last_name
+		end
+
+		- initiate
+		
+		UserBuilder.build do |builder|
+			builder.set_name('John', 'Doe')
+		end
+
+		class UserBuilder
+		  def self.build
+			builder = new
+			yield(builder)
+			builder.user
+		  end
+
+		  def initialize
+			@user = User.new
+		  end
+
+		  def set_name(first_name, last_name)
+			@user.first_name = first_name
+			@user.last_name = last_name
+		  end
+
+		  def user
+			@user
+		  end
+		end
 
 Links
 ------------------------------------------------------------------------
@@ -905,8 +1202,12 @@ Links
 	<td><%= link_to "Edit", edit_book_path(book) %></td>
 	<td><%= link_to "Destroy", book, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %></td>
 
+	<%= link_to some_path(obj) do %>
+		some stuf .... 
+	<% end %>
 
 
+	<a href="..." data-turbolinks="false">No turbolinks here</a>.
 
 
 
@@ -1072,6 +1373,9 @@ Links
 		- model
 			
 			accepts_nested_attributes_for :addresses, allow_destroy: true
+
+			- prevent empty records	
+			accepts_nested_attributes_for :addresses, reject_if: lambda {|attributes| attributes['kind'].blank?}
 	
 		- form
 		
@@ -1089,9 +1393,6 @@ Links
 					permit(:name, addresses_attributes: [:id, :kind, :street, :_destroy])
 				end
 		
-	- prevent empty records
-	
-	  accepts_nested_attributes_for :addresses, reject_if: lambda {|attributes| attributes['kind'].blank?}
 	
 	
 - dealing with namespaces
@@ -1222,11 +1523,7 @@ Links
 		data-request-target="form" 
 		data-request-target-value="#some_dom_id" 
 		 method="post"><input type="hidden" name="authenticity_token" value="V_ykRPEuUQ7dw2pPEXYkCx4xbYORmBN4at7NX9O5ocQZnVMTj3h9EBfqKG7F2v1m0NJKTeCtWbsgFUdqsc5abw" autocomplete="off">
-
 	</form>
-
-
-
 
 
 - (CSRF) Cross-site request forgery is a type of attack in which a site tricks a user into making requests on another site, possibly adding, modifying, or deleting data on that site without the user's knowledge or permission.
@@ -1301,7 +1598,10 @@ Links
 
 	- rescue_from
 	
+		application_controller.rb:
+		
 		class ApplicationController < ActionController::Base
+
 		  rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 		  # rescue_from User::NotAuthorized, with: :user_not_authorized
 
@@ -1325,96 +1625,16 @@ Links
 			  raise User::NotAuthorized unless current_user.admin?
 			end
 
+- Error messages
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		
-- Layouts
-------------------------------------------------------------------------
-
-	- default layout is layouts/application.html.erb
-	- specify layout at controller level
-	
-		  layout "application"
-
-	- specify layout at method level
-	
-		    render :template => "home/test", :layout => "application"
-		    render :template => "home/test", :layout => false
-
-	- content_for
-
-		# app/views/layouts/static_pages.html.erb
-		<% content_for :stylesheets do %>
-			#navbar {display: none}
+	  <div>
+		<%= form.label :title %><br>
+		<%= form.text_field :title %>
+		<% @article.errors.full_messages_for(:title).each do |message| %>
+		  <div><%= message %></div>
 		<% end %>
-		 
-		Then your application.html.erb layout needs to be set up to catch that content and use it, for instance by adding this #yield line:
-
-		# app/views/layouts/application.html.erb
-		...
-		<head>
-			<style><%= yield :stylesheets %></style>
-		</head>
-
-- Partials
-------------------------------------------------------------------------
-
-	<%= render "shared/menu" %>
-	<%= render :partial => "shared/something", :locals => {:bo => "hh"}
-	<%= render partial: "link_area", layout: "graybar" %>
-
-	# Within the customer partial, the customer variable will refer to @new_customer from the parent view.
-	<%= render partial: "customer", object: @new_customer %>
-
-	# Assuming that the @customer instance variable contains an instance of the Customer model, 
-	# this will use _customer.html.erb to render it and will pass the local variable customer 
-	# into the partial which will refer to the @customer instance variable in the parent view.
-	<%= render @customer %>
-
-	# this will render _product.html.erb (same folder)
-	# and wil fetch each product as --> <p>Product Name: <%= product.name %></p>	
-	<%= render partial: "product", collection: @products %> --> 
-	<%= render partial: "product", collection: @products, as: :item %> --> 
-
-	# also this will render index.html.erb
-	<%= render @products %>
-
-	- partials can be rendered inside methods as well when using ajax
-
-	- spacers
-	# Rails will render the _product_ruler partial (with no data passed in to it) between each pair of _product partials.
-	<%= render partial: @products, spacer_template: "product_ruler" %>
-
-	# using collections with layout
-	<%= render partial: "product", collection: @products, layout: "special_layout" %>
-	
-	# magical partial
-	# this
-	<%= render partial: 'comments' %>
-	# could be written
-	<%= render 'comments' %>
-	
-	# this will iterate throught _article.html.erb partial
-	<ul id='articles'><%= render @articles %></ul>
-
+	  </div>
 
 
 
@@ -1422,7 +1642,7 @@ Links
 
 
 - Helpers
-========================================================================
+------------------------------------------------------------------------
 
 
 - Ready made helpers
@@ -1470,7 +1690,7 @@ Links
 
 
 - Presenter
-========================================================================
+------------------------------------------------------------------------
 
 
 	# app/presenters/post_presenter.rb
@@ -1500,7 +1720,7 @@ Links
 
 
 Ajax & ejs	(for Rails7, check actioncable & turbo)
-========================================================================
+------------------------------------------------------------------------
 
 There are several ways to use ajax with rails applications.
 - the hard way, using jQuery directly .. or any other libraries 
@@ -1525,7 +1745,69 @@ There are several ways to use ajax with rails applications.
 
 
 
+Render status types
+--------------------
 
+Response Class 	HTTP Status Code 	Symbol
+Informational 	100 	:continue
+	101 	:switching_protocols
+	102 	:processing
+Success 	200 	:ok
+	201 	:created
+	202 	:accepted
+	203 	:non_authoritative_information
+	204 	:no_content
+	205 	:reset_content
+	206 	:partial_content
+	207 	:multi_status
+	208 	:already_reported
+	226 	:im_used
+Redirection 	300 	:multiple_choices
+	301 	:moved_permanently
+	302 	:found
+	303 	:see_other
+	304 	:not_modified
+	305 	:use_proxy
+	307 	:temporary_redirect
+	308 	:permanent_redirect
+Client Error 	400 	:bad_request
+	401 	:unauthorized
+	402 	:payment_required
+	403 	:forbidden
+	404 	:not_found
+	405 	:method_not_allowed
+	406 	:not_acceptable
+	407 	:proxy_authentication_required
+	408 	:request_timeout
+	409 	:conflict
+	410 	:gone
+	411 	:length_required
+	412 	:precondition_failed
+	413 	:payload_too_large
+	414 	:uri_too_long
+	415 	:unsupported_media_type
+	416 	:range_not_satisfiable
+	417 	:expectation_failed
+	421 	:misdirected_request
+	422 	:unprocessable_entity
+	423 	:locked
+	424 	:failed_dependency
+	426 	:upgrade_required
+	428 	:precondition_required
+	429 	:too_many_requests
+	431 	:request_header_fields_too_large
+	451 	:unavailable_for_legal_reasons
+Server Error 	500 	:internal_server_error
+	501 	:not_implemented
+	502 	:bad_gateway
+	503 	:service_unavailable
+	504 	:gateway_timeout
+	505 	:http_version_not_supported
+	506 	:variant_also_negotiates
+	507 	:insufficient_storage
+	508 	:loop_detected
+	510 	:not_extended
+	511 	:network_authentication_required
 
 
 

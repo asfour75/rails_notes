@@ -377,6 +377,11 @@ rename_table  :tags :categories
 
 	class Customer < ActiveRecord::Base
 	  set_table_name 'existing_customers'
+	  
+	  Or 
+	  
+	  self.table_name = "my_customers"
+	  
 	end
 
 - Specifying Primary Key
@@ -384,6 +389,11 @@ rename_table  :tags :categories
 	class Customer < ActiveRecord::Base
 	  set_table_name 'existing_customers'
 	  set_primary_key 'customer_id'
+	  
+	  Or
+	  
+	  self.primary_key = "customer_id"
+	  
 	end
 
 - Foreign Keys
@@ -777,12 +787,6 @@ Validations
 				title:
 				  blank: "Please enter a title."
 
-- Database Validations
---------------------------------------------------
-
-	# For truly bullet-proof data integrity you’ll need to implement validations at the database level, too.
-	# in your migration...
-	t.index(:title, unique: true)
 
 
 
@@ -845,11 +849,353 @@ Transactions
 
 
 
-Queries (where, find_by, references, includes, joins, order, limit, pagination ... etc
+Queries (Insert, where, find_by, references, includes, joins, order, limit, pagination ... etc
 ======================================================================================
+
+New / Create / Select
+---------------------
+
+- create
+
+	user = User.create(name: "David", occupation: "Code Artist")
+	
+	user = User.new
+	user.name = "David"
+	user.occupation = "Code Artist"
+
+	user.save
+
+	- you can also
+	
+	user = User.new do |u|
+	  u.name = "David"
+	  u.occupation = "Code Artist"
+	end
+
+	- find_or_create_by
+	
+	Customer.find_or_create_by(first_name: 'Andy')
+	Customer.create_with(locked: false).find_or_create_by(first_name: 'Andy')
+
+	Customer.find_or_create_by(first_name: 'Andy') do |c|
+	  c.locked = false
+	end
+
+	Customer.find_or_create_by!(first_name: 'Andy')		-> trigger exception if validation failed
+	
+- Read
+
+	users = User.all
+	user = User.first
+	david = User.find_by(name: 'David')
+	users = User.where(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
+	users = User.where.not(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
+	
+	- ids
+	Customer.ids	--> SELECT id FROM customers	# if self.primary_key = "customer_id" --> SELECT customer_id FROM customers
+
+	
+	User.find_by_first_name(fn)
+	Customer.find_by_first_name_and_orders_count("Ryan", 5)
+	
+	- find_or_initialize_by
+
+	nina = Customer.find_or_initialize_by(first_name: 'Nina')
+	nina.persisted?		# if exists
+	nina.new_record?	# if new record
+	nina.save
+	
+	- Finding by SQL
+	
+	Customer.find_by_sql("SELECT * FROM customers INNER JOIN orders ON customers.id = orders.customer_id ORDER BY customers.created_at desc")
+	Customer.connection.select_all("SELECT first_name, created_at FROM customers WHERE id = '1'").to_a	# ActiveRecord::Result --> .to_a
+	
+	- pluck
+	
+	Book.where(out_of_print: true).pluck(:id)	--> [1, 2, 3]
+	Order.distinct.pluck(:status)	--> ["shipped", "being_packed", "cancelled"]
+	Customer.pluck(:id, :first_name) -->  [[1, "David"], [2, "Fran"], [3, "Jose"]]
+	
+	Same
+	
+	Customer.select(:id).map { |c| c.id }
+	Customer.select(:id).map(&:id)
+	Customer.select(:id, :first_name).map { |c| [c.id, c.first_name] }
+	
+	- method
+	
+	def name
+		"I am #{first_name}"
+	end
+	Customer.select(:first_name).map &:name
+	
+	- multiple tables
+	
+	Order.joins(:customer, :books).pluck("orders.created_at, customers.email, books.title")
+	
+	Customer.pluck(:first_name).limit(1)	# NoMethodError: undefined method `limit' for #<Array:0x007ff34d3ad6d8>
+	Customer.limit(1).pluck(:first_name)	# must be at last
+	
+	assoc = Customer.includes(:reviews)
+	assoc.pluck(:id)
+		
+	
+	- exist 
+	
+	Customer.exists?(1)
+	Customer.exists?(id: [1,2,3])
+	Customer.exists?(first_name: ['Jane', 'Sergei'])
+	Customer.exists?	# false if empty
+	
+	Order.any?	--> SELECT 1 FROM orders LIMIT 1
+	Order.many? --> SELECT COUNT(*) FROM (SELECT 1 FROM orders LIMIT 2)
+	
+	Order.shipped.any?
+	Order.shipped.many?
+	Book.where(out_of_print: true).any?
+	Book.where(out_of_print: true).many?
+	Customer.first.orders.any?
+	Customer.first.orders.many?
+
+	- Calculations
+	
+	Customer.count
+	Customer.where(first_name: 'Ryan').count
+	Customer.includes("orders").where(first_name: 'Ryan', orders: { status: 'shipped' }).count
+	
+	Order.average("subtotal")
+	Order.minimum("subtotal")
+	Order.maximum("subtotal")
+	Order.sum("subtotal")
+	Customer.where(id: 1).joins(:orders).explain
+	Customer.where(id: 1).includes(:orders).explain
+	
+
+	
+
+- Update
+
+	user = User.find_by(name: 'David')
+	user.name = 'Dave'
+	user.save
+
+	user.update(name: 'Dave')
+	
+	User.update_all "max_login_attempts = 3, must_change_password = 'true'"	# no callbacks
+	User.update(:all, max_login_attempts: 3, must_change_password: true)
+	
+	
+- Read only
+
+	customer = Customer.readonly.first
+	customer.visits += 1
+	customer.save
+
+
+	- Locking Records for Update (Optimistic Locking, Pessimistic Locking)
+
+	- In order to use optimistic locking, the table needs to have a column called lock_version of type integer.
+	- An ActiveRecord::StaleObjectError exception is thrown if that has occurred and the update is ignored.
+	
+	- OPtimistic
+	
+	c1 = Customer.find(1)
+	c2 = Customer.find(1)
+
+	c1.first_name = "Sandra"
+	c1.save
+
+	c2.first_name = "Michael"
+	c2.save # Raises an ActiveRecord::StaleObjectError
+
+	- Pessimistic Locking
+	
+	Book.transaction do
+	  book = Book.lock.first
+	  book.title = 'Algorithms, second edition'
+	  book.save!
+	end
+
+	Book.transaction do
+	  book = Book.lock("LOCK IN SHARE MODE").find(1)
+	  book.increment!(:views)
+	end
+
+	book = Book.first
+	book.with_lock do
+	  # This block is called within a transaction,
+	  # book is already locked.
+	  book.increment!(:views)
+	end	
+	
+- Delete
+
+	user.destroy
+	User.destroy_by(name: 'David')
+	User.destroy_all
+	
+
+
+Querying
+------------------------------------------------------------------------
+
+
+    annotate
+    find
+    create_with
+    distinct
+    eager_load
+    extending
+    extract_associated
+    from
+    group
+    having
+    includes
+    joins
+    left_outer_joins
+    limit
+    lock
+    none
+    offset
+    optimizer_hints
+    order
+    preload
+    readonly
+    references
+    reorder
+    reselect
+    reverse_order
+    select
+    where
+
+
+	customer = Customer.find(10)
+	customers = Customer.find([1, 10]) 
+	customer = Customer.take			--> SELECT * FROM customers LIMIT 1
+	customers = Customer.take(2)		--> SELECT * FROM customers LIMIT 2
+	customer = Customer.first
+	customers = Customer.first(3)		--> SELECT * FROM customers ORDER BY customers.id ASC LIMIT 3
+	customer = Customer.order(:first_name).first
+	customer = Customer.last
+	customers = Customer.last(3)
+	customer = Customer.order(:first_name).last
+	Customer.find_by first_name: 'Lifo'
+	Customer.where(first_name: 'Lifo').take
+	Customer.find_by! first_name: 'does not exist'	--> ActiveRecord::RecordNotFound
+	Customer.where(first_name: 'does not exist').take!
+
+	# entire table
+	Customer.all.each do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+
+	# find_each retrieves customers in batches of 1000 and yields them to the block one by one: - repeat next 1000
+	Customer.find_each do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+
+	Customer.where(weekly_subscriber: true).find_each(batch_size: 5000) do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+	# also use --> 
+	
+		start: 2000
+		start: 2000, finish: 10000
+	
+	- you can yield batches 
+	Customer.find_in_batches do |customers|
+	  export.add_customers(customers)
+	end
+
+- Conditions
+
+	Book.where("title = ?", params[:title])
+	Book.where("title = ? AND out_of_print = ?", params[:title], false)
+	Book.where("created_at >= :start_date AND created_at <= :end_date", {start_date: params[:start_date], end_date: params[:end_date]})
+
+	Book.where('out_of_print' => true)
+	
+	
+	Book.where(author: author)	# association
+	Author.joins(:books).where(books: { author: author })
+	
+	Book.where(created_at: (Time.now.midnight - 1.day)..Time.now.midnight)
+	Customer.where(orders_count: [1,3,5])
+	Customer.where.not(orders_count: [1,3,5])
+	Customer.where(last_name: 'Smith').or(Customer.where(orders_count: [1,3,5]))	# OR
+	Customer.where(last_name: 'Smith').where(orders_count: [1,3,5]))	# AND
+	Customer.where(id: [1, 2]).and(Customer.where(id: [2, 3]))
+
+- Ordering
+
+	Book.order(title: :asc, created_at: :desc)
+	Book.order("title ASC, created_at DESC")
+	
+- Select
+
+	Book.select(:isbn, :out_of_print)
+	Book.select("isbn, out_of_print")
+	Customer.select(:last_name).distinct
+	
+- Limit, Offset
+
+	Customer.limit(5).offset(30)
+
+- group
+
+	Order.select("created_at").group("created_at")
+	Order.group(:status).count
+	
+- Having
+
+	Order.select("created_at, sum(total) as total_price").group("created_at").having("sum(total) > ?", 200)
+
+- Overriding Conditions
+
+	Book.where('id > 100').limit(20).order('id desc').unscope(:order)	# remove order by .. 
+	
+	Book.where(id: 10, out_of_print: false).unscope(where: :id)
+	# SELECT books.* FROM books WHERE out_of_print = 0
+
+	Book.order('id desc').merge(Book.unscope(:order))
+	Book.where('id > 10').limit(20).order('id desc').only(:order, :where)	# remove limit
+	
+- reselect
+
+	Book.select(:title, :isbn).reselect(:created_at)	# only created_at
+	Book.select(:title, :isbn).select(:created_at)		# with created_at
+
+- reorder, reverse_order
+
+	has_many :books, -> { order(year_published: :desc) }
+	Author.find(10).books.reorder('year_published ASC')
+	
+	Book.where("author_id > 10").order(:year_published).reverse_order
+
+- rewhere
+
+	Book.where(out_of_print: true).rewhere(out_of_print: false)	# new where
+	Book.where(out_of_print: true).where(out_of_print: false)	# with
+
+- Null relation
+
+	if reviews.count > 5
+	  reviews
+	else
+	  Review.none # Does not meet minimum threshold yet
+	end
+
+
+
+	
+
+# https://guides.rubyonrails.org/active_record_querying.html
+
 
 - Includes, references and joins
 --------------------------------------------------
+
+- Join
 
 	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.title }
 	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
@@ -862,16 +1208,54 @@ Queries (where, find_by, references, includes, joins, order, limit, pagination .
 	# SELECT COUNT(*) FROM "comments" WHERE "comments"."post_id" = $1
 	# ...
 
+	Author.joins(books: [{reviews: { customer: :orders} }, :supplier] )
+
+	SELECT * FROM authors
+	  INNER JOIN books ON books.author_id = authors.id
+	  INNER JOIN reviews ON reviews.book_id = books.id
+	  INNER JOIN customers ON customers.id = reviews.customer_id
+	  INNER JOIN orders ON orders.customer_id = customers.id
+	INNER JOIN suppliers ON suppliers.id = books.supplier_id
+
+
+	time_range = (Time.now.midnight - 1.day)..Time.now.midnight
+	Customer.joins(:orders).where('orders.created_at' => time_range).distinct
+
+	Customer.joins(:orders).merge(Order.created_in_time_range(time_range)).distinct
+	
+	Customer.left_outer_joins(:reviews).distinct.select('customers.*, COUNT(reviews.*) AS reviews_count').group('customers.id')
+
 	- Can joins be combined with includes, preload, and eager_load? Yes
 	- Can includes prevent N+1 queries? yes
 	
+	- From multiple tables
+	
+	Customer
+	  .select('customers.id, customers.last_name, reviews.body')
+	  .joins(:reviews)
+	  .where('reviews.created_at > ?', 1.week.ago)
+	
+	
+	
+	
+- Includes
+
+	- Solution to N + 1 queries problem	
+    includes
+    preload
+    eager_load
+
 	Post.includes(:comments).map { |post| post.comments.size }
 	# SELECT "comments".* FROM "comments" WHERE "comments"."post_id" IN (1, 3, 4, 5, 6)
 	
 	- Does includes always generate a separate query to fetch the records in the relationship? No
-	  includes will either use a separate query (like above) or a LEFT OUTER JOIN. 
-	  
+	  includes will either use a separate query (like above) or a LEFT OUTER JOIN. 	  
 	  If you have a where or order clause that references a relationship, a LEFT OUTER JOIN is used versus a separate query.
+	
+	- nested
+	Customer.includes(orders: {books: [:supplier, :author]}).find(1)
+	
+	Author.includes(:books).where(books: { out_of_print: true })	# LEFT OUTER JOIN
 	
 	Post.includes(:comments).references(:comments).map { |post| post.comments.size }
 	
@@ -933,7 +1317,50 @@ Queries (where, find_by, references, includes, joins, order, limit, pagination .
 
 	It's includes with an INNER JOIN vs. a LEFT OUTER JOIN.
 
+- Scopes
+--------
 
+	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
+
+	scope :in_print, -> { where(out_of_print: false) }
+	scope :out_of_print, -> { where(out_of_print: true) }
+	scope :old, -> { where('year_published < ?', 50.years.ago )}
+	scope :out_of_print_and_expensive, -> { out_of_print.where('price > 500') }
+	scope :costs_more_than, ->(amount) { where('price > ?', amount) }
+	
+	scope :out_of_print, -> { where(out_of_print: true) }	--> Book.out_of_print
+	scope :out_of_print_and_expensive, -> { out_of_print.where("price > 500") }
+	
+	scope :costs_more_than, ->(amount) { where("price > ?", amount) }	--> Book.costs_more_than(100.10)
+	Also
+	def self.costs_more_than(amount)
+		where("price > ?", amount)
+	end  
+	
+	scope :created_before, ->(time) { where("created_at < ?", time) if time.present? }
+	
+	- default_scope
+	default_scope { where(out_of_print: false) }	= 	default_scope { where("out_of_print = ?", false) }	# this doesn't work with Book.new
+	# applies all queries and scopes
+	# you can use def self.default_scope
+	# Book.new --> #<Book id: nil, out_of_print: false>	# Use Book.unscoped.new to prevent
+	
+	
+	- merging
+	Book.out_of_print.old
+	Book.in_print.merge(Book.out_of_print)	# will override
+	
+	- with where
+	Book.in_print.where('price < 100')
+	
+	- without scope
+	Book.unscoped.load
+	Book.where(out_of_print: true).unscoped.all
+	Book.unscoped { Book.out_of_print }
+	
+	
+	
+	
 
 - How to use use index for mysql inside model
 --------------------------------------------------
@@ -969,11 +1396,129 @@ Queries (where, find_by, references, includes, joins, order, limit, pagination .
 		  end
 		end
 
+- Enums
+
+	enum :status, [:shipped, :being_packaged, :complete, :cancelled]
+	Order.shipped	-> query
+	order.shipped?	-> if
+	order.shipped!	-> update
+
+
+
+
+
+Nested Attributes
+======================================================================================
+- Nested attributes allow you to save attributes on associated records through the parent.
+- By default nested attribute updating is turned off and you can enable it using the accepts_nested_attributes_for class method.
+
+	class Book < ActiveRecord::Base
+	  has_one :author
+	  has_many :pages
+
+	  accepts_nested_attributes_for :author, :pages
+	end
+
+	# Two methods will be generated
+
+		- author_attributes=(attributes)
+		- pages_attributes=(attributes).
+
+
+1-1
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_one :avatar
+	  accepts_nested_attributes_for :avatar	
+		# , update_only: true -> you don;t need to provide the id
+		# , allow_destroy: true
+	end
+
+	params = { member: { name: 'Jack', avatar_attributes: { icon: 'smiling' } } }
+	member = Member.create(params[:member])
+	member.avatar.id # => 2
+	member.avatar.icon # => 'smiling'
+
+	- update
+	
+	params = { member: { avatar_attributes: { id: '2', icon: 'sad' } } }
+	member.update params[:member]
+	member.avatar.icon # => 'sad'
+
+	- allow_destroy: true
+	
+	member.avatar_attributes = { id: '2', _destroy: '1' }
+
+1-*
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_many :posts
+	  accepts_nested_attributes_for :posts
+	end
+
+
+	params = { member: {
+	  name: 'joe', posts_attributes: [
+		{ title: 'Kari, the awesome Ruby documentation browser!' },
+		{ title: 'The egalitarian assumption of the modern citizen' },
+		{ title: '', _destroy: '1' } # this will be ignored
+	  ]
+	}}
+
+	member = Member.create(params[:member])
+	member.posts.length # => 2
+	member.posts.first.title # => 'Kari, the awesome Ruby documentation browser!'
+	member.posts.second.title # => 'The egalitarian assumption of the modern citizen'
+
+	- validation
+	
+	accepts_nested_attributes_for :posts, reject_if: proc { |attributes| attributes['title'].blank? }
+	accepts_nested_attributes_for :posts, reject_if: :new_record?
+	
+	accepts_nested_attributes_for :posts, reject_if: :reject_posts
+
+	  def reject_posts(attributes)
+		attributes['title'].blank?
+	  end
+
+	- If the hash contains an id key that matches an already associated record, the matching record will be modified:
+
+	  posts_attributes: [
+		{ id: 1, title: '[UPDATED] An, as of yet, undisclosed awesome Ruby documentation browser!' },
+		{ id: 2, title: '[UPDATED] other post' }
+	  ]
+	
+	- allow_desotry
+	
+		class Member < ActiveRecord::Base
+		  has_many :posts
+		  accepts_nested_attributes_for :posts, allow_destroy: true	<-------------
+		end
+
+		params = { member: {
+		  posts_attributes: [{ id: '2', _destroy: '1' }]
+		}}
+
+		member.attributes = params[:member]
+		member.posts.detect { |p| p.id == 2 }.marked_for_destruction? # => true
+		member.posts.length # => 2
+		member.save
+		member.reload.posts.length # => 1
+
+
+
+
+
+
+
 - Complex queries
 -------------------------
 # https://pganalyze.com/blog/active-record-subqueries-rails
 
 		- select count(*) from users where users.id not in (select user_id from orders);		
+		
 		User.where(id: Order.select(:user_id).all).size
 
 
@@ -1059,6 +1604,14 @@ Callbacks
 	Instead users have to do:
 
 	before_create :do_something
+
+Or
+
+	before_save do
+		self..........
+	end
+	
+
 
 - All callbacks
 -------------------------
@@ -1189,122 +1742,301 @@ Callbacks
 	User::update_all	No						Yes					No				No			No					No
 
 
+- Check existing values
 
 
-Scopes
-======================================================================================
+	before_save	do
+	
+		# self.id
+		# self.[field]_changed?			# true of current update changed the value
+		# self.[field]_was				# the existing value
+	
+	end
+	
 
-	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
+	before_validation :normalize_name, on: :create
+	
 
 
 
+- Validations
+=======================================================================================================
+
+	# For truly bullet-proof data integrity you’ll need to implement validations at the database level, too.
+	# in your migration...
+	t.index(:title, unique: true)
+
+-
+
+	validates :name, presence: true		--> Person.create(name: "John Doe").valid?
+	
+	p = Person.new(name: "John Doe")
+	p.new_record?	--> true
+	p.save
+	p.new_record?	--> false
+	
+# Remember, using ! as save! or create! wil raise an exception if the record in invalid
+# without ! : save and update return false, and create returns the object.
+
+# The following methods will skip validation
 
 
+    decrement!
+    decrement_counter
+    increment!
+    increment_counter
+    insert
+    insert!
+    insert_all
+    insert_all!
+    toggle!
+    touch
+    touch_all
+    update_all
+    update_attribute
+    update_column
+    update_columns
+    update_counters
+    upsert
+    upsert_all
+
+- errors
+
+	validates :name, presence: true
+
+	p = Person.new
+	p.errors.size 	--> 0
+	p.valid? 		--> false
+	p.errors.objects.first.full_message	--> "Name can't be blank"
+	
+	p.save	--> false
+	p.save!	--> ActiveRecord::RecordInvalid: Validation failed: Name can't be blank
 
 
+	Person.new.errors[:name].any?	--> false
+	Person.create.errors[:name].any?	--> true
+	
+- acceptance
 
-Nested Attributes
-======================================================================================
-- Nested attributes allow you to save attributes on associated records through the parent.
-- By default nested attribute updating is turned off and you can enable it using the accepts_nested_attributes_for class method.
+	validates :terms_of_service, acceptance: true
+	validates :terms_of_service, acceptance: { message: 'must be abided' }
+	  
+	validates :terms_of_service, acceptance: { accept: 'yes' }
+	validates :eula, acceptance: { accept: ['TRUE', 'accepted'] }	 
+	  
+- validates_associated
 
-	class Book < ActiveRecord::Base
-	  has_one :author
-	  has_many :pages
+	has_many :books
+	validates_associated :books	# use only from one side of the association
+	
+-  confirmation
 
-	  accepts_nested_attributes_for :author, :pages
+	validates :email, confirmation: true
+	validates :email_confirmation, presence: true
+	validates :email, confirmation: { case_sensitive: false }
+	
+	# assuming you have the following in your view / model
+	
+	<%= text_field :person, :email %>
+	<%= text_field :person, :email_confirmation %>
+
+- comparison
+	
+	validates :start_date, comparison: { greater_than: :end_date }
+	
+- exclusion
+
+	validates :subdomain, exclusion: { in: %w(www us ca jp),
+    message: "%{value} is reserved." }
+	
+-  format
+
+	validates :legacy_code, format: { with: /\A[a-zA-Z]+\z/,
+    message: "only allows letters" }
+	
+- inclusion
+
+	validates :size, inclusion: { in: %w(small medium large),
+    message: "%{value} is not a valid size" }
+    
+-  length
+
+	validates :name, length: { minimum: 2 }
+	validates :bio, length: { maximum: 500 }
+	validates :password, length: { in: 6..20 }
+	validates :registration_number, length: { is: 6 }	
+	
+	validates :bio, length: { maximum: 1000,
+    too_long: "%{count} characters is the maximum allowed" }
+    
+- numericality
+
+	# To specify that only integer numbers are allowed, set :only_integer to true. Then it will use the
+
+	validates :points, numericality: true
+	validates :games_played, numericality: { only_integer: true }
+	
+	- You can use
+	
+    :greater_than - Specifies the value must be greater than the supplied value. The default error message for this option is "must be greater than %{count}".
+    :greater_than_or_equal_to - Specifies the value must be greater than or equal to the supplied value. The default error message for this option is "must be greater than or equal to %{count}".
+    :equal_to - Specifies the value must be equal to the supplied value. The default error message for this option is "must be equal to %{count}".
+    :less_than - Specifies the value must be less than the supplied value. The default error message for this option is "must be less than %{count}".
+    :less_than_or_equal_to - Specifies the value must be less than or equal to the supplied value. The default error message for this option is "must be less than or equal to %{count}".
+    :other_than - Specifies the value must be other than the supplied value. The default error message for this option is "must be other than %{count}".
+    :in - Specifies the value must be in the supplied range. The default error message for this option is "must be in %{count}".
+    :odd - Specifies the value must be an odd number if set to true. The default error message for this option is "must be odd".
+    :even - Specifies the value must be an even number if set to true. The default error message for this option is "must be even".
+
+- presence
+
+	validates :name, :login, :email, presence: true
+	  
+	has_one :account
+	validates :account, presence: true	  
+	# If you want to ensure that the association it is both present and valid, you also need to use validates_associated.
+	
+	has_many :line_items, inverse_of: :order  
+	  
+	validates :boolean_field_name, inclusion: [true, false]
+	validates :boolean_field_name, exclusion: [nil]
+
+- absence
+
+	validates :name, :login, :email, absence: true
+	
+	- with association
+	
+	class LineItem < ApplicationRecord
+	  belongs_to :order
+	  validates :order, absence: true
 	end
 
-	# Two methods will be generated
-
-		- author_attributes=(attributes)
-		- pages_attributes=(attributes).
-
-
-1-1
-----------------------------------------------------------------------------------------
-
-	class Member < ActiveRecord::Base
-	  has_one :avatar
-	  accepts_nested_attributes_for :avatar	
-		# , update_only: true -> you don;t need to provide the id
-		# , allow_destroy: true
+	# In order to validate associated records whose absence is required, you must specify the :inverse_of option for the association:
+	class Order < ApplicationRecord
+	  has_many :line_items, inverse_of: :order
 	end
 
-	params = { member: { name: 'Jack', avatar_attributes: { icon: 'smiling' } } }
-	member = Member.create(params[:member])
-	member.avatar.id # => 2
-	member.avatar.icon # => 'smiling'
+- uniqueness
 
-	- update
+	validates :email, uniqueness: true
+	validates :name, uniqueness: { scope: :year, message: "should happen once per year" }
+	validates :name, uniqueness: { case_sensitive: false }
 	
-	params = { member: { avatar_attributes: { id: '2', icon: 'sad' } } }
-	member.update params[:member]
-	member.avatar.icon # => 'sad'
-
-	- allow_destroy: true
+	validates_with GoodnessValidator
 	
-	member.avatar_attributes = { id: '2', _destroy: '1' }
-
-1-*
-----------------------------------------------------------------------------------------
-
-	class Member < ActiveRecord::Base
-	  has_many :posts
-	  accepts_nested_attributes_for :posts
-	end
-
-
-	params = { member: {
-	  name: 'joe', posts_attributes: [
-		{ title: 'Kari, the awesome Ruby documentation browser!' },
-		{ title: 'The egalitarian assumption of the modern citizen' },
-		{ title: '', _destroy: '1' } # this will be ignored
-	  ]
-	}}
-
-	member = Member.create(params[:member])
-	member.posts.length # => 2
-	member.posts.first.title # => 'Kari, the awesome Ruby documentation browser!'
-	member.posts.second.title # => 'The egalitarian assumption of the modern citizen'
-
-	- validation
-	
-	accepts_nested_attributes_for :posts, reject_if: proc { |attributes| attributes['title'].blank? }
-	accepts_nested_attributes_for :posts, reject_if: :new_record?
-	
-	accepts_nested_attributes_for :posts, reject_if: :reject_posts
-
-	  def reject_posts(attributes)
-		attributes['title'].blank?
-	  end
-
-	- If the hash contains an id key that matches an already associated record, the matching record will be modified:
-
-	  posts_attributes: [
-		{ id: 1, title: '[UPDATED] An, as of yet, undisclosed awesome Ruby documentation browser!' },
-		{ id: 2, title: '[UPDATED] other post' }
-	  ]
-	
-	- allow_desotry
-	
-		class Member < ActiveRecord::Base
-		  has_many :posts
-		  accepts_nested_attributes_for :posts, allow_destroy: true	<-------------
+	class GoodnessValidator < ActiveModel::Validator
+	  def validate(record)
+		if record.first_name == "Evil"
+		  record.errors.add :base, "This person is evil"
 		end
+	  end
+	end
+	# Errors added to record.errors[:base]
+	
+	class GoodnessValidator < ActiveModel::Validator
+	  def validate(record)
+		if options[:fields].any? { |field| record.send(field) == "Evil" }
+		  record.errors.add :base, "This person is evil"
+		end
+	  end
+	end
 
-		params = { member: {
-		  posts_attributes: [{ id: '2', _destroy: '1' }]
-		}}
+	class Person < ApplicationRecord
+	  validates_with GoodnessValidator, fields: [:first_name, :last_name]
+	end
+	
+- validates_each
 
-		member.attributes = params[:member]
-		member.posts.detect { |p| p.id == 2 }.marked_for_destruction? # => true
-		member.posts.length # => 2
-		member.save
-		member.reload.posts.length # => 1
+	 validates_each :name, :surname do |record, attr, value|
+    record.errors.add(attr, 'must start with upper case') if value =~ /\A[[:lower:]]/
+	
+- allow ?
+
+	validates :size, inclusion: { in: %w(small medium large),
+    message: "%{value} is not a valid size" }, allow_nil: true
+
+	validates :title, length: { is: 5 }, allow_blank: true
+	
+:message
+
+	validates :name, presence: { message: "must be given please" }
+
+	# Message with dynamic attribute value. %{value} will be replaced
+	# with the actual value of the attribute. %{attribute} and %{model}
+	# are also available.
+	validates :age, numericality: { message: "%{value} seems wrong" }
+
+	# Proc
+	validates :username,
+	uniqueness: {
+	  # object = person object being validated
+	  # data = { model: "Person", attribute: "Username", value: <username> }
+	  message: -> (object, data) do
+		"Hey #{object.name}, #{data[:value]} is already taken."
+	  end
+	}	
+	
+:on
+
+	validates :email, uniqueness: true, on: :create
+	validates :age, numericality: true, on: :update
+	
+	
+	validates :email, uniqueness: true, on: :account_setup
+	validates :age, numericality: true, on: :account_setup	
+	
+	person.valid?(:account_setup)	--> person.errors.messages => {:email=>["has already been taken"], :age=>["is not a number"]}
+	
+- Strict Validations
+
+	validates :name, presence: { strict: true }	
+	Person.new.valid?	--> ActiveModel::StrictValidationFailed: Name can't be blank
+	
+	validates :token, presence: true, uniqueness: true, strict: TokenGenerationException
+	Person.new.valid?	--> TokenGenerationException: Token can't be blank
+	
+- conditional
+
+	validates :card_number, presence: true, if: :paid_with_card?
+	
+	def paid_with_card?
+		payment_type == "card"
+	end
+	
+- Using a Proc with :if and :unless
+
+	validates :password, confirmation: true, unless: Proc.new { |a| a.password.blank? }
+	validates :password, confirmation: true, unless: -> { password.blank? }
+	
+- Display errors in views
+
+	<% if @article.errors.any? %>
+	  <div id="error_explanation">
+		<h2><%= pluralize(@article.errors.count, "error") %> prohibited this article from being saved:</h2>
+
+		<ul>
+		  <% @article.errors.each do |error| %>
+			<li><%= error.full_message %></li>
+		  <% end %>
+		</ul>
+	  </div>
+	<% end %>
+	
+	- If you are using form helpers, when a validation error occurs on a field, it will generate an extra <div> around the entry.
+	
+	<div class="field_with_errors">
+	  <input id="article_title" name="article[title]" size="30" type="text" value="">
+	</div>
+
+	
+	
+	
+# https://guides.rubyonrails.org/active_record_validations.html
+
 	
 
-seed
+Seed
 -------------------------------------------------------------------------------------
 - triggered by
 	
