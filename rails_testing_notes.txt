@@ -1,11 +1,49 @@
 Testing
 
-MiniTest (default)
+textTest (default)
 ========================================================================
 
-gem 'rspec-rails'
-gem 'factory_bot_rails'
-gem 'ffaker'
+# https://guides.rubyonrails.org/testing.html
+# https://guides.rubyonrails.org/generators.html
+
+- Emails Previews
+
+	- previews are located under: test/mailers/previews/user_mailer_preview.rb
+	
+	class UserMailerPreview < ActionMailer::Preview
+	  def welcome_email
+		UserMailer.with(user: User.first).welcome_email
+	  end
+	end	
+
+	- if you have rspec installed, it will use: spec/mailers/previews/user_mailer_preview.rb
+	- to disable it an use default: application.rb
+	
+		config.action_mailer.preview_path = "#{Rails.root}/test/mailers/previews"
+		
+	* Remember, if you have two versions of emails (text, html)
+	
+		mail(to: @user.email, subject: 'Welcome to My Awesome Site') do |format|
+			format.html
+			format.text
+		end
+		
+		- and make use you have both: welcome_email.html.erb welcome_email.text.erb
+		- in the preview you will get select box to choose .. 
+		- to send the email as text, remove the option format.html
+		- you can use conditions as: format.html if something?
+
+- To ensure which generator for tests to use (minitest, rspec)
+
+	config/initializers/generators.rb:
+
+		Rails.application.config.generators do |g|
+		  g.test_framework  :test_unit, fixture: true #, model: false, 
+		end
+
+	
+
+
 
 
 RSpec and BDD
@@ -23,7 +61,15 @@ RSpec and BDD
 		gem lib, git: "https://github.com/rspec/#{lib}.git", branch: 'main' # Previously '4-0-dev' or '4-0-maintenance' branch
 	  end
 	end
-
+	
+	Or
+	
+	group :development, :test do
+		gem 'rspec-rails'
+		gem 'factory_bot_rails'
+		gem 'ffaker'
+	end
+	
 # gem install rspec
 
 	> rspec --init
@@ -98,32 +144,44 @@ to generate test with rails ..
 
 config/initializers/generators.rb:
 
-Rails.application.config.generators do |g|
-  g.test_framework :rspec
-end
+	Rails.application.config.generators do |g|
+	  g.test_framework :rspec
+	end
 
-rails g model Article title:string body:text
-rails db:migrate
+To remain on default testing (after installing rspec)
+
+	g.test_framework  :test_unit, fixture: true
+
+	> rails g model Article title:string body:text
+	> rails db:migrate
 
 # to generate test for article model
-rails generate rspec:model article
+
+	> rails generate rspec:model article
+	> rails g rspec:controller ControllerName
 
 # Default: Run all spec files (i.e., those matching spec/**/*_spec.rb)
-$ bundle exec rspec
+
+	> bundle exec rspec
 
 # Run all spec files in a single directory (recursively)
-$ bundle exec rspec spec/models
+
+	> bundle exec rspec spec/models
 
 # Run a single spec file
-$ bundle exec rspec spec/controllers/accounts_controller_spec.rb
+
+	> bundle exec rspec spec/controllers/accounts_controller_spec.rb
 
 # Run a single example from a spec file (by line number)
-$ bundle exec rspec spec/controllers/accounts_controller_spec.rb:8
+
+	> bundle exec rspec spec/controllers/accounts_controller_spec.rb:8
 
 # See all options for running specs
-$ bundle exec rspec --help
+
+	> bundle exec rspec --help
 
 for spec/models/article_spec.rb
+
 
 RSpec.describe Article, type: :model do
 
@@ -191,12 +249,18 @@ end
 
 -.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.
 
-Using test (original)
 
 
 
 
+Good Gems for testing
 
+gem 'factory_bot_rails'
+gem 'ffaker'
+gem 'database_cleaner'
+gem 'faker'
+
+	capybara #https://github.com/teamcapybara/capybara#using-capybara-with-rspec
 
 
 

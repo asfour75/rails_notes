@@ -103,107 +103,49 @@ end
 puts MR_COUNT        # this is the global constant
 puts Foo::MR_COUNT   # this is the local "Foo" constant
 
+
 String
 ========================================================================
 
-"ruby".size
-# 4
+"ruby".size		# 4
+"".size == 0	# true
+"".empty?		# true
 
-"".size == 0
-# true
+string = "abc123"				string[0,3]						# "abc"
+								string[3,3]						# "123"
 
-"".empty?
-# true
+string = "abc123"				string[0..-2]					# "abc12"
+string[0..2] = ""				p string						# "123"
+string = "Today is Saturday"	string.include?("Saturday")		# true
+string = "Today is Sunday"		string.index("day")				# 2
+binary_string = "1101"			binary_string.rjust(8, "0")		# "00001101"
+binary_string = "1111"			binary_string.ljust(8, "0")		# "11110000"
+lang1 = "ruby"					lang2 = "Ruby"					lang1.upcase == lang2.upcase
 
-string = "abc123"
-string[0,3]
-# "abc"
-string[3,3]
-# "123"
+extra_space = "   test    "		extra_space.strip						# "test"
+string = "ruby programming"		string.start_with? "ruby"				# true
+string = "ruby programming"		string.end_with? "programming"			# true
+string = "bacon is expensive"	string.delete_suffix(" is expensive")	# "bacon"
 
-string = "abc123"
-string[0..-2]
-# "abc12"
-
-string[0..2] = ""
-p string
-# "123"
-
-string = "Today is Saturday"
-string.include?("Saturday")
-# true
-
-string = "Today is Sunday"
-string.index("day")
-# 2
-
-binary_string = "1101"
-binary_string.rjust(8, "0")
-# "00001101"
-
-binary_string = "1111"
-binary_string.ljust(8, "0")
-# "11110000"
-
-lang1 = "ruby"
-lang2 = "Ruby"
-lang1.upcase == lang2.upcase
-
-extra_space = "   test    "
-extra_space.strip
-# "test"
-
-string = "ruby programming"
-string.start_with? "ruby"
-# true
-
-string = "ruby programming"
-string.end_with? "programming"
-# true
-
-string = "bacon is expensive"
-string.delete_suffix(" is expensive")
-# "bacon"
-
-string = "a b c d"
-string.split
-# ["a", "b", "c", "d"]
-
-csv = "a,b,c,d"
-string.split(",")
-# ["a", "b", "c", "d"]
-
-arr = ['a', 'b', 'c']
-arr.join
-# "abc"
-
-arr = ['a', 'b', 'c']
-arr.join("-")
-# "a-b-c"
-
+string = "a b c d"		string.split		# ["a", "b", "c", "d"]
+csv = "a,b,c,d"			string.split(",")	# ["a", "b", "c", "d"]
+arr = ['a', 'b', 'c']	arr.join			# "abc"
+arr = ['a', 'b', 'c']	arr.join("-")		# "a-b-c"
 "49".to_i
 
-"123".match?(/\A-?\d+\Z/)
-# true
-"123bb".match?(/\A-?\d+\Z/)
-# false
+"123".match?(/\A-?\d+\Z/)		# true
+"123bb".match?(/\A-?\d+\Z/)		# false
 
 string = ""
-string << "hello"
-string << " "
-string << "there"
-# "hello there"
+	string << "hello"
+	string << " "
+	string << "there"		# "hello there"
 
 "rubyguides".each_char { |ch| puts ch }
 
-array_of_characters = "rubyguides".chars
-# ["r", "u", "b", "y", "g", "u", "i", "d", "e", "s"]
-
-"abcd".upcase
-# "ABCD"
-
-"ABCD".downcase
-# "abcd"
+array_of_characters = "rubyguides".chars		# ["r", "u", "b", "y", "g", "u", "i", "d", "e", "s"]
+"abcd".upcase									# "ABCD"
+"ABCD".downcase									# "abcd"
 
 b = <<-STRING
 aaa
@@ -216,33 +158,19 @@ bbb
 ccc
 )
 
-string = "We have many dogs"
-string.gsub("dogs", "cats")
-# "We have many cats"
+string = "We have many dogs"		string.gsub("dogs", "cats")			# "We have many cats"
+string = "abccc"					string.gsub("c", "")				# "ab"
+string = "We have 3 cats"			string.gsub(/\d+/, "5")				# "We have 5 cats"
 
-string = "abccc"
-string.gsub("c", "")
-# "ab"
-
-string = "We have 3 cats"
-string.gsub(/\d+/, "5")
-# "We have 5 cats"
-
-title = "the lord of the rings"
-title.gsub(/\w+/) { |word| word.capitalize }
-# "The Lord Of The Rings"
+title = "the lord of the rings"		title.gsub(/\w+/) { |word| word.capitalize }	# "The Lord Of The Rings"
 
 puts "What's your name?"
 name = gets
 # type something...
 name = gets.chomp	<-- remove "\n"
 
-"abcd?".chomp("?")
-# "abcd"
-
-"abc".encoding
-# Encoding:UTF-8
-
+"abcd?".chomp("?")			# "abcd"
+"abc".encoding				# Encoding:UTF-8
 "abc".force_encoding("UTF-8")
 
 str = "aaab"
@@ -1053,10 +981,11 @@ https://www.rubyguides.com/2016/02/ruby-procs-and-lambdas/
 	- two types
 
 		method { |i| ... }
-		
 		method do |i|
 			...
 		end
+		[1, 2, 3].each { |num| puts num }	# |num|	 is block segment	& puts num is block body
+
 
 	- wrap
 
@@ -1092,19 +1021,20 @@ https://www.rubyguides.com/2016/02/ruby-procs-and-lambdas/
 			else
 				puts el + el
 			end
-		end 
+		end
 
-	- Passing block as a parameter
+	*- Passing block as a parameter
 	
 		def start_wrap(&block)
 			puts "*" + block.call + "*"
 		end
 	
-		* And you can pass args to block via block.call(args)
-		
+		* And you can pass args to block via block.call(args)		
 
 
 - Ruby .call Method
+
+	# block.call	=== yield
 
 	proc_test = Proc.new { puts "I am the proc method!" }
 	lambda_test = lambda { puts "I am the lambda method!"}
@@ -1141,7 +1071,9 @@ https://www.rubyguides.com/2016/02/ruby-procs-and-lambdas/
 	# (Notice that the lambda returns back to the method in order to complete it.)
 
 - Ruby proc
-* Proc objects are blocks of code that can be bound to a set of local variables. You can think of a proc object as a "saved" block.
+
+	* Proc objects are blocks of code that can be bound to a set of local variables. You can think of a proc object as a "saved" block.
+
 	square = Proc.new { |x| x ** 2 }
 	# A proc is defined by calling Proc.new followed by a block.
 	 
@@ -1159,11 +1091,9 @@ https://www.rubyguides.com/2016/02/ruby-procs-and-lambdas/
 	add = proc {|x, y| x + y}
 	puts foo(15, 10, add)
 
--
-
 In Ruby Programming Language ("Methods, Procs, Lambdas, and Closures"), a lambda defined using -> is called lambda literal.
 
-	succ = ->(x){ x+1 }
+	succ = -> (x) { x+1 }
 	succ.call(2)
 
 	The code is equivalent to the following one.

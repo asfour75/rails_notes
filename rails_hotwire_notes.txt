@@ -228,8 +228,6 @@ Stimulus
 			}
 		}
 
-
-
 - Controllers
 
 
@@ -615,6 +613,49 @@ Good references
 # https://www.betterstimulus.com/
 
 
+Confirm Message Example
+------------------------------------------------------------------------
+
+- Link
+
+	<%= link_to "Delete", message, method: :delete, data: { :turbo_method => :delete, :turbo_confirm => "Are you sure"} %>
+
+- With controller
+
+	<%= link_to "Delete", message, method: :delete, data: { :turbo_method => :delete, :turbo_confirm => "Are you sure"} %>
+	<%= link_to "Delete", message, method: :delete, data: { :turbo_method => :delete,  action: "click->messages#delete" }  do %>
+
+# Make sure to register it
+messages_controller.js:
+
+	import { Controller } from "@hotwired/stimulus"
+	export default class extends Controller {
+	  delete(event) {
+		let confirmed = confirm("Are you sure ?");
+		if(!confirmed) {
+		  event.preventDefault();
+		}
+	  }
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Turbo
@@ -631,14 +672,353 @@ Turbo
 ** It's all done by sending HTML over the wire. And for those instances when that's not enough, you can reach for the other side of Hotwire, and finish the job with Stimulus.
 
 # https://github.com/jasonfb/hot-glue	(commercial)
+# https://www.colby.so/posts/turbo-frames-on-rails
 
-- Drive
+- Turbo is composed of Turbo Drive, Turbo Frames, Turbo Streams, and Turbo Native. 
+- Each is a valuable piece of the puzzle but today we’re going to focus on Turbo Frames.
 
-	- Turbo Drive gives you that same speed by using the same persistent-process model, but without requiring you to craft your entire application around the paradigm. 
-	- There’s no client-side router to maintain, there’s no state to carefully manage. 
-	- The persistent process is managed by Turbo, and you write your server-side code as though you were living back in the early aughts – blissfully isolated from the complexities of today’s SPA monstrosities!
 
+- Turbo Drive
+-------------------------------------------------------------------------
+- Turbo Drive gives you that same speed by using the same persistent-process model, but without requiring you to craft your entire application around the paradigm. 
+- There’s no client-side router to maintain, there’s no state to carefully manage. 
+- The persistent process is managed by Turbo, and you write your server-side code as though you were living back in the early aughts – blissfully isolated from the complexities of today’s SPA monstrosities!
+
+- There are two types of visit: 
+	- an application visit, which has an action of advance or replace, 
+	- and a restoration visit, which has an action of restore.
+
+- Application visit
+
+	- network request
+	- When the response arrives, Turbo Drive renders its HTML and completes the visit.
+
+	Turbo.visit(location)
 	
+	# Preview
+	# If possible, Turbo Drive will render a preview of the page from cache immediately after the visit starts. 
+	# This improves the perceived speed of frequent navigation between the same pages.
+	
+	- If the visit’s location includes an anchor, Turbo Drive will attempt to scroll to the anchored element. Otherwise, it will scroll to the top of the page.
+	- Uses: history.pushState.
+	
+	-You may wish to visit a location without pushing a new history entry onto the stack.
+	
+	Turbo.visit("/edit", { action: "replace" }) --> <a href="/edit" data-turbo-action="replace">Edit</a>
+	
+	
+	Turbo.clearCache()				# Removes all entries from the Turbo Drive page cache. Call this when state has changed on the server that may affect cached pages.
+	Turbo.setProgressBarDelay(ms)	# Sets the delay after which the progress bar will appear during navigation, in milliseconds. 
+	Turbo.session.drive = false		# Turns Turbo Drive off by default. You must now opt-in to Turbo Drive on a per-link and per-form basis using data-turbo="true"
+	
+	
+- Restoring
+
+	Restoration visits have an action of restore and Turbo Drive reserves them for internal use. 
+	You should not attempt to annotate links or invoke Turbo.visit with an action of restore.
+	
+	Turbo.visit("/edit", { action: "restore" })
+	
+- Canceling Visits Before They Start
+
+	- Listen for the turbo:before-visit event to be notified when a visit is about to start, and use event.detail.url
+	
+	turbo:before-visit --> event.preventDefault()
+	
+- Pausing render 
+	
+	turbo:before-render --> event.preventDefault() --> event.detail.resume()
+	
+	document.addEventListener('turbo:before-render', async (event) => {
+	  event.preventDefault()
+	  await animateOut()
+	  event.detail.resume()
+	})
+	
+- Pausing Requests
+	
+	turbo:before-fetch-request --> event.preventDefault() --> event.detail.resume()
+	
+	document.addEventListener('turbo:before-fetch-request', async (event) => {
+	  event.preventDefault()
+
+	  const token = await getSessionToken(window.app)
+	  event.detail.fetchOptions.headers['Authorization'] = `Bearer ${token}`
+
+	  event.detail.resume()
+	})
+	
+- Performing Visits With a Different Method
+	
+	<a href="/articles/54" data-turbo-method="delete">Delete the article</a>
+	
+- Disabling Turbo Drive on Specific Links or Forms
+
+	<a href="/" data-turbo="false">Disabled</a>
+
+	<form action="/messages" method="post" data-turbo="false">
+	...
+	</form>
+
+	<div data-turbo="false">
+	  <a href="/">Disabled</a>
+	  <a href="/" data-turbo="true">Enabled</a>
+	  <form action="/messages" method="post">
+		...
+	  </form>
+	</div>
+
+	- If you want Drive to be opt-in rather than opt-out, then you can set Turbo.session.drive = false; then, data-turbo="true" is used to enable Drive on a per-element basis. 
+	- If you’re importing Turbo in a JavaScript pack, you can do this globally:
+
+	import { Turbo } from "@hotwired/turbo-rails"
+	Turbo.session.drive = false
+
+- Displaying Progress
+
+	During Turbo Drive navigation, the browser will not display its native progress indicator. 
+	Turbo Drive installs a CSS-based progress bar to provide feedback while issuing a request.
+	It appears automatically for any page that takes longer than 500ms to load. (You can change this delay with the Turbo.setProgressBarDelay method.)
+	The progress bar is a <div> element with the class name turbo-progress-bar. Its default styles appear first in the document and can be overridden by rules that come later.
+	
+	<div class="turbo-progress-bar"></div>
+
+- Reloading When Assets Change
+
+	Turbo Drive can track the URLs of asset elements in <head> from one page to the next and automatically issue a full reload if they change.
+	
+	<head>
+	  ...
+	  <link rel="stylesheet" href="/application-258e88d.css" data-turbo-track="reload">
+	  <script src="/application-cbd3cd4.js" data-turbo-track="reload"></script>
+	</head>
+
+	Ensuring Specific Pages Trigger a Full Reload
+	
+	<meta name="turbo-visit-control" content="reload">
+
+- Setting a Root Location
+
+	<head>
+	  ...
+	  <meta name="turbo-root" content="/app">
+	</head>
+
+- Form Submissions
+
+	Form submissions can issue stateful requests using the HTTP POST method
+	Link clicks only ever issue stateless HTTP GET requests.
+
+	Events:
+	
+		turbo:submit-start
+		turbo:before-fetch-request
+		turbo:before-fetch-response
+		turbo:submit-end
+
+	During a submission, Turbo Drive will set the “submitter” element’s disabled attribute when the submission begins, then remove the attribute after the submission ends
+	Submitter ->  HTMLFormElement.requestSubmit()
+	
+	addEventListener("turbo:submit-start", ({ target }) => {
+	  for (const field of target.elements) {
+		field.disabled = true
+	  }
+	})
+
+
+
+
+- Turbo Frames: Decompose complex pages
+-------------------------------------------------------------------------
+
+	- Turbo Frames allow predefined parts of a page to be updated on request.
+	- Any links and forms inside a frame are captured, and the frame contents automatically updated after receiving a response. 
+	- Regardless of whether the server provides a full document, or just a fragment containing an updated version of the requested frame, only that particular frame will be extracted from the response to replace the existing content.
+	- Frames are created by wrapping a segment of the page in a <turbo-frame> element.
+	
+	- At a high level, Turbo Frames are pieces of a webpage that can be updated independently, without impacting the rest of the content on the page.
+	- Links and forms within a frame will, by default, attempt to update only the content of the containing frame, whether the server sends a completely new HTML document or only a page fragment.
+	
+	
+- Example
+
+	<%= turbo_frame_tag @message, :data => {:controller => "message"}  do %>
+		
+		<%= render @message %>
+		
+        <%= link_to "Edit this message", edit_message_path(@message)  %> |
+        <%= link_to "Back to messages", messages_path, "data-turbo-frame": "_top" %> |
+        <%= button_to "Delete", @message, method: :delete, data: { :action => "click->message#delete", :turbo => false}  %>		
+	<% end %>
+
+	==
+
+	<turbo-frame id="message_1" data-controller="message">
+		<!-- render messages/message -->
+		
+	</turbo-frame>
+
+	- When src is supplied, the frame will be populated after the initial page load via a separate HTTP request to the frame’s
+	
+	<%= turbo_frame_tag "comments", src: comments_path  do %>
+	<% end %>
+
+	= 
+	
+	<turbo-frame id="comments">
+	  <!-- A list of comments, perhaps -->
+	</turbo-frame>
+
+- Navigating within frames
+
+	- By default, links and forms within a Turbo Frame will perform the navigation within the frame, rather than performing a full page turn.
+	
+	<% @comments do |comment| %>
+	  <%= turbo_frame_tag comment do %>
+		<div>
+		  <%= link_to comment.body, edit_comment_path(comment) %>	--> this will load the edit form of this comment and replace it with original content
+		</div>
+	  <% end %>
+	<% end %>
+
+	=
+	
+	<turbo-frame id="comment_1">
+	  <div>
+		<a href="/comments/1/edit">Comment 1</a>
+	  </div>
+	</turbo-frame>
+
+	- The Turbo Frame request is a normal HTML request with an additional Turbo-Frame header included in the request, with a value that matches the id of the target Turbo Frame.
+	- You can identify if the request coming from a frame
+	
+	if turbo_frame_request?
+	  render partial: "some_turbo_frame_partial"
+	else
+	  render partial: "some_other_partial"
+	end
+
+	- But it';s better to use the turbo_stream . variant to detect if request coming from a frame
+	
+    respond_to do |format|
+      format.turbo_stream do |variant|
+        variant.turbo_frame {
+          redirect_to messages_url, notice: "Message was successfully destroyed."
+        }
+        variant.none {
+          redirect_to messages_url, notice: "Message was successfully destroyed."
+        }
+      end	
+	.......
+
+
+	# Here Turbo Drive will do it's job and replaces the content of the target frame, leaving the rest of the page untouched.
+
+	- The edit view could contain something like this
+	- this will replace the frame tag of the related comment id 
+	- notice the request was a normal get to edit page request
+	
+	<%= turbo_frame_tag @comment do %>
+	  <%= form_with(model: @comment) do |form| %>
+		............
+	  <% end %>
+	<% end %>	
+
+	- From the server, you might redirect the user to the show page of the comment in the example
+	- When the request occurs within a Turbo Frame, a “redirect” still occurs, but rather than redirecting the page in the browser, the redirect is followed, the new HTML content is sent from the server, and that HTML is used to update the frame.
+	
+		format.html { redirect_to @comment }
+		
+	- Therefor the view page will look like this
+	
+	<%= turbo_frame_tag @comment do %>
+	  <div>
+		<%= link_to @comment.body, edit_comment_path(@comment) %>
+	  </div>
+	<% end %>	
+
+- Breaking out of a frame	
+	
+	<%= link_to comment.body, edit_comment_path(comment), data: { turbo_frame: "_top" } %>
+	
+- Targeting a frame from the outside
+
+	<a href="user/1/favorites" data-turbo-frame="main">
+      Favorites
+    </a>
+	<turbo-frame id="main"></turbo-frame>
+	
+- Lazy loading Frames
+
+	<%= turbo_frame_tag "lazy_frame", src: comments_path, loading: "lazy" do %>
+	  <div>I'm a loading spinner</div>
+	<% end %>
+	
+- Frame events (to be used by stimulus)
+
+    turbo:frame-render
+    turbo:frame-load
+
+	document.addEventListener("turbo:frame-render", function(event) {
+		console.log("turbo:frame-render")
+		console.log(event.target)
+	})
+
+	Also, it will add a new attribute 'busy' while frame is loading, and rem,oved after done
+
+
+
+
+- Turbo Streams: Deliver live page changes
+-------------------------------------------------------------------------
+
+
+
+
+- Turbo Native: Hybrid apps for iOS & Android
+---------------------------------------------
+
+
+
+
+
+# https://github.com/hotwired/turbo-rails
+
+	import { Turbo } from "@hotwired/turbo-rails"
+	Turbo.session.drive = false
+
+	Then you can use data-turbo="true" to enable Drive on a per-element basis.
+
+	<%# app/views/todos/show.html.erb %>
+	<%= turbo_frame_tag @todo do %>
+	  <p><%= @todo.description %></p>
+
+	  <%= link_to 'Edit this todo', edit_todo_path(@todo) %>
+	<% end %>
+
+	<%# app/views/todos/edit.html.erb %>
+	<%= turbo_frame_tag @todo do %>
+	  <%= render "form" %>
+
+	  <%= link_to 'Cancel', todo_path(@todo) %>
+	<% end %>
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 
 

@@ -1,13 +1,205 @@
-whenever
-===========================================================================================
-
 Concepts
+===========================================================================================
+- create a job
+
+	bin/rails generate job guests_cleanup	--> app/jobs/guests_cleanup_job.rb
+	bin/rails generate job guests_cleanup --queue urgent
+	
+	Or create your own inside app/jobs
+	
+	class GuestsCleanupJob < ApplicationJob
+	  queue_as :default
+
+	  def perform(*guests)
+		# Do something later
+	  end
+	end
+
+- Enqueue
+
+	GuestsCleanupJob.perform_later guest
+	GuestsCleanupJob.set(wait_until: Date.tomorrow.noon).perform_later(guest)
+	GuestsCleanupJob.set(wait: 1.week).perform_later(guest)
+	GuestsCleanupJob.perform_later(guest1, guest2, filter: 'some_filter')
+
+# Active Job has built-in adapters for multiple queuing backends:
+	- Sidekiq	# https://github.com/mperham/sidekiq/wiki/Active-Job
+	- Resque	# https://github.com/resque/resque/wiki/ActiveJob
+	- Sneakers	# https://github.com/jondot/sneakers/wiki/How-To:-Rails-Background-Jobs-with-ActiveJob
+	- Sucker Punch	# https://github.com/brandonhilkert/sucker_punch#active-job
+	- Queue Classic # https://github.com/QueueClassic/queue_classic#active-job
+	- Que 			# https://github.com/que-rb/que#additional-rails-specific-setup
+	- Delayed Job, and others). # https://github.com/collectiveidea/delayed_job#active-job
+	- Good Job # https://github.com/bensheldon/good_job#readme
+	
+	To get an up-to-date list of the adapters see the API Documentation for ActiveJob::QueueAdapters.
+
+- Backend
+
+	application.rb:
+	
+		config.active_job.queue_adapter = :sidekiq
+
+	Or per Job
+	
+		class GuestsCleanupJob < ApplicationJob
+			self.queue_adapter = :resque
+			...
+	
+	- starting the backend depends on which backend you are using
+
+
+- Queues
+
+	# Default Rails queue is in-process thread pool (memory)
+	
+	- Most of the adapters support multiple queues.
+	
+		queue_as :low_priority
+	
+	- You can prefix the queue name for all your jobs using config.active_job.queue_name_prefix in application.rb:
+
+		config.active_job.queue_name_prefix = Rails.env		--> queue_as :low_priority will be queued production_low_priority or staging_low_priority
+		self.queue_name_prefix = nil	# per job
+		
+	- delimiter 
+	
+		config.active_job.queue_name_prefix = Rails.env
+		config.active_job.queue_name_delimiter = '.'		--> production.low_priority
+		
+		
+	- Queue at execution time
+	
+		MyJob.set(queue: :another_queue).perform_later(record)
+		
+	- as block
+	
+		class ProcessVideoJob < ApplicationJob
+		  queue_as do
+			video = self.arguments.first
+			if video.owner.premium?
+			  :premium_videojobs
+			else
+			  :videojobs
+			end
+		  end
+
+		  def perform(video)
+			# Do process video
+		  end
+		end
+		
+		ProcessVideoJob.perform_later(Video.last)
+	
+- Callbacks
+
+	class GuestsCleanupJob < ApplicationJob
+	  queue_as :default
+	  around_perform :around_cleanup	<--
+
+	  def perform
+		# Do something later
+	  end
+
+	  private
+		def around_cleanup
+		  # Do something before perform
+		  yield
+		  # Do something after perform
+		end
+	end
+	
+	- For example, you could send metrics for every job enqueued:
+	
+	class ApplicationJob < ActiveJob::Base
+	  before_enqueue { |job| $statsd.increment "#{job.class.name.underscore}.enqueue" }
+	end
+
+	- Callbacks
+	
+		before_enqueue
+		around_enqueue
+		after_enqueue
+		before_perform
+		around_perform
+		after_perform
+	
+	
+- Action Mailer
+
+	UserMailer.welcome(@user).deliver_now
+	UserMailer.welcome(@user).deliver_later		--> through Active Jobs
+	
+* Using the asynchronous queue from a Rake task (for example, to send an email using .deliver_later) will generally not work because Rake will likely end, causing the in-process thread pool to be deleted, before any/all of the .deliver_later emails are processed. To avoid this problem, use .deliver_now or run a persistent queue in development.
+
+
+- Internationalization
+
+	I18n.locale = :eo
+	UserMailer.welcome(@user).deliver_later
+	
+- Supported Arguments
+
+    Basic types (NilClass, String, Integer, Float, BigDecimal, TrueClass, FalseClass)
+    Symbol
+    Date
+    Time
+    DateTime
+    ActiveSupport::TimeWithZone
+    ActiveSupport::Duration
+    Hash (Keys should be of String or Symbol type)
+    ActiveSupport::HashWithIndifferentAccess
+    Array
+    Range
+    Module
+    Class
+
+- GlobalID
+
+	# This makes it possible to pass live Active Record objects to your job instead of class/id pairs
+																	--> Simply
+	class TrashableCleanupJob < ApplicationJob							
+	  def perform(trashable_class, trashable_id, depth)					def perform(trashable, depth)
+		trashable = trashable_class.constantize.find(trashable_id)			trashable.cleanup(depth)
+		trashable.cleanup(depth)										end
+	  end
+	end
+
+- Serializers	# https://guides.rubyonrails.org/active_job_basics.html#serializers
+
+- Exceptions
+
+	  rescue_from(ActiveRecord::RecordNotFound) do |exception|
+		# Do something with the exception
+	  end
+		
+* A failed job will not be retried, unless configured otherwise.
+* It's possible to retry or discard a failed job by using retry_on or discard_on, respectively. For example:
+
+	class RemoteServiceJob < ApplicationJob
+	  retry_on CustomAppException # defaults to 3s wait, 5 attempts
+
+	  discard_on ActiveJob::DeserializationError	<----
+
+	  def perform(*args)
+		# Might raise CustomAppException or ActiveJob::DeserializationError
+	  end
+	end
 
 
 
 
 
-delayed_job
+
+
+
+
+
+
+
+
+
+Delayed Job
 ===========================================================================================
 
 # https://github.com/collectiveidea/delayed_job#installation
@@ -397,4 +589,8 @@ actions:
 Sideqik
 ===========================================================================================
 
+
+whenever
 ===========================================================================================
+
+

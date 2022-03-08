@@ -412,6 +412,676 @@ rename_table  :tags :categories
 
 
 
+Seed
+======================================================================================================
+- triggered by
+	
+	rails db:reset and rails db:setup
+	
+	- setup will create the database first and warn you if ithey are exist .. 
+	- reset will drop and recreat the databases
+
+- create directly
+
+	User.create(name: 'Matz')
+
+- seeding from csv
+
+	require 'csv'
+	require_relative './data/users.csv'
+	def seed_users
+	  csv_file_path = '/[project_path]/db/data/users.csv'
+	  puts 'Seeding users from #{csv_file_path}...'
+	  f = File.new(csv_file_path, 'r')
+	  csv = CSV.new(f)
+	  headers = csv.shift
+	  
+	  csv.each do |row|
+		user_information = {
+		  name: row[0],
+		  age: row[1]
+		}
+		inv = User.create(user_information)
+	  end
+	  puts 'Seeding users from #{csv_file_path} done.'
+	end
+
+- best to execute first specially for testing 
+
+	Model.destroy_all
+
+- for dates
+
+	use helpers such as : 1.week.ago	
+	
+- check results from acommand
+
+	rails runner 'p Movie.pluck :title'
+	
+- Using a custom Rails task to seed actual data
+
+	rails g task movies seed_genres	--> lib/tasks/movies.rake:
+	
+		namespace :movies do
+		  desc "Seeds genres"
+		  task seed_genres: :environment do
+			# add then this .. 
+			Genre.create!([{
+			  name: "Action"
+			},
+			{
+			  name: "Sci-Fi"
+			},
+			{
+			  name: "Adventure"
+			}])
+
+			p "Created #{Genre.count} genres"
+		  end
+		end
+
+		> rails -T movies
+		> rails movies:seed_genres
+		
+- loading seeds from the console
+
+	> Rails.application.load_seed
+
+- loops & faker --> (gem 'faker'
+
+	Movie.destroy_all
+
+	100.times do |index|
+	  Movie.create!(title: Faker::Lorem.sentence(word_count: 3, supplemental: false, random_words_to_add: 0).chop,
+					director: Faker::Name.name,
+					storyline: Faker::Lorem.paragraph,
+					watched_on: Faker::Time.between(from: 4.months.ago, to: 1.week.ago))
+	end
+
+	p "Created #{Movie.count} movies"
+
+- creating a seed file from existing data 
+
+	lib/tasks/export_data.rake:
+	
+	namespace :export do
+	  desc "Export users" 
+	  task :export_to_seeds => :environment do
+		User.all.each do |users| 
+		  excluded_keys = [‘created_at’, ‘updated_at’, ‘id’] 
+		  serialized = country
+			.serializable_hash
+			.delete_if{|key,value| excluded_keys.include?(key)} 
+		  puts “User.create(#{serialized})”
+		end 
+	  end
+	end
+
+
+	> rails export:export_to_seed > db/seeds.rb
+
+- creating existing record
+
+	user = User.create({....
+
+	user.errors.inspect --> #<ActiveModel::Errors [#<ActiveModel::Error attribute=email, type=taken, options={:allow_blank=>true, :if=>:will_save_change_to_email?, :value=>"admin@d1g.com"}>]>
+
+
+
+Queries (Insert, where, find_by, references, includes, joins, order, limit, pagination ... etc
+================================================================================================
+
+New / Create / Select
+---------------------
+
+- create
+
+	user = User.create(name: "David", occupation: "Code Artist")
+	
+	user = User.new
+	user.name = "David"
+	user.occupation = "Code Artist"
+
+	user.save
+
+	- you can also
+	
+	user = User.new do |u|
+	  u.name = "David"
+	  u.occupation = "Code Artist"
+	end
+
+	- find_or_create_by
+	
+	Customer.find_or_create_by(first_name: 'Andy')
+	Customer.create_with(locked: false).find_or_create_by(first_name: 'Andy')
+
+	Customer.find_or_create_by(first_name: 'Andy') do |c|
+	  c.locked = false
+	end
+
+	Customer.find_or_create_by!(first_name: 'Andy')		-> trigger exception if validation failed
+	
+- Read
+
+	users = User.all
+	user = User.first
+	david = User.find_by(name: 'David')
+	users = User.where(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
+	users = User.where.not(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
+	
+	- ids
+	Customer.ids	--> SELECT id FROM customers	# if self.primary_key = "customer_id" --> SELECT customer_id FROM customers
+
+	
+	User.find_by_first_name(fn)
+	Customer.find_by_first_name_and_orders_count("Ryan", 5)
+	
+	- find_or_initialize_by
+
+	nina = Customer.find_or_initialize_by(first_name: 'Nina')
+	nina.persisted?		# if exists
+	nina.new_record?	# if new record
+	nina.save
+	
+	- Finding by SQL
+	
+	Customer.find_by_sql("SELECT * FROM customers INNER JOIN orders ON customers.id = orders.customer_id ORDER BY customers.created_at desc")
+	Customer.connection.select_all("SELECT first_name, created_at FROM customers WHERE id = '1'").to_a	# ActiveRecord::Result --> .to_a
+	
+	- pluck
+	
+	Book.where(out_of_print: true).pluck(:id)	--> [1, 2, 3]
+	Order.distinct.pluck(:status)	--> ["shipped", "being_packed", "cancelled"]
+	Customer.pluck(:id, :first_name) -->  [[1, "David"], [2, "Fran"], [3, "Jose"]]
+	
+	Same
+	
+	Customer.select(:id).map { |c| c.id }
+	Customer.select(:id).map(&:id)
+	Customer.select(:id, :first_name).map { |c| [c.id, c.first_name] }
+	
+	- method
+	
+	def name
+		"I am #{first_name}"
+	end
+	Customer.select(:first_name).map &:name
+	
+	- multiple tables
+	
+	Order.joins(:customer, :books).pluck("orders.created_at, customers.email, books.title")
+	
+	Customer.pluck(:first_name).limit(1)	# NoMethodError: undefined method `limit' for #<Array:0x007ff34d3ad6d8>
+	Customer.limit(1).pluck(:first_name)	# must be at last
+	
+	assoc = Customer.includes(:reviews)
+	assoc.pluck(:id)
+		
+	
+	- exist 
+	
+	Customer.exists?(1)
+	Customer.exists?(id: [1,2,3])
+	Customer.exists?(first_name: ['Jane', 'Sergei'])
+	Customer.exists?	# false if empty
+	
+	Order.any?	--> SELECT 1 FROM orders LIMIT 1
+	Order.many? --> SELECT COUNT(*) FROM (SELECT 1 FROM orders LIMIT 2)
+	
+	Order.shipped.any?
+	Order.shipped.many?
+	Book.where(out_of_print: true).any?
+	Book.where(out_of_print: true).many?
+	Customer.first.orders.any?
+	Customer.first.orders.many?
+
+	- Calculations
+	
+	Customer.count
+	Customer.where(first_name: 'Ryan').count
+	Customer.includes("orders").where(first_name: 'Ryan', orders: { status: 'shipped' }).count
+	
+	Order.average("subtotal")
+	Order.minimum("subtotal")
+	Order.maximum("subtotal")
+	Order.sum("subtotal")
+	Customer.where(id: 1).joins(:orders).explain
+	Customer.where(id: 1).includes(:orders).explain
+	
+
+	
+
+- Update
+
+	user = User.find_by(name: 'David')
+	user.name = 'Dave'
+	user.save
+
+	user.update(name: 'Dave')
+	
+	User.update_all "max_login_attempts = 3, must_change_password = 'true'"	# no callbacks
+	User.update(:all, max_login_attempts: 3, must_change_password: true)
+	
+	
+- Read only
+
+	customer = Customer.readonly.first
+	customer.visits += 1
+	customer.save
+
+
+	- Locking Records for Update (Optimistic Locking, Pessimistic Locking)
+
+	- In order to use optimistic locking, the table needs to have a column called lock_version of type integer.
+	- An ActiveRecord::StaleObjectError exception is thrown if that has occurred and the update is ignored.
+	
+	- OPtimistic
+	
+	c1 = Customer.find(1)
+	c2 = Customer.find(1)
+
+	c1.first_name = "Sandra"
+	c1.save
+
+	c2.first_name = "Michael"
+	c2.save # Raises an ActiveRecord::StaleObjectError
+
+	- Pessimistic Locking
+	
+	Book.transaction do
+	  book = Book.lock.first
+	  book.title = 'Algorithms, second edition'
+	  book.save!
+	end
+
+	Book.transaction do
+	  book = Book.lock("LOCK IN SHARE MODE").find(1)
+	  book.increment!(:views)
+	end
+
+	book = Book.first
+	book.with_lock do
+	  # This block is called within a transaction,
+	  # book is already locked.
+	  book.increment!(:views)
+	end	
+	
+- Delete
+
+	user.destroy
+	User.destroy_by(name: 'David')
+	User.destroy_all
+	
+
+
+Querying
+------------------------------------------------------------------------
+
+    annotate
+    find
+    create_with
+    distinct
+    eager_load
+    extending
+    extract_associated
+    from
+    group
+    having
+    includes
+    joins
+    left_outer_joins
+    limit
+    lock
+    none
+    offset
+    optimizer_hints
+    order
+    preload
+    readonly
+    references
+    reorder
+    reselect
+    reverse_order
+    select
+    where
+
+
+	customer = Customer.find(10)
+	customers = Customer.find([1, 10]) 
+	customer = Customer.take			--> SELECT * FROM customers LIMIT 1
+	customers = Customer.take(2)		--> SELECT * FROM customers LIMIT 2
+	customer = Customer.first
+	customers = Customer.first(3)		--> SELECT * FROM customers ORDER BY customers.id ASC LIMIT 3
+	customer = Customer.order(:first_name).first
+	customer = Customer.last
+	customers = Customer.last(3)
+	customer = Customer.order(:first_name).last
+	Customer.find_by first_name: 'Lifo'
+	Customer.where(first_name: 'Lifo').take
+	Customer.find_by! first_name: 'does not exist'	--> ActiveRecord::RecordNotFound
+	Customer.where(first_name: 'does not exist').take!
+
+	# entire table
+	Customer.all.each do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+
+	# find_each retrieves customers in batches of 1000 and yields them to the block one by one: - repeat next 1000
+	Customer.find_each do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+
+	Customer.where(weekly_subscriber: true).find_each(batch_size: 5000) do |customer|
+	  NewsMailer.weekly(customer).deliver_now
+	end
+	# also use --> 
+	
+		start: 2000
+		start: 2000, finish: 10000
+	
+	- you can yield batches 
+	Customer.find_in_batches do |customers|
+	  export.add_customers(customers)
+	end
+
+- Conditions
+
+	Book.where("title = ?", params[:title])
+	Book.where("title = ? AND out_of_print = ?", params[:title], false)
+	Book.where("created_at >= :start_date AND created_at <= :end_date", {start_date: params[:start_date], end_date: params[:end_date]})
+
+	Book.where('out_of_print' => true)
+	
+	
+	Book.where(author: author)	# association
+	Author.joins(:books).where(books: { author: author })
+	
+	Book.where(created_at: (Time.now.midnight - 1.day)..Time.now.midnight)
+	Customer.where(orders_count: [1,3,5])
+	Customer.where.not(orders_count: [1,3,5])
+	Customer.where(last_name: 'Smith').or(Customer.where(orders_count: [1,3,5]))	# OR
+	Customer.where(last_name: 'Smith').where(orders_count: [1,3,5]))	# AND
+	Customer.where(id: [1, 2]).and(Customer.where(id: [2, 3]))
+
+- Ordering
+
+	Book.order(title: :asc, created_at: :desc)
+	Book.order("title ASC, created_at DESC")
+	
+- Select
+
+	Book.select(:isbn, :out_of_print)
+	Book.select("isbn, out_of_print")
+	Customer.select(:last_name).distinct
+	
+- Limit, Offset
+
+	Customer.limit(5).offset(30)
+
+- group
+
+	Order.select("created_at").group("created_at")
+	Order.group(:status).count
+	
+- Having
+
+	Order.select("created_at, sum(total) as total_price").group("created_at").having("sum(total) > ?", 200)
+
+- Overriding Conditions
+
+	Book.where('id > 100').limit(20).order('id desc').unscope(:order)	# remove order by .. 
+	
+	Book.where(id: 10, out_of_print: false).unscope(where: :id)
+	# SELECT books.* FROM books WHERE out_of_print = 0
+
+	Book.order('id desc').merge(Book.unscope(:order))
+	Book.where('id > 10').limit(20).order('id desc').only(:order, :where)	# remove limit
+	
+- reselect
+
+	Book.select(:title, :isbn).reselect(:created_at)	# only created_at
+	Book.select(:title, :isbn).select(:created_at)		# with created_at
+
+- reorder, reverse_order
+
+	has_many :books, -> { order(year_published: :desc) }
+	Author.find(10).books.reorder('year_published ASC')
+	
+	Book.where("author_id > 10").order(:year_published).reverse_order
+
+- rewhere
+
+	Book.where(out_of_print: true).rewhere(out_of_print: false)	# new where
+	Book.where(out_of_print: true).where(out_of_print: false)	# with
+
+- Null relation
+
+	if reviews.count > 5
+	  reviews
+	else
+	  Review.none # Does not meet minimum threshold yet
+	end
+
+
+
+# https://guides.rubyonrails.org/active_record_querying.html
+
+- Includes, references and joins
+--------------------------------------------------
+
+- Join
+
+	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.title }
+	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
+
+	- Do joins prevent N+1 queries? NO
+	  This will run query for each comment fetched 
+	  
+	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.comments.size }
+	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
+	# SELECT COUNT(*) FROM "comments" WHERE "comments"."post_id" = $1
+	# ...
+
+	Author.joins(books: [{reviews: { customer: :orders} }, :supplier] )
+
+	SELECT * FROM authors
+	  INNER JOIN books ON books.author_id = authors.id
+	  INNER JOIN reviews ON reviews.book_id = books.id
+	  INNER JOIN customers ON customers.id = reviews.customer_id
+	  INNER JOIN orders ON orders.customer_id = customers.id
+	INNER JOIN suppliers ON suppliers.id = books.supplier_id
+
+
+	time_range = (Time.now.midnight - 1.day)..Time.now.midnight
+	Customer.joins(:orders).where('orders.created_at' => time_range).distinct
+
+	Customer.joins(:orders).merge(Order.created_in_time_range(time_range)).distinct
+	
+	Customer.left_outer_joins(:reviews).distinct.select('customers.*, COUNT(reviews.*) AS reviews_count').group('customers.id')
+
+	- Can joins be combined with includes, preload, and eager_load? Yes
+	- Can includes prevent N+1 queries? yes
+	
+	- From multiple tables
+	
+	Customer
+	  .select('customers.id, customers.last_name, reviews.body')
+	  .joins(:reviews)
+	  .where('reviews.created_at > ?', 1.week.ago)
+	
+	
+	
+	
+- Includes
+
+	- Solution to N + 1 queries problem	
+    includes
+    preload
+    eager_load
+
+	Post.includes(:comments).map { |post| post.comments.size }
+	# SELECT "comments".* FROM "comments" WHERE "comments"."post_id" IN (1, 3, 4, 5, 6)
+	
+	- Does includes always generate a separate query to fetch the records in the relationship? No
+	  includes will either use a separate query (like above) or a LEFT OUTER JOIN. 	  
+	  If you have a where or order clause that references a relationship, a LEFT OUTER JOIN is used versus a separate query.
+	
+	- nested
+	Customer.includes(orders: {books: [:supplier, :author]}).find(1)
+	
+	Author.includes(:books).where(books: { out_of_print: true })	# LEFT OUTER JOIN
+	
+	Post.includes(:comments).references(:comments).map { |post| post.comments.size }
+	
+	- What happens when I apply conditions to a relationship referenced via includes?
+	ActiveRecord will return all of the parent records and just the relationship records that match the condition.
+	
+	Post.includes(:comments).references(:comments).where(comments => {author: 'Derek'}).map { |post| post.comments.size }
+	
+	- Does includes prevent all N+1 queries? No
+	If you are accessing data in a nested relationship, that data isn't preloaded. 
+	For example, an additional query would be required to load the Comment#likes association for each comment:
+	
+	<% post.comments.each do |comment| %>
+	  <%= comment.likes.map { |like| like.user_avatar_url }
+	<% end %>
+
+	- Can I prevent N+1s in nested relationships? Yes. You can load nested relationships via includes:
+	
+	Post.includes(comments => :likes).references(:comments).map { |post| post.comments.size }
+	
+	- Should I always always load data from nested relationships?
+	No. It's very easy to end up initializing a significant number of records. 
+	For example, a popular Comment may have thousands of Like records, which would result in a slow query and significant memory allocations.
+	
+	
+- preload
+-------------------------
+
+	- Should I ever use preload by itself?
+	Sometimes, but not by default. 
+	I use preload versus includes if I know using a LEFT OUTER JOIN to load a relationship is significantly slower. 
+	Otherwise, if I add where or order clauses at a later date, those clauses would trigger eager_load, which would trigger a join.
+	
+	- Is it common to combine joins with preload?	
+	If I need all relationship records - not just just those that match a relationship condition - I'll combine preload and joins. For example:
+	
+		- Find all Post records with a Comment authored by Derek
+		- Render those Post records and the total count of comments for each post
+
+	includes will only fetch Comment records authored by Derek, not all comments associated with each post.
+
+- eager_load
+-------------------------
+
+	- includes delegates to eager_load when a where or order clause references a relationship.
+	- Should I ever use eager_load by itself? Yes. 
+	If I've found includes to be slow using two queries, using eager_load will force a single query via a LEFT OUTER JOIN. 
+	Its presence in my code indicates I'm future-proofing against using two queries to fetch records.
+	
+	- Can I combine eager_load with joins? Yes. 
+	In the following example:
+
+		Post.joins(:comments).eager_load(:comments).map { |post| post.comments.size }
+
+	ActiveRecord will do the following:
+
+    - Return an Array of Post records with comments.
+    - Load the comments associated with each Post.
+
+	It's includes with an INNER JOIN vs. a LEFT OUTER JOIN.
+
+- Scopes
+--------
+
+	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
+
+	scope :in_print, -> { where(out_of_print: false) }
+	scope :out_of_print, -> { where(out_of_print: true) }
+	scope :old, -> { where('year_published < ?', 50.years.ago )}
+	scope :out_of_print_and_expensive, -> { out_of_print.where('price > 500') }
+	scope :costs_more_than, ->(amount) { where('price > ?', amount) }
+	
+	scope :out_of_print, -> { where(out_of_print: true) }	--> Book.out_of_print
+	scope :out_of_print_and_expensive, -> { out_of_print.where("price > 500") }
+	
+	scope :costs_more_than, ->(amount) { where("price > ?", amount) }	--> Book.costs_more_than(100.10)
+	Also
+	def self.costs_more_than(amount)
+		where("price > ?", amount)
+	end  
+	
+	scope :created_before, ->(time) { where("created_at < ?", time) if time.present? }
+	
+	- default_scope
+	default_scope { where(out_of_print: false) }	= 	default_scope { where("out_of_print = ?", false) }	# this doesn't work with Book.new
+	# applies all queries and scopes
+	# you can use def self.default_scope
+	# Book.new --> #<Book id: nil, out_of_print: false>	# Use Book.unscoped.new to prevent
+	
+	
+	- merging
+	Book.out_of_print.old
+	Book.in_print.merge(Book.out_of_print)	# will override
+	
+	- with where
+	Book.in_print.where('price < 100')
+	
+	- without scope
+	Book.unscoped.load
+	Book.where(out_of_print: true).unscoped.all
+	Book.unscoped { Book.out_of_print }
+	
+	
+	
+- How to use use index for mysql inside model
+--------------------------------------------------
+
+	class Issue
+	   def self.use_index(index)
+		 # update: OP fixed my mistake
+		 from("#{self.table_name} USE INDEX(#{index})")
+	   end
+	 end
+
+	 # then
+	 Issue.use_index("bla").where(some_condition: true)
+
+	- Add use_index to ActiveRecord::Relation.
+
+	config/initializers/active_record_relation.rb
+	
+		class ActiveRecord::Relation
+		  # Allow passing index hints to MySQL in case the query planner gets confused.
+		  #
+		  # Example:
+		  #   Message.first.events.use_index( :index_events_on_eventable_type_and_eventable_id )
+		  #   #=> Event Load (0.5ms)  SELECT `events`.* FROM `events` USE INDEX (index_events_on_eventable_type_and_eventable_id) WHERE `events`.`eventable_id` = 123 AND `events`.`eventable_type` = 'Message'
+		  #
+		  # MySQL documentation:
+		  #    https://dev.mysql.com/doc/refman/5.7/en/index-hints.html
+		  #
+		  # See https://github.com/rails/rails/pull/30514
+		  #
+		  def use_index( index_name )
+			self.from( "#{ self.quoted_table_name } USE INDEX ( #{ index_name } )" )
+		  end
+		end
+
+- Enums
+
+	enum :status, [:shipped, :being_packaged, :complete, :cancelled]
+	Order.shipped	-> query
+	order.shipped?	-> if
+	order.shipped!	-> update
+
+
+
+
+
+
+
 Associations
 =========================================================================================
 
@@ -610,12 +1280,6 @@ Example:
 	end
 
 
-
-
-
-
-
-
 - inverse_of
 --------------------------------------------------
 # It's a hint to ActiveRecord to use already loaded data instead of fetching it again through a relationship.
@@ -637,41 +1301,7 @@ Example:
 
 
 
-Loading
-==========================================================================
-
-# Query Mothds
-# https://api.rubyonrails.org/v7.0.2.2/classes/ActiveRecord/QueryMethods.html
-
- eager_load: One query, with JOINs 
- --------------------------------------------------
- 
-	users = User.eager_load(:address)
-	cities = users.map do |user|
-	  user.addresses.city
-	end
-
-	users = User.eager_load(:address).where(address: { city: 'New Haven' })
-	streets = users.map do |user|
-	  user.address.street
-	end
-
- preload: One query per table 
- -----------------------------------------
- 
- includes: preload by default, eager_load if necessary
- ---------------------------------------------------------------------------
- 
- joins (inner joins)
- ------------------------
-	User.first.orders.joins(:items)
-
-	User Load (0.2ms)  SELECT  "users".* FROM "users" ORDER BY "users"."id" ASC LIMIT ?  [["LIMIT", 1]]
-	Order Load (0.4ms)  SELECT "orders".* FROM "orders" INNER JOIN "items" ON "items"."order_id" = "orders"."id" WHERE "orders"."user_id" = ?  [["user_id", 1]]
-
-
-
-Validations
+Validations 1
 ========================================================================
 # http://tutorials.jumpstartlab.com/topics/models/validations.html
 # https://api.rubyonrails.org/classes/ActiveModel/Validations/HelperMethods.html
@@ -697,1075 +1327,11 @@ Validations
 	validates_format_of :email, with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\Z/i
 	validates_format_of :comment, without: /(<script>|<\/script>)/
 	validates_inclusion_of :birth_year, in: (1880..2011)
-	
-- Custom Validations
--------------------------
 
-	validate :not_spammy
-	def not_spammy
-	  if self.description.downcase.include?("enhancement")
-		errors.add(:base, "The description sounds spammy")
-	  end
-	end
-
-- Try it 
-
-	p = Product.new
-	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
-	p.valid?
-	=> false
-
-	p.errors
-	=> {title:["can't be blank"]}
-	p.errors.full_messages
-	=> ["Title can't be blank"]
-
-
->>>> in form 
-
-<% if p.errors.any? %>
-	<div id="error_explanation">
-	  <h2><%= pluralize(p.errors.count, "error") %> prohibited this article from being saved:</h2>
-
-	  <ul>
-		<% p.errors.each do |error| %>
-		  <li><%= error.full_message %></li>
-		<% end %>
-	  </ul>
-	</div>
-<% end %>
-
-
-
-- Save vs. Save!
--------------------------
-
-	p = Product.new
-	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
-	p.save
-	=> false
-	p.save!
-	ActiveRecord::RecordInvalid: Validation failed: Title can't be blank
-
-	# A call to save will return true if the save succeeds and false if it fails. In your application code, you should react to this return value to determine next steps. For example:
-	p = Product.new
-	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
-	p.save!
-	ActiveRecord::RecordInvalid: Validation failed: Title can't be blank
-
-	# When .save! succeeds it will also return true, but when it fails it will raise an exception. Well architected Ruby treats exceptions as extremely abnormal cases. For that reason, saving a model should only raise an exception when something very strange has happened, like the database has crashed. Users entering junky input is not unexpected, so we shouldn’t typically raise exceptions on a validation.
-	
-
-- Better helper method
--------------------------
-
-	def error_messages_for(*objects)
-	  options = objects.extract_options!
-	  options[:header_message] ||= I18n.t(:"activerecord.errors.header", default: "Invalid Fields")
-	  options[:message] ||= I18n.t(:"activerecord.errors.message", default: "Correct the following errors and try again.")
-	  messages = objects.compact.map { |o| o.errors.full_messages }.flatten
-	  unless messages.empty?
-		content_tag(:div, class: "error_messages") do
-		  list_items = messages.map { |msg| content_tag(:li, msg) }
-		  content_tag(:h2, options[:header_message]) + content_tag(:p, options[:message]) + content_tag(:ul, list_items.join.html_safe)
-		end
-	  end
-	end
-
-- Custom Messages & Internationalization
---------------------------------------------------
-
-	validates_presence_of :title for a Product
-	
-	en.yml:
-	en:
-	  activerecord:
-		errors:
-		  models:
-			product:
-			  attributes:
-				title:
-				  blank: "Please enter a title."
-
-
-
-
-
-
-
-
-
-
-
-Transactions
-========================================================================
-
-	@account_a = Account.find_by_name("A")
-	@account_b = Account.find_by_name("B")
-	@account_a.balance -= transfer_amount
-	@account_b.balance += transfer_amount
-	
-	# Try to use fewer command inside transaction block
-	Account.transaction do
-	  raise "Transaction Failed" unless @account_a.save && @account_b.save
-	end
-
-- Callbacks
--------------------------
-
-	There are two additional callbacks available when working with transactions.
-	after_commit
-
-	This callback fires when the transaction succeeds.
-	after_rollback
-
-	This callback fires when the transaction fails.
-
-- Full example
--------------------------
-
-	class Account < ActiveRecord::Base
-	
-	  after_commit :transaction_success
-	  after_rollback :transaction_failed
-
-	  def transfer_funds_to(amount, target)
-		self.balance -= amount
-		target.balance += amount
-		Account.transaction do
-		  raise "Transaction Failed" unless self.save && target.save
-		end
-	  end
-
-	private
-	  def transaction_success
-		Logger.info "Transfer succeed for Account #{self.to_param}"
-	  end
-
-	  def transaction_failed
-		Logger.warn "Transfer failed for Account #{self.to_param}"
-	  end
-	end
-
-
-
-Queries (Insert, where, find_by, references, includes, joins, order, limit, pagination ... etc
-======================================================================================
-
-New / Create / Select
----------------------
-
-- create
-
-	user = User.create(name: "David", occupation: "Code Artist")
-	
-	user = User.new
-	user.name = "David"
-	user.occupation = "Code Artist"
-
-	user.save
-
-	- you can also
-	
-	user = User.new do |u|
-	  u.name = "David"
-	  u.occupation = "Code Artist"
-	end
-
-	- find_or_create_by
-	
-	Customer.find_or_create_by(first_name: 'Andy')
-	Customer.create_with(locked: false).find_or_create_by(first_name: 'Andy')
-
-	Customer.find_or_create_by(first_name: 'Andy') do |c|
-	  c.locked = false
-	end
-
-	Customer.find_or_create_by!(first_name: 'Andy')		-> trigger exception if validation failed
-	
-- Read
-
-	users = User.all
-	user = User.first
-	david = User.find_by(name: 'David')
-	users = User.where(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
-	users = User.where.not(name: 'David', occupation: 'Code Artist').order(created_at: :desc)
-	
-	- ids
-	Customer.ids	--> SELECT id FROM customers	# if self.primary_key = "customer_id" --> SELECT customer_id FROM customers
-
-	
-	User.find_by_first_name(fn)
-	Customer.find_by_first_name_and_orders_count("Ryan", 5)
-	
-	- find_or_initialize_by
-
-	nina = Customer.find_or_initialize_by(first_name: 'Nina')
-	nina.persisted?		# if exists
-	nina.new_record?	# if new record
-	nina.save
-	
-	- Finding by SQL
-	
-	Customer.find_by_sql("SELECT * FROM customers INNER JOIN orders ON customers.id = orders.customer_id ORDER BY customers.created_at desc")
-	Customer.connection.select_all("SELECT first_name, created_at FROM customers WHERE id = '1'").to_a	# ActiveRecord::Result --> .to_a
-	
-	- pluck
-	
-	Book.where(out_of_print: true).pluck(:id)	--> [1, 2, 3]
-	Order.distinct.pluck(:status)	--> ["shipped", "being_packed", "cancelled"]
-	Customer.pluck(:id, :first_name) -->  [[1, "David"], [2, "Fran"], [3, "Jose"]]
-	
-	Same
-	
-	Customer.select(:id).map { |c| c.id }
-	Customer.select(:id).map(&:id)
-	Customer.select(:id, :first_name).map { |c| [c.id, c.first_name] }
-	
-	- method
-	
-	def name
-		"I am #{first_name}"
-	end
-	Customer.select(:first_name).map &:name
-	
-	- multiple tables
-	
-	Order.joins(:customer, :books).pluck("orders.created_at, customers.email, books.title")
-	
-	Customer.pluck(:first_name).limit(1)	# NoMethodError: undefined method `limit' for #<Array:0x007ff34d3ad6d8>
-	Customer.limit(1).pluck(:first_name)	# must be at last
-	
-	assoc = Customer.includes(:reviews)
-	assoc.pluck(:id)
-		
-	
-	- exist 
-	
-	Customer.exists?(1)
-	Customer.exists?(id: [1,2,3])
-	Customer.exists?(first_name: ['Jane', 'Sergei'])
-	Customer.exists?	# false if empty
-	
-	Order.any?	--> SELECT 1 FROM orders LIMIT 1
-	Order.many? --> SELECT COUNT(*) FROM (SELECT 1 FROM orders LIMIT 2)
-	
-	Order.shipped.any?
-	Order.shipped.many?
-	Book.where(out_of_print: true).any?
-	Book.where(out_of_print: true).many?
-	Customer.first.orders.any?
-	Customer.first.orders.many?
-
-	- Calculations
-	
-	Customer.count
-	Customer.where(first_name: 'Ryan').count
-	Customer.includes("orders").where(first_name: 'Ryan', orders: { status: 'shipped' }).count
-	
-	Order.average("subtotal")
-	Order.minimum("subtotal")
-	Order.maximum("subtotal")
-	Order.sum("subtotal")
-	Customer.where(id: 1).joins(:orders).explain
-	Customer.where(id: 1).includes(:orders).explain
-	
-
-	
-
-- Update
-
-	user = User.find_by(name: 'David')
-	user.name = 'Dave'
-	user.save
-
-	user.update(name: 'Dave')
-	
-	User.update_all "max_login_attempts = 3, must_change_password = 'true'"	# no callbacks
-	User.update(:all, max_login_attempts: 3, must_change_password: true)
-	
-	
-- Read only
-
-	customer = Customer.readonly.first
-	customer.visits += 1
-	customer.save
-
-
-	- Locking Records for Update (Optimistic Locking, Pessimistic Locking)
-
-	- In order to use optimistic locking, the table needs to have a column called lock_version of type integer.
-	- An ActiveRecord::StaleObjectError exception is thrown if that has occurred and the update is ignored.
-	
-	- OPtimistic
-	
-	c1 = Customer.find(1)
-	c2 = Customer.find(1)
-
-	c1.first_name = "Sandra"
-	c1.save
-
-	c2.first_name = "Michael"
-	c2.save # Raises an ActiveRecord::StaleObjectError
-
-	- Pessimistic Locking
-	
-	Book.transaction do
-	  book = Book.lock.first
-	  book.title = 'Algorithms, second edition'
-	  book.save!
-	end
-
-	Book.transaction do
-	  book = Book.lock("LOCK IN SHARE MODE").find(1)
-	  book.increment!(:views)
-	end
-
-	book = Book.first
-	book.with_lock do
-	  # This block is called within a transaction,
-	  # book is already locked.
-	  book.increment!(:views)
-	end	
-	
-- Delete
-
-	user.destroy
-	User.destroy_by(name: 'David')
-	User.destroy_all
-	
-
-
-Querying
-------------------------------------------------------------------------
-
-
-    annotate
-    find
-    create_with
-    distinct
-    eager_load
-    extending
-    extract_associated
-    from
-    group
-    having
-    includes
-    joins
-    left_outer_joins
-    limit
-    lock
-    none
-    offset
-    optimizer_hints
-    order
-    preload
-    readonly
-    references
-    reorder
-    reselect
-    reverse_order
-    select
-    where
-
-
-	customer = Customer.find(10)
-	customers = Customer.find([1, 10]) 
-	customer = Customer.take			--> SELECT * FROM customers LIMIT 1
-	customers = Customer.take(2)		--> SELECT * FROM customers LIMIT 2
-	customer = Customer.first
-	customers = Customer.first(3)		--> SELECT * FROM customers ORDER BY customers.id ASC LIMIT 3
-	customer = Customer.order(:first_name).first
-	customer = Customer.last
-	customers = Customer.last(3)
-	customer = Customer.order(:first_name).last
-	Customer.find_by first_name: 'Lifo'
-	Customer.where(first_name: 'Lifo').take
-	Customer.find_by! first_name: 'does not exist'	--> ActiveRecord::RecordNotFound
-	Customer.where(first_name: 'does not exist').take!
-
-	# entire table
-	Customer.all.each do |customer|
-	  NewsMailer.weekly(customer).deliver_now
-	end
-
-	# find_each retrieves customers in batches of 1000 and yields them to the block one by one: - repeat next 1000
-	Customer.find_each do |customer|
-	  NewsMailer.weekly(customer).deliver_now
-	end
-
-	Customer.where(weekly_subscriber: true).find_each(batch_size: 5000) do |customer|
-	  NewsMailer.weekly(customer).deliver_now
-	end
-	# also use --> 
-	
-		start: 2000
-		start: 2000, finish: 10000
-	
-	- you can yield batches 
-	Customer.find_in_batches do |customers|
-	  export.add_customers(customers)
-	end
-
-- Conditions
-
-	Book.where("title = ?", params[:title])
-	Book.where("title = ? AND out_of_print = ?", params[:title], false)
-	Book.where("created_at >= :start_date AND created_at <= :end_date", {start_date: params[:start_date], end_date: params[:end_date]})
-
-	Book.where('out_of_print' => true)
-	
-	
-	Book.where(author: author)	# association
-	Author.joins(:books).where(books: { author: author })
-	
-	Book.where(created_at: (Time.now.midnight - 1.day)..Time.now.midnight)
-	Customer.where(orders_count: [1,3,5])
-	Customer.where.not(orders_count: [1,3,5])
-	Customer.where(last_name: 'Smith').or(Customer.where(orders_count: [1,3,5]))	# OR
-	Customer.where(last_name: 'Smith').where(orders_count: [1,3,5]))	# AND
-	Customer.where(id: [1, 2]).and(Customer.where(id: [2, 3]))
-
-- Ordering
-
-	Book.order(title: :asc, created_at: :desc)
-	Book.order("title ASC, created_at DESC")
-	
-- Select
-
-	Book.select(:isbn, :out_of_print)
-	Book.select("isbn, out_of_print")
-	Customer.select(:last_name).distinct
-	
-- Limit, Offset
-
-	Customer.limit(5).offset(30)
-
-- group
-
-	Order.select("created_at").group("created_at")
-	Order.group(:status).count
-	
-- Having
-
-	Order.select("created_at, sum(total) as total_price").group("created_at").having("sum(total) > ?", 200)
-
-- Overriding Conditions
-
-	Book.where('id > 100').limit(20).order('id desc').unscope(:order)	# remove order by .. 
-	
-	Book.where(id: 10, out_of_print: false).unscope(where: :id)
-	# SELECT books.* FROM books WHERE out_of_print = 0
-
-	Book.order('id desc').merge(Book.unscope(:order))
-	Book.where('id > 10').limit(20).order('id desc').only(:order, :where)	# remove limit
-	
-- reselect
-
-	Book.select(:title, :isbn).reselect(:created_at)	# only created_at
-	Book.select(:title, :isbn).select(:created_at)		# with created_at
-
-- reorder, reverse_order
-
-	has_many :books, -> { order(year_published: :desc) }
-	Author.find(10).books.reorder('year_published ASC')
-	
-	Book.where("author_id > 10").order(:year_published).reverse_order
-
-- rewhere
-
-	Book.where(out_of_print: true).rewhere(out_of_print: false)	# new where
-	Book.where(out_of_print: true).where(out_of_print: false)	# with
-
-- Null relation
-
-	if reviews.count > 5
-	  reviews
-	else
-	  Review.none # Does not meet minimum threshold yet
-	end
-
-
-
-	
-
-# https://guides.rubyonrails.org/active_record_querying.html
-
-
-- Includes, references and joins
---------------------------------------------------
-
-- Join
-
-	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.title }
-	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
-
-	- Do joins prevent N+1 queries? NO
-	  This will run query for each comment fetched 
-	  
-	Post.joins(:comments).where(:comments => {author: 'Derek'}).map { |post| post.comments.size }
-	# SELECT  "posts".* FROM "posts" INNER JOIN "comments" ON "comments"."post_id" = "posts"."id" WHERE "comments"."author" = $1
-	# SELECT COUNT(*) FROM "comments" WHERE "comments"."post_id" = $1
-	# ...
-
-	Author.joins(books: [{reviews: { customer: :orders} }, :supplier] )
-
-	SELECT * FROM authors
-	  INNER JOIN books ON books.author_id = authors.id
-	  INNER JOIN reviews ON reviews.book_id = books.id
-	  INNER JOIN customers ON customers.id = reviews.customer_id
-	  INNER JOIN orders ON orders.customer_id = customers.id
-	INNER JOIN suppliers ON suppliers.id = books.supplier_id
-
-
-	time_range = (Time.now.midnight - 1.day)..Time.now.midnight
-	Customer.joins(:orders).where('orders.created_at' => time_range).distinct
-
-	Customer.joins(:orders).merge(Order.created_in_time_range(time_range)).distinct
-	
-	Customer.left_outer_joins(:reviews).distinct.select('customers.*, COUNT(reviews.*) AS reviews_count').group('customers.id')
-
-	- Can joins be combined with includes, preload, and eager_load? Yes
-	- Can includes prevent N+1 queries? yes
-	
-	- From multiple tables
-	
-	Customer
-	  .select('customers.id, customers.last_name, reviews.body')
-	  .joins(:reviews)
-	  .where('reviews.created_at > ?', 1.week.ago)
-	
-	
-	
-	
-- Includes
-
-	- Solution to N + 1 queries problem	
-    includes
-    preload
-    eager_load
-
-	Post.includes(:comments).map { |post| post.comments.size }
-	# SELECT "comments".* FROM "comments" WHERE "comments"."post_id" IN (1, 3, 4, 5, 6)
-	
-	- Does includes always generate a separate query to fetch the records in the relationship? No
-	  includes will either use a separate query (like above) or a LEFT OUTER JOIN. 	  
-	  If you have a where or order clause that references a relationship, a LEFT OUTER JOIN is used versus a separate query.
-	
-	- nested
-	Customer.includes(orders: {books: [:supplier, :author]}).find(1)
-	
-	Author.includes(:books).where(books: { out_of_print: true })	# LEFT OUTER JOIN
-	
-	Post.includes(:comments).references(:comments).map { |post| post.comments.size }
-	
-	- What happens when I apply conditions to a relationship referenced via includes?
-	ActiveRecord will return all of the parent records and just the relationship records that match the condition.
-	
-	Post.includes(:comments).references(:comments).where(comments => {author: 'Derek'}).map { |post| post.comments.size }
-	
-	- Does includes prevent all N+1 queries? No
-	If you are accessing data in a nested relationship, that data isn't preloaded. 
-	For example, an additional query would be required to load the Comment#likes association for each comment:
-	
-	<% post.comments.each do |comment| %>
-	  <%= comment.likes.map { |like| like.user_avatar_url }
-	<% end %>
-
-	- Can I prevent N+1s in nested relationships? Yes. You can load nested relationships via includes:
-	
-	Post.includes(comments => :likes).references(:comments).map { |post| post.comments.size }
-	
-	- Should I always always load data from nested relationships?
-	No. It's very easy to end up initializing a significant number of records. 
-	For example, a popular Comment may have thousands of Like records, which would result in a slow query and significant memory allocations.
-	
-	
-- preload
--------------------------
-
-	- Should I ever use preload by itself?
-	Sometimes, but not by default. 
-	I use preload versus includes if I know using a LEFT OUTER JOIN to load a relationship is significantly slower. 
-	Otherwise, if I add where or order clauses at a later date, those clauses would trigger eager_load, which would trigger a join.
-	
-	- Is it common to combine joins with preload?	
-	If I need all relationship records - not just just those that match a relationship condition - I'll combine preload and joins. For example:
-	
-		- Find all Post records with a Comment authored by Derek
-		- Render those Post records and the total count of comments for each post
-
-	includes will only fetch Comment records authored by Derek, not all comments associated with each post.
-
-- eager_load
--------------------------
-
-	- includes delegates to eager_load when a where or order clause references a relationship.
-	- Should I ever use eager_load by itself? Yes. 
-	If I've found includes to be slow using two queries, using eager_load will force a single query via a LEFT OUTER JOIN. 
-	Its presence in my code indicates I'm future-proofing against using two queries to fetch records.
-	
-	- Can I combine eager_load with joins? Yes. 
-	In the following example:
-
-		Post.joins(:comments).eager_load(:comments).map { |post| post.comments.size }
-
-	ActiveRecord will do the following:
-
-    - Return an Array of Post records with comments.
-    - Load the comments associated with each Post.
-
-	It's includes with an INNER JOIN vs. a LEFT OUTER JOIN.
-
-- Scopes
---------
-
-	scope :ordered, -> { includes(:availabilities).order(Availability.arel_table[:price].desc) }
-
-	scope :in_print, -> { where(out_of_print: false) }
-	scope :out_of_print, -> { where(out_of_print: true) }
-	scope :old, -> { where('year_published < ?', 50.years.ago )}
-	scope :out_of_print_and_expensive, -> { out_of_print.where('price > 500') }
-	scope :costs_more_than, ->(amount) { where('price > ?', amount) }
-	
-	scope :out_of_print, -> { where(out_of_print: true) }	--> Book.out_of_print
-	scope :out_of_print_and_expensive, -> { out_of_print.where("price > 500") }
-	
-	scope :costs_more_than, ->(amount) { where("price > ?", amount) }	--> Book.costs_more_than(100.10)
-	Also
-	def self.costs_more_than(amount)
-		where("price > ?", amount)
-	end  
-	
-	scope :created_before, ->(time) { where("created_at < ?", time) if time.present? }
-	
-	- default_scope
-	default_scope { where(out_of_print: false) }	= 	default_scope { where("out_of_print = ?", false) }	# this doesn't work with Book.new
-	# applies all queries and scopes
-	# you can use def self.default_scope
-	# Book.new --> #<Book id: nil, out_of_print: false>	# Use Book.unscoped.new to prevent
-	
-	
-	- merging
-	Book.out_of_print.old
-	Book.in_print.merge(Book.out_of_print)	# will override
-	
-	- with where
-	Book.in_print.where('price < 100')
-	
-	- without scope
-	Book.unscoped.load
-	Book.where(out_of_print: true).unscoped.all
-	Book.unscoped { Book.out_of_print }
-	
-	
-	
-	
-
-- How to use use index for mysql inside model
---------------------------------------------------
-
-	class Issue
-	   def self.use_index(index)
-		 # update: OP fixed my mistake
-		 from("#{self.table_name} USE INDEX(#{index})")
-	   end
-	 end
-
-	 # then
-	 Issue.use_index("bla").where(some_condition: true)
-
-	- Add use_index to ActiveRecord::Relation.
-
-	config/initializers/active_record_relation.rb
-	
-		class ActiveRecord::Relation
-		  # Allow passing index hints to MySQL in case the query planner gets confused.
-		  #
-		  # Example:
-		  #   Message.first.events.use_index( :index_events_on_eventable_type_and_eventable_id )
-		  #   #=> Event Load (0.5ms)  SELECT `events`.* FROM `events` USE INDEX (index_events_on_eventable_type_and_eventable_id) WHERE `events`.`eventable_id` = 123 AND `events`.`eventable_type` = 'Message'
-		  #
-		  # MySQL documentation:
-		  #    https://dev.mysql.com/doc/refman/5.7/en/index-hints.html
-		  #
-		  # See https://github.com/rails/rails/pull/30514
-		  #
-		  def use_index( index_name )
-			self.from( "#{ self.quoted_table_name } USE INDEX ( #{ index_name } )" )
-		  end
-		end
-
-- Enums
-
-	enum :status, [:shipped, :being_packaged, :complete, :cancelled]
-	Order.shipped	-> query
-	order.shipped?	-> if
-	order.shipped!	-> update
-
-
-
-
-
-Nested Attributes
-======================================================================================
-- Nested attributes allow you to save attributes on associated records through the parent.
-- By default nested attribute updating is turned off and you can enable it using the accepts_nested_attributes_for class method.
-
-	class Book < ActiveRecord::Base
-	  has_one :author
-	  has_many :pages
-
-	  accepts_nested_attributes_for :author, :pages
-	end
-
-	# Two methods will be generated
-
-		- author_attributes=(attributes)
-		- pages_attributes=(attributes).
-
-
-1-1
-----------------------------------------------------------------------------------------
-
-	class Member < ActiveRecord::Base
-	  has_one :avatar
-	  accepts_nested_attributes_for :avatar	
-		# , update_only: true -> you don;t need to provide the id
-		# , allow_destroy: true
-	end
-
-	params = { member: { name: 'Jack', avatar_attributes: { icon: 'smiling' } } }
-	member = Member.create(params[:member])
-	member.avatar.id # => 2
-	member.avatar.icon # => 'smiling'
-
-	- update
-	
-	params = { member: { avatar_attributes: { id: '2', icon: 'sad' } } }
-	member.update params[:member]
-	member.avatar.icon # => 'sad'
-
-	- allow_destroy: true
-	
-	member.avatar_attributes = { id: '2', _destroy: '1' }
-
-1-*
-----------------------------------------------------------------------------------------
-
-	class Member < ActiveRecord::Base
-	  has_many :posts
-	  accepts_nested_attributes_for :posts
-	end
-
-
-	params = { member: {
-	  name: 'joe', posts_attributes: [
-		{ title: 'Kari, the awesome Ruby documentation browser!' },
-		{ title: 'The egalitarian assumption of the modern citizen' },
-		{ title: '', _destroy: '1' } # this will be ignored
-	  ]
-	}}
-
-	member = Member.create(params[:member])
-	member.posts.length # => 2
-	member.posts.first.title # => 'Kari, the awesome Ruby documentation browser!'
-	member.posts.second.title # => 'The egalitarian assumption of the modern citizen'
-
-	- validation
-	
-	accepts_nested_attributes_for :posts, reject_if: proc { |attributes| attributes['title'].blank? }
-	accepts_nested_attributes_for :posts, reject_if: :new_record?
-	
-	accepts_nested_attributes_for :posts, reject_if: :reject_posts
-
-	  def reject_posts(attributes)
-		attributes['title'].blank?
-	  end
-
-	- If the hash contains an id key that matches an already associated record, the matching record will be modified:
-
-	  posts_attributes: [
-		{ id: 1, title: '[UPDATED] An, as of yet, undisclosed awesome Ruby documentation browser!' },
-		{ id: 2, title: '[UPDATED] other post' }
-	  ]
-	
-	- allow_desotry
-	
-		class Member < ActiveRecord::Base
-		  has_many :posts
-		  accepts_nested_attributes_for :posts, allow_destroy: true	<-------------
-		end
-
-		params = { member: {
-		  posts_attributes: [{ id: '2', _destroy: '1' }]
-		}}
-
-		member.attributes = params[:member]
-		member.posts.detect { |p| p.id == 2 }.marked_for_destruction? # => true
-		member.posts.length # => 2
-		member.save
-		member.reload.posts.length # => 1
-
-
-
-
-
-
-
-- Complex queries
--------------------------
-# https://pganalyze.com/blog/active-record-subqueries-rails
-
-		- select count(*) from users where users.id not in (select user_id from orders);		
-		
-		User.where(id: Order.select(:user_id).all).size
-
-
-
-
-- async loading / Rails 7
--------------------------
-
-	# carefully used
-	# config/application.rb:
-	
-	config.active_record.async_query_executor = :global_thread_pool
-
-	# controller
-	def PostsController
-	  def index
-		@posts = Post.load_async
-		@categories = Category.load_async
-	  end
-	end
-
-
-
-
-- Arel
--------------------------
-
-	- Every Active Record model has arel_table on it, which allows you to build your AST for that model.
-
-	table = User.arel_table
-	
-	=> #<Arel::Table:0x0000557250a01690 @name="users", @columns=nil, @type_caster=#<ActiveRecord::TypeCaster::Map:0x0000557250a01de8 @types=User(id: integer, email: string, encrypted_password: string, reset_password_token: string, reset_password_sent_at: datetime, remember_created_at: datetime, sign_in_count: integer, current_sign_in_at: datetime, last_sign_in_at: datetime, current_sign_in_ip: string, last_sign_in_ip: string, created_at: datetime, updated_at: datetime, username: string, role: integer, avatar: string, name: string, address: text, mobile: string, note: text, gender: integer, region_id: integer, city_id: integer, country_id: integer, account_number: string, tokens: text, confirmation_token: string, confirmed_at: datetime, confirmation_sent_at: datetime, date_of_birth: datetime, last_name: string, news_letter: boolean, token: string)>, @table_alias=nil> 
-
-	Arel::Predications.instance_methods
-	[:in, :matches, :eq, :lt, :not_eq, :not_eq_any, :not_eq_all, :eq_any,
-	:eq_all, :in_any, :in_all, :not_in, :not_in_any, :not_in_all, :matches_any
-	:matches_all, :does_not_match, :does_not_match_any, :does_not_match_all,
-	:gteq, :gteq_any, :gteq_all, :gt, :gt_any, :gt_all, :lt_any, :lt_all, :lteq,
-	:lteq_any, :lteq_all, :eql_any]
-	# Rails 4.2 (Arel 6.0) adds the following
-	[:between, :not_between]
-	# Rails 5.0 (Arel 7.1) adds the following
-
-	- User.where(table[:id].eq(1)).to_sql
-	- User.where( User.arel_table[:created_at].lt( 5.days.ago ) ).to_sql	# SELECT "addresses".* FROM "addresses"  WHERE ("addresses"."created_at" < '2016-12-13 03:31:23.911914')
-	
-	
-	veg = Arel::Table.new(:vegetables)
-	
-	query = veg[:created_at].gteq( 5.days.ago ).and(
-	  veg[:color].eq("green").or(
-		veg[:gardener].eq("Susan")
-	  )
-	)
-	
-	query.to_sql
-	
-	#  "vegetables"."created_at" >= '2016-12-13 03:54:28.575342'
-	#    AND ("vegetables"."color" = 'green' OR "vegetables"."gardener" = 'Susan')
-	
-	Vegetable.where( query )
-
-	Arel::SelectManager.instance_methods - Object.methods
-	# => [:take, :join, :union, :source, :offset, :skip, :group, :lock, :from, :limit,
-	#     :on, :with, :order, :locked, :exists, :except, :orders, :froms, :distinct, :as,
-	#     :outer_join, :project, :having, :projections, :projections=, :limit=, :offset=,
-	# ...
-
-
-Callbacks
-======================================================================================
---> https://guides.rubyonrails.org/active_record_callbacks.html
-
-- The on: :create option will just get silently ignored and do_something will get called 
-  after every save on the record, not just the initial create. Same goes for after_save.
-	
-	before_save :do_something, on: :create
-
-	This might cause some hard to trace bugs in your rails app. 
-	I just stumbled upon this today by accident, I asked around and a lot of my coworkers 
-	weren't aware either that this is how it works.
-
-	Instead users have to do:
-
-	before_create :do_something
-
-Or
-
-	before_save do
-		self..........
-	end
-	
-
-
-- All callbacks
--------------------------
-
-	3.1 Creating an Object
-
-		before_validation
-		after_validation
-		before_save
-		around_save
-		before_create
-		around_create
-		after_create
-		after_save
-		after_commit / after_rollback
-
-	3.2 Updating an Object
-
-		before_validation
-		after_validation
-		before_save
-		around_save
-		before_update
-		around_update
-		after_update
-		after_save
-		after_commit / after_rollback
-
-	3.3 Destroying an Object
-
-		before_destroy
-		around_destroy
-		after_destroy
-		after_commit / after_rollback
-
-* after_save runs both on create and update, but always after the more specific callbacks after_create and after_update, no matter the order in which the macro calls were executed.
-* Avoid updating or saving attributes in callbacks. For example, don't call update(attribute: "value") within a callback. This can alter the state of the model and may result in unexpected side effects during commit. Instead, you can safely assign values directly (for example, self.attribute = "value") in before_create / before_update or earlier callbacks.
-* before_destroy callbacks should be placed before dependent: :destroy associations (or use the prepend: true option), to ensure they execute before the records are deleted by dependent: :destroy.
-
-	3.4 after_initialize and after_find
-
-		The after_initialize callback will be called whenever an Active Record object is instantiated, either by directly using new or when a record is loaded from the database. It can be useful to avoid the need to directly override your Active Record initialize method.
-
-		The after_find callback will be called whenever Active Record loads a record from the database. after_find is called before after_initialize if both are defined.
-
-		class User < ApplicationRecord
-		  after_initialize do |user|
-			puts "You have initialized an object!"
-		  end
-
-		  after_find do |user|
-			puts "You have found an object!"
-		  end
-		end
-
-	3.5 after_touch
-	
-		The after_touch callback will be called whenever an Active Record object is touched.
-
-		class User < ApplicationRecord
-		  after_touch do |user|
-			puts "You have touched an object"
-		  end
-		end
-
-		-- u = User.create(name: 'Kuldeep')
-		=> #<User id: 1, name: "Kuldeep", created_at: "2013-11-25 12:17:49", updated_at: "2013-11-25 12:17:49">
-		-- u.touch
-
-	- touch ?
-		
-		- touch is used to update updated_at field .. this is usefall to trigger certain callbacks ... 
-
-		product.touch                         # updates updated_at/on with current time
-		product.touch(time: Time.new(2015, 2, 16, 0, 0, 0)) # updates updated_at/on with specified time
-		product.touch(:designed_at)           # updates the designed_at attribute and updated_at/on
-		product.touch(:started_at, :ended_at) # updates started_at, ended_at and updated_at/on attributes
-
-		- using with belongs_to
-
-		class Employee < ApplicationRecord
-		  belongs_to :company, touch: true	--> this will trigger touch in company model
-		  after_touch do
-			puts 'An Employee was touched'
-		  end
-		end
-
-- The following methods trigger callbacks:
---------------------------------------------------
-		create
-		create!
-		destroy
-		destroy!
-		destroy_all
-		destroy_by
-		save
-		save!
-		save(validate: false)
-		toggle!
-		touch
-		update_attribute
-		update
-		update!
-		valid?
-
-	Additionally, the after_find callback is triggered by the following finder methods:
-
-		all
-		first
-		find
-		find_by
-		find_by_*
-		find_by_*!
-		find_by_sql
-		last
-
-
-	Method				Uses Default Accessor	Saved to Database	Validations		Callbacks	Touches updated_at	Readonly check
-
-	attribute=			Yes						No					n/a				n/a			n/a					n/a
-	write_attribute		No						No					n/a				n/a			n/a					n/a
-	update_attribute	Yes						Yes					No				Yes			Yes					Yes
-	attributes=			Yes						No					n/a				n/a			n/a					n/a
-	update				Yes						Yes					Yes				Yes			Yes					Yes
-	update_column		No						Yes					No				No			No					Yes
-	update_columns		No						Yes					No				No			No					Yes
-	User::update		Yes						Yes					Yes				Yes			Yes					Yes
-	User::update_all	No						Yes					No				No			No					No
-
-
-- Check existing values
-
-
-	before_save	do
-	
-		# self.id
-		# self.[field]_changed?			# true of current update changed the value
-		# self.[field]_was				# the existing value
-	
-	end
-	
-
-	before_validation :normalize_name, on: :create
-	
-
-
-
-- Validations
-=======================================================================================================
 
 	# For truly bullet-proof data integrity you’ll need to implement validations at the database level, too.
 	# in your migration...
 	t.index(:title, unique: true)
-
 -
 
 	validates :name, presence: true		--> Person.create(name: "John Doe").valid?
@@ -1779,7 +1345,6 @@ Or
 # without ! : save and update return false, and create returns the object.
 
 # The following methods will skip validation
-
 
     decrement!
     decrement_counter
@@ -1808,6 +1373,8 @@ Or
 	p.errors.size 	--> 0
 	p.valid? 		--> false
 	p.errors.objects.first.full_message	--> "Name can't be blank"
+
+- save & save!
 	
 	p.save	--> false
 	p.save!	--> ActiveRecord::RecordInvalid: Validation failed: Name can't be blank
@@ -2028,152 +1595,432 @@ Or
 	<div class="field_with_errors">
 	  <input id="article_title" name="article[title]" size="30" type="text" value="">
 	</div>
-
 	
+- Custom Validations
+-------------------------
+
+	validate :not_spammy
+	def not_spammy
+	  if self.description.downcase.include?("enhancement")
+		errors.add(:base, "The description sounds spammy")
+	  end
+	end
+
+- Try it 
+
+	p = Product.new
+	=> #<Product id: nil, title: nil, price: nil, description: nil, image_url: nil, created_at: nil, updated_at: nil, stock: 0>
+	p.valid?
+	=> false
+
+	p.errors
+	=> {title:["can't be blank"]}
+	p.errors.full_messages
+	=> ["Title can't be blank"]
+
+
+>>>> in form 
+
+<% if p.errors.any? %>
+	<div id="error_explanation">
+	  <h2><%= pluralize(p.errors.count, "error") %> prohibited this article from being saved:</h2>
+
+	  <ul>
+		<% p.errors.each do |error| %>
+		  <li><%= error.full_message %></li>
+		<% end %>
+	  </ul>
+	</div>
+<% end %>
+
+- Better helper method
+-------------------------
+
+	def error_messages_for(*objects)
+	  options = objects.extract_options!
+	  options[:header_message] ||= I18n.t(:"activerecord.errors.header", default: "Invalid Fields")
+	  options[:message] ||= I18n.t(:"activerecord.errors.message", default: "Correct the following errors and try again.")
+	  messages = objects.compact.map { |o| o.errors.full_messages }.flatten
+	  unless messages.empty?
+		content_tag(:div, class: "error_messages") do
+		  list_items = messages.map { |msg| content_tag(:li, msg) }
+		  content_tag(:h2, options[:header_message]) + content_tag(:p, options[:message]) + content_tag(:ul, list_items.join.html_safe)
+		end
+	  end
+	end
+
+- Custom Messages & Internationalization
+--------------------------------------------------
+
+	validates_presence_of :title for a Product
+	
+	en.yml:
+	en:
+	  activerecord:
+		errors:
+		  models:
+			product:
+			  attributes:
+				title:
+				  blank: "Please enter a title."
 	
 	
 # https://guides.rubyonrails.org/active_record_validations.html
 
 	
 
-Seed
--------------------------------------------------------------------------------------
-- triggered by
+
+
+
+
+
+
+Transactions
+========================================================================
+
+	@account_a = Account.find_by_name("A")
+	@account_b = Account.find_by_name("B")
+	@account_a.balance -= transfer_amount
+	@account_b.balance += transfer_amount
 	
-	rails db:reset and rails db:setup
-	
-	- setup will create the database first and warn you if ithey are exist .. 
-	- reset will drop and recreat the databases
-
-- create directly
-
-	User.create(name: 'Matz')
-
-- seeding from csv
-
-	require 'csv'
-	require_relative './data/users.csv'
-	def seed_users
-	  csv_file_path = '/[project_path]/db/data/users.csv'
-	  puts 'Seeding users from #{csv_file_path}...'
-	  f = File.new(csv_file_path, 'r')
-	  csv = CSV.new(f)
-	  headers = csv.shift
-	  
-	  csv.each do |row|
-		user_information = {
-		  name: row[0],
-		  age: row[1]
-		}
-		inv = User.create(user_information)
-	  end
-	  puts 'Seeding users from #{csv_file_path} done.'
+	# Try to use fewer command inside transaction block
+	Account.transaction do
+	  raise "Transaction Failed" unless @account_a.save && @account_b.save
 	end
 
-- best to execute first specially for testing 
+- Callbacks
+-------------------------
 
-	Model.destroy_all
+	There are two additional callbacks available when working with transactions.
+	after_commit
 
-- for dates
+	This callback fires when the transaction succeeds.
+	after_rollback
 
-	use helpers such as : 1.week.ago	
+	This callback fires when the transaction fails.
+
+- Full example
+-------------------------
+
+	class Account < ActiveRecord::Base
 	
-- check results from acommand
+	  after_commit :transaction_success
+	  after_rollback :transaction_failed
 
-	rails runner 'p Movie.pluck :title'
+	  def transfer_funds_to(amount, target)
+		self.balance -= amount
+		target.balance += amount
+		Account.transaction do
+		  raise "Transaction Failed" unless self.save && target.save
+		end
+	  end
+
+	private
+	  def transaction_success
+		Logger.info "Transfer succeed for Account #{self.to_param}"
+	  end
+
+	  def transaction_failed
+		Logger.warn "Transfer failed for Account #{self.to_param}"
+	  end
+	end
+
+
+
+
+
+
+
+
+Nested Attributes
+======================================================================================
+- Nested attributes allow you to save attributes on associated records through the parent.
+- By default nested attribute updating is turned off and you can enable it using the accepts_nested_attributes_for class method.
+
+	class Book < ActiveRecord::Base
+	  has_one :author
+	  has_many :pages
+
+	  accepts_nested_attributes_for :author, :pages
+	end
+
+	# Two methods will be generated
+
+		- author_attributes=(attributes)
+		- pages_attributes=(attributes).
+
+
+1-1
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_one :avatar
+	  accepts_nested_attributes_for :avatar	
+		# , update_only: true -> you don;t need to provide the id
+		# , allow_destroy: true
+	end
+
+	params = { member: { name: 'Jack', avatar_attributes: { icon: 'smiling' } } }
+	member = Member.create(params[:member])
+	member.avatar.id # => 2
+	member.avatar.icon # => 'smiling'
+
+	- update
 	
-- Using a custom Rails task to seed actual data
+	params = { member: { avatar_attributes: { id: '2', icon: 'sad' } } }
+	member.update params[:member]
+	member.avatar.icon # => 'sad'
 
-	rails g task movies seed_genres	--> lib/tasks/movies.rake:
+	- allow_destroy: true
 	
-		namespace :movies do
-		  desc "Seeds genres"
-		  task seed_genres: :environment do
-			# add then this .. 
-			Genre.create!([{
-			  name: "Action"
-			},
-			{
-			  name: "Sci-Fi"
-			},
-			{
-			  name: "Adventure"
-			}])
+	member.avatar_attributes = { id: '2', _destroy: '1' }
 
-			p "Created #{Genre.count} genres"
+1-*
+----------------------------------------------------------------------------------------
+
+	class Member < ActiveRecord::Base
+	  has_many :posts
+	  accepts_nested_attributes_for :posts
+	end
+
+
+	params = { member: {
+	  name: 'joe', posts_attributes: [
+		{ title: 'Kari, the awesome Ruby documentation browser!' },
+		{ title: 'The egalitarian assumption of the modern citizen' },
+		{ title: '', _destroy: '1' } # this will be ignored
+	  ]
+	}}
+
+	member = Member.create(params[:member])
+	member.posts.length # => 2
+	member.posts.first.title # => 'Kari, the awesome Ruby documentation browser!'
+	member.posts.second.title # => 'The egalitarian assumption of the modern citizen'
+
+	- validation
+	
+	accepts_nested_attributes_for :posts, reject_if: proc { |attributes| attributes['title'].blank? }
+	accepts_nested_attributes_for :posts, reject_if: :new_record?
+	
+	accepts_nested_attributes_for :posts, reject_if: :reject_posts
+
+	  def reject_posts(attributes)
+		attributes['title'].blank?
+	  end
+
+	- If the hash contains an id key that matches an already associated record, the matching record will be modified:
+
+	  posts_attributes: [
+		{ id: 1, title: '[UPDATED] An, as of yet, undisclosed awesome Ruby documentation browser!' },
+		{ id: 2, title: '[UPDATED] other post' }
+	  ]
+	
+	- allow_desotry
+	
+		class Member < ActiveRecord::Base
+		  has_many :posts
+		  accepts_nested_attributes_for :posts, allow_destroy: true	<-------------
+		end
+
+		params = { member: {
+		  posts_attributes: [{ id: '2', _destroy: '1' }]
+		}}
+
+		member.attributes = params[:member]
+		member.posts.detect { |p| p.id == 2 }.marked_for_destruction? # => true
+		member.posts.length # => 2
+		member.save
+		member.reload.posts.length # => 1
+
+
+
+
+Callbacks
+======================================================================================
+--> https://guides.rubyonrails.org/active_record_callbacks.html
+
+- The on: :create option will just get silently ignored and do_something will get called 
+  after every save on the record, not just the initial create. Same goes for after_save.
+	
+	before_save :do_something, on: :create
+
+	This might cause some hard to trace bugs in your rails app. 
+	I just stumbled upon this today by accident, I asked around and a lot of my coworkers 
+	weren't aware either that this is how it works.
+
+	Instead users have to do:
+
+	before_create :do_something
+
+Or
+
+	before_save do
+		self..........
+	end
+	
+
+
+- All callbacks
+-------------------------
+
+	3.1 Creating an Object
+
+		before_validation
+		after_validation
+		before_save
+		around_save
+		before_create
+		around_create
+		after_create
+		after_save
+		after_commit / after_rollback
+
+	3.2 Updating an Object
+
+		before_validation
+		after_validation
+		before_save
+		around_save
+		before_update
+		around_update
+		after_update
+		after_save
+		after_commit / after_rollback
+
+	3.3 Destroying an Object
+
+		before_destroy
+		around_destroy
+		after_destroy
+		after_commit / after_rollback
+
+* after_save runs both on create and update, but always after the more specific callbacks after_create and after_update, no matter the order in which the macro calls were executed.
+* Avoid updating or saving attributes in callbacks. For example, don't call update(attribute: "value") within a callback. This can alter the state of the model and may result in unexpected side effects during commit. Instead, you can safely assign values directly (for example, self.attribute = "value") in before_create / before_update or earlier callbacks.
+* before_destroy callbacks should be placed before dependent: :destroy associations (or use the prepend: true option), to ensure they execute before the records are deleted by dependent: :destroy.
+
+	3.4 after_initialize and after_find
+
+		The after_initialize callback will be called whenever an Active Record object is instantiated, either by directly using new or when a record is loaded from the database. It can be useful to avoid the need to directly override your Active Record initialize method.
+
+		The after_find callback will be called whenever Active Record loads a record from the database. after_find is called before after_initialize if both are defined.
+
+		class User < ApplicationRecord
+		  after_initialize do |user|
+			puts "You have initialized an object!"
+		  end
+
+		  after_find do |user|
+			puts "You have found an object!"
 		  end
 		end
 
-		> rails -T movies
-		> rails movies:seed_genres
-		
-- loading seeds from the console
-
-	> Rails.application.load_seed
-
-- loops & faker --> (gem 'faker'
-
-	Movie.destroy_all
-
-	100.times do |index|
-	  Movie.create!(title: Faker::Lorem.sentence(word_count: 3, supplemental: false, random_words_to_add: 0).chop,
-					director: Faker::Name.name,
-					storyline: Faker::Lorem.paragraph,
-					watched_on: Faker::Time.between(from: 4.months.ago, to: 1.week.ago))
-	end
-
-	p "Created #{Movie.count} movies"
-
-- creating a seed file from existing data 
-
-	lib/tasks/export_data.rake:
+	3.5 after_touch
 	
-	namespace :export do
-	  desc "Export users" 
-	  task :export_to_seeds => :environment do
-		User.all.each do |users| 
-		  excluded_keys = [‘created_at’, ‘updated_at’, ‘id’] 
-		  serialized = country
-			.serializable_hash
-			.delete_if{|key,value| excluded_keys.include?(key)} 
-		  puts “User.create(#{serialized})”
-		end 
-	  end
-	end
+		The after_touch callback will be called whenever an Active Record object is touched.
 
+		class User < ApplicationRecord
+		  after_touch do |user|
+			puts "You have touched an object"
+		  end
+		end
 
-	> rails export:export_to_seed > db/seeds.rb
+		-- u = User.create(name: 'Kuldeep')
+		=> #<User id: 1, name: "Kuldeep", created_at: "2013-11-25 12:17:49", updated_at: "2013-11-25 12:17:49">
+		-- u.touch
 
-- creating existing record
+	- touch ?
+		
+		- touch is used to update updated_at field .. this is usefall to trigger certain callbacks ... 
 
-	user = User.create({....
+		product.touch                         # updates updated_at/on with current time
+		product.touch(time: Time.new(2015, 2, 16, 0, 0, 0)) # updates updated_at/on with specified time
+		product.touch(:designed_at)           # updates the designed_at attribute and updated_at/on
+		product.touch(:started_at, :ended_at) # updates started_at, ended_at and updated_at/on attributes
 
-	user.errors.inspect --> #<ActiveModel::Errors [#<ActiveModel::Error attribute=email, type=taken, options={:allow_blank=>true, :if=>:will_save_change_to_email?, :value=>"admin@d1g.com"}>]>
+		- using with belongs_to
 
+		class Employee < ApplicationRecord
+		  belongs_to :company, touch: true	--> this will trigger touch in company model
+		  after_touch do
+			puts 'An Employee was touched'
+		  end
+		end
 
-
-
-Processor Model Design Pattern
-======================================================================================
-
-- Creating a Processor Object
+- The following methods trigger callbacks:
 --------------------------------------------------
-	class MyProcessor
-	  def initialize(thing, stuff)
-		@thing = thing
-		@stuff = stuff
-	  end
-	end
+		create
+		create!
+		destroy
+		destroy!
+		destroy_all
+		destroy_by
+		save
+		save!
+		save(validate: false)
+		toggle!
+		touch
+		update_attribute
+		update
+		update!
+		valid?
+
+	Additionally, the after_find callback is triggered by the following finder methods:
+
+		all
+		first
+		find
+		find_by
+		find_by_*
+		find_by_*!
+		find_by_sql
+		last
 
 
-	class StudentReport
-	  attr_reader :student, :term, :report_type	# define @studant, @term, @report_type
-	  
-	  # taraaaaaam
-	  delegate :first_name, :last_name, to: :student
-	  delegate :title, :subtitle, to: :report_type
-	  delegate :start_date, :end_date, to: :term
+	Method				Uses Default Accessor	Saved to Database	Validations		Callbacks	Touches updated_at	Readonly check
+
+	attribute=			Yes						No					n/a				n/a			n/a					n/a
+	write_attribute		No						No					n/a				n/a			n/a					n/a
+	update_attribute	Yes						Yes					No				Yes			Yes					Yes
+	attributes=			Yes						No					n/a				n/a			n/a					n/a
+	update				Yes						Yes					Yes				Yes			Yes					Yes
+	update_column		No						Yes					No				No			No					Yes
+	update_columns		No						Yes					No				No			No					Yes
+	User::update		Yes						Yes					Yes				Yes			Yes					Yes
+	User::update_all	No						Yes					No				No			No					No
+
+
+- Check existing values
+
+
+	before_save	do
+	
+		# self.id
+		# self.[field]_changed?			# true of current update changed the value
+		# self.[field]_was				# the existing value
+	
 	end
+	
+
+	before_validation :normalize_name, on: :create
+	
+- Check saved changes
+
+	m = Message.find(1)
+	m.message = "something different"
+	m.save
+	
+	m.saved_changes  -->  {"message"=>["hello there", "something different"], "updated_at"=>[Wed, 02 Mar 2022 19:40:58.097660000 UTC +00:00, Wed, 02 Mar 2022 21:42:18.602833000 UTC +00:00]}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2266,6 +2113,49 @@ Or
 * update_ methods don't make callbacks !!!!!
 
 
+- Arel
+-------------------------
+
+	- Every Active Record model has arel_table on it, which allows you to build your AST for that model.
+
+	table = User.arel_table
+	
+	=> #<Arel::Table:0x0000557250a01690 @name="users", @columns=nil, @type_caster=#<ActiveRecord::TypeCaster::Map:0x0000557250a01de8 @types=User(id: integer, email: string, encrypted_password: string, reset_password_token: string, reset_password_sent_at: datetime, remember_created_at: datetime, sign_in_count: integer, current_sign_in_at: datetime, last_sign_in_at: datetime, current_sign_in_ip: string, last_sign_in_ip: string, created_at: datetime, updated_at: datetime, username: string, role: integer, avatar: string, name: string, address: text, mobile: string, note: text, gender: integer, region_id: integer, city_id: integer, country_id: integer, account_number: string, tokens: text, confirmation_token: string, confirmed_at: datetime, confirmation_sent_at: datetime, date_of_birth: datetime, last_name: string, news_letter: boolean, token: string)>, @table_alias=nil> 
+
+	Arel::Predications.instance_methods
+	[:in, :matches, :eq, :lt, :not_eq, :not_eq_any, :not_eq_all, :eq_any,
+	:eq_all, :in_any, :in_all, :not_in, :not_in_any, :not_in_all, :matches_any
+	:matches_all, :does_not_match, :does_not_match_any, :does_not_match_all,
+	:gteq, :gteq_any, :gteq_all, :gt, :gt_any, :gt_all, :lt_any, :lt_all, :lteq,
+	:lteq_any, :lteq_all, :eql_any]
+	# Rails 4.2 (Arel 6.0) adds the following
+	[:between, :not_between]
+	# Rails 5.0 (Arel 7.1) adds the following
+
+	- User.where(table[:id].eq(1)).to_sql
+	- User.where( User.arel_table[:created_at].lt( 5.days.ago ) ).to_sql	# SELECT "addresses".* FROM "addresses"  WHERE ("addresses"."created_at" < '2016-12-13 03:31:23.911914')
+	
+	
+	veg = Arel::Table.new(:vegetables)
+	
+	query = veg[:created_at].gteq( 5.days.ago ).and(
+	  veg[:color].eq("green").or(
+		veg[:gardener].eq("Susan")
+	  )
+	)
+	
+	query.to_sql
+	
+	#  "vegetables"."created_at" >= '2016-12-13 03:54:28.575342'
+	#    AND ("vegetables"."color" = 'green' OR "vegetables"."gardener" = 'Susan')
+	
+	Vegetable.where( query )
+
+	Arel::SelectManager.instance_methods - Object.methods
+	# => [:take, :join, :union, :source, :offset, :skip, :group, :lock, :from, :limit,
+	#     :on, :with, :order, :locked, :exists, :except, :orders, :froms, :distinct, :as,
+	#     :outer_join, :project, :having, :projections, :projections=, :limit=, :offset=,
+	# ...
 
 
 
@@ -2274,6 +2164,7 @@ Misc
 ========================================================================
 
 count, size and length
+-----------------------
 
 	count will perform an SQL COUNT query
 	length will calculate the length of the resulting array
@@ -2299,6 +2190,35 @@ If you use a :counter_cache on a has_many association, size will use the cached 
 		loaded? ? @records.length : count(:all)
 	end
 
+
+
+
+- Complex queries
+-------------------------
+# https://pganalyze.com/blog/active-record-subqueries-rails
+
+		- select count(*) from users where users.id not in (select user_id from orders);		
+		
+		User.where(id: Order.select(:user_id).all).size
+
+
+
+
+- async loading / Rails 7
+-------------------------
+
+	# carefully used
+	# config/application.rb:
+	
+	config.active_record.async_query_executor = :global_thread_pool
+
+	# controller
+	def PostsController
+	  def index
+		@posts = Post.load_async
+		@categories = Category.load_async
+	  end
+	end
 
 
 virtual attributes
@@ -2362,8 +2282,30 @@ You can also do something like
 
 	  # ...
 	end
+	
+	
+	
+Processor Model Design Pattern
+======================================================================================
+
+- Creating a Processor Object
+--------------------------------------------------
+	class MyProcessor
+	  def initialize(thing, stuff)
+		@thing = thing
+		@stuff = stuff
+	  end
+	end
 
 
+	class StudentReport
+	  attr_reader :student, :term, :report_type	# define @studant, @term, @report_type
+	  
+	  # taraaaaaam
+	  delegate :first_name, :last_name, to: :student
+	  delegate :title, :subtitle, to: :report_type
+	  delegate :start_date, :end_date, to: :term
+	end	
 
 
 Thin Controller, Fat Model ??? Use PORO
@@ -2437,6 +2379,11 @@ Thin Controller, Fat Model ??? Use PORO
 
 Cool stuff
 ======================================================================================
+
+- gems
+
+	gem 'validates_timeliness'
+
 
 - objects = controller_name.classify.constantize.find(:all)
 - instance_variable_set("@#{controller_name}", objects)	# @names = objects 

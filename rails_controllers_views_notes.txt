@@ -25,6 +25,22 @@ Controllers
 
 	rails g --help
 
+
+	rails g scaffold_controller Messages --force
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
 - General
 ------------------------------------------------------------------------
 
@@ -1052,22 +1068,6 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 
 
 
-
-
-
-
-- Builder
-
-
-
-
-
-
-
-
-
-
-
 		
 - Layouts
 ------------------------------------------------------------------------
@@ -1144,6 +1144,7 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 
 
 - Rendering Objects
+------------------------------------------------------------------------
 
 	- The default view class ActionView::Base
 	- The view class must have the following methods:
@@ -1157,6 +1158,7 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 	
 	
 - Builder
+------------------------------------------------------------------------
 
 	- The Builder gem is a dependency of the rails ActionView component.
 	- It provides a simple way to programatically build XML documents and fragments. 
@@ -1200,7 +1202,18 @@ Links
 
 	<td><%= link_to "Show", book %></td>
 	<td><%= link_to "Edit", edit_book_path(book) %></td>
+
+	# Since we are using Turbo, you need to set turbo_confirm & turob_method 
+	
 	<td><%= link_to "Destroy", book, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %></td>
+
+	# None turbo delete
+	<%= button_to 'Sign Out', destroy_user_session_path, method: :delete %>
+
+	<%= button_to 'Sign Out', destroy_user_session_path, method: :delete,
+		form: {data: {turbo_confirm: 'Are you sure?'}} %>
+		
+	
 
 	<%= link_to some_path(obj) do %>
 		some stuf .... 
@@ -1228,7 +1241,7 @@ Links
 	  <input id="query" name="query" type="text" />
 	  <input name="commit" type="submit" value="Search" data-disable-with="Search" />
 	</form>
-
+	
 	- for other controls
 	
 	<%= form.radio_button :age, "child" %>	>> <input type="radio" id="age_child" name="age" value="child" />
@@ -1259,7 +1272,6 @@ Links
 	<%= check_box_tag "accept" %>	--> <input type="checkbox" name="accept" id="accept" value="1" />
 	
 
-
 - Bind it to an active model
 
 	@article = Article.find(42)
@@ -1285,6 +1297,10 @@ Links
 		form_with(model: @article, url: articles_path)								>> in case as new .. auto generated 
 		form_with(model: @article, url: article_path(@article), method: "patch")	>> in case of existing one .. auto generated
 
+	* form_with is the new kid on the block. form_for and form_tag are now (basically) obsolete.
+
+
+- Nested Attributes
 - fields_for
 
 	# if you had a Person model with an associated ContactDetail model
@@ -1394,7 +1410,7 @@ Links
 				end
 		
 	
-	
+
 - dealing with namespaces
 
 	form_with model: [:admin, @article]			--> admin_article_path(@article)
@@ -1457,6 +1473,7 @@ Links
 	  end
 	end
 
+- Builders
 - Other helpers and custoimizations	(ActionView::Helpers::FormBuilder.)
 
 	<%= form_with model: @person do |form| %>
@@ -1494,8 +1511,6 @@ Links
 	# :local - By default form submits are remote and unobtrusive XHRs. Disable remote submits with local: true.
 	# In Rails 6.0 and 5.2, all forms using form_with implement remote: true by default. These forms will submit data using an XHR (Ajax) request. To disable this include local: true. To dive deeper see Working with JavaScript in Rails guide.
 
-
-
     <%= form_with(
           local: false,
           data: {
@@ -1524,6 +1539,15 @@ Links
 		data-request-target-value="#some_dom_id" 
 		 method="post"><input type="hidden" name="authenticity_token" value="V_ykRPEuUQ7dw2pPEXYkCx4xbYORmBN4at7NX9O5ocQZnVMTj3h9EBfqKG7F2v1m0NJKTeCtWbsgFUdqsc5abw" autocomplete="off">
 	</form>
+
+
+- Styling
+
+	<%= form_with(model: message, local: false, class: "p-8") do |form| %>
+	
+
+
+
 
 
 - (CSRF) Cross-site request forgery is a type of attack in which a site tricks a user into making requests on another site, possibly adding, modifying, or deleting data on that site without the user's knowledge or permission.
@@ -1635,6 +1659,13 @@ Links
 		  <div><%= message %></div>
 		<% end %>
 	  </div>
+
+
+
+
+
+
+
 
 
 
@@ -1810,6 +1841,9 @@ Server Error 	500 	:internal_server_error
 	511 	:network_authentication_required
 
 
+- Gems
+
+	gem 'will_paginate', '~> 3.1.0'
 
 
 
