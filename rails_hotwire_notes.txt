@@ -815,6 +815,30 @@ Turbo
 - Turbo Frames: Decompose complex pages
 -------------------------------------------------------------------------
 
+- turbo-rails
+
+	# https://github.com/hotwired/turbo-rails
+
+		import { Turbo } from "@hotwired/turbo-rails"
+		Turbo.session.drive = false
+
+		Then you can use data-turbo="true" to enable Drive on a per-element basis.
+
+		<%# app/views/todos/show.html.erb %>
+		<%= turbo_frame_tag @todo do %>
+		  <p><%= @todo.description %></p>
+
+		  <%= link_to 'Edit this todo', edit_todo_path(@todo) %>
+		<% end %>
+
+		<%# app/views/todos/edit.html.erb %>
+		<%= turbo_frame_tag @todo do %>
+		  <%= render "form" %>
+
+		  <%= link_to 'Cancel', todo_path(@todo) %>
+		<% end %>
+
+
 - Turbo Frames allow predefined parts of a page to be updated on request.
 - Any links and forms inside a frame are captured, and the frame contents automatically updated after receiving a response. 
 - Regardless of whether the server provides a full document, or just a fragment containing an updated version of the requested frame, only that particular frame will be extracted from the response to replace the existing content.
@@ -1452,48 +1476,10 @@ Turbo
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 - Turbo Native: Hybrid apps for iOS & Android
 ---------------------------------------------
 
 
-
-
-
-# https://github.com/hotwired/turbo-rails
-
-	import { Turbo } from "@hotwired/turbo-rails"
-	Turbo.session.drive = false
-
-	Then you can use data-turbo="true" to enable Drive on a per-element basis.
-
-	<%# app/views/todos/show.html.erb %>
-	<%= turbo_frame_tag @todo do %>
-	  <p><%= @todo.description %></p>
-
-	  <%= link_to 'Edit this todo', edit_todo_path(@todo) %>
-	<% end %>
-
-	<%# app/views/todos/edit.html.erb %>
-	<%= turbo_frame_tag @todo do %>
-	  <%= render "form" %>
-
-	  <%= link_to 'Cancel', todo_path(@todo) %>
-	<% end %>
 	
 
 
@@ -1712,14 +1698,16 @@ ViewComponent
 
 
 	# app/components/message_component.rb
-	class MessageComponent < ViewComponent::Base
-	  def initialize(name:)
-		@name = name
-	  end
-	end
+
+		class MessageComponent < ViewComponent::Base
+		  def initialize(name:)
+			@name = name
+		  end
+		end
 
 	<%# app/components/message_component.html.erb %>
-	<h1>Hello, <%= @name %>!</h1>
+
+		<h1>Hello, <%= @name %>!</h1>
 
 Which is rendered by calling:
 
@@ -1733,12 +1721,45 @@ Which is rendered by calling:
 
 #* https://github.com/joshleblanc/view_component_reflex
 
+- Generator
+
+
+	> bin/rails generate component Example title
+
+	# app/components/example_component.rb
+	class ExampleComponent < ViewComponent::Base
+	  def initialize(title:)
+		@title = title
+	  end
+	end
+
+	<%# app/components/example_component.html.erb %>
+	<span title="<%= @title %>"><%= content %></span>
+
+	# Use it
+	<%= render(ExampleComponent.new(title: "my title")) do %>
+	  Hello, World!			--> this will go to content
+	<% end %>
+
+	- with_content
+
+	<%= render(ExampleComponent.new(title: "my title").with_content("Hello, World!")) %>
+
+- Rendering from controllers 
+
+	render(ExampleComponent.new(title: "My Title")) { "Hello, World!" }
 	
+- When rendering the same component multiple times for later reuse, use render_in:
 
+	  def index
+		# Doesn't work: triggers a `AbstractController::DoubleRenderError`
+		# @reusable_icon = render IconComponent.new('close')
 
+		# Doesn't work: renders the whole index view as a string
+		# @reusable_icon = render_to_string IconComponent.new('close')
 
-
-
-
+		# Works: renders the component as a string
+		@reusable_icon = IconComponent.new('close').render_in(view_context)
+	  end
 
 

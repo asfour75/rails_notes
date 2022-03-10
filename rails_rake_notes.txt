@@ -1,1 +1,66 @@
+========================================================================
+
+Command Line Basics
+------------------------------------------------------------------------
+# https://guides.rubyonrails.org/command_line.html
+# All commands can run with -h or --help to list more information.
+
+
+    bin/rails console
+    bin/rails server
+    bin/rails test
+    bin/rails generate
+    bin/rails db:migrate
+    bin/rails db:create
+    bin/rails routes
+    bin/rails dbconsole
+    rails new app_name
+
+> bin/rails generate task feeds list
+
+	lib/tasks/feeds.rake:
+	
+	namespace :feeds do
+	  desc "TODO"
+	  task list: :environment do
+		u = User.first
+		puts "hello #{u.email}"
+	  end
+	end
+	
+> find it: rails -T
+> run it: rails feeds:list	--> hello admin@d1g.com
+
+* :environment loads the whole environment and allows you to use models classes .. etc
+
+- To use arguments
+
+namespace :feeds do
+  desc "TODO"
+  task :list, [:v1] => [:environment] do |task, args|
+    u = User.first
+    puts "hello #{u.email} #{task} #{args.v1}"
+  end
+end
+
+> rails "feeds:list[jj]"	--> hello admin@d1g.com feeds:list jj
+
+- Making chain of tasks
+
+namespace :feeds do
+  desc "TODO"
+  task :list, [:v1] => [:list2] do |task, args|
+    u = User.first
+    puts "hello #{u.email} #{task} #{args.v1}"
+  end
+
+  desc "TODO 2"
+  task :list2 => :environment do |task|
+    u = User.last
+    puts "hello #{u.email}"
+  end
+end
+
+> rails "feeds:list[jj]"	--> hello user@d1g.com
+								hello admin@d1g.com feeds:list jj
 
