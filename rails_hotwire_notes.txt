@@ -272,8 +272,8 @@ Stimulus
 			  
 			# dispatch event called "copy" 
 			# with payload in detail: { content: this.sourceTarget.value }
-			this.dispatch("copy", { target: document, detail: { content: this.sourceTarget.value } })			--> read the value in input field 
-																							--> <input data-clipboard-target="source" type="text" value="1234" readonly>		
+			this.dispatch("copy", { target: document, detail: { content: this.sourceTarget.value } })		--> read the value in input field 
+																											--> <input data-clipboard-target="source" type="text" value="1234" readonly>		
 			this.sourceTarget.select()
 			document.execCommand("copy")	<-- execute the command dispatch copy
 		  }
@@ -642,22 +642,6 @@ messages_controller.js:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Turbo
 ========================================================================
 # Turbo bundles several techniques for creating fast, modern, progressively enhanced web applications without using much JavaScript.
@@ -831,116 +815,128 @@ Turbo
 - Turbo Frames: Decompose complex pages
 -------------------------------------------------------------------------
 
-	- Turbo Frames allow predefined parts of a page to be updated on request.
-	- Any links and forms inside a frame are captured, and the frame contents automatically updated after receiving a response. 
-	- Regardless of whether the server provides a full document, or just a fragment containing an updated version of the requested frame, only that particular frame will be extracted from the response to replace the existing content.
-	- Frames are created by wrapping a segment of the page in a <turbo-frame> element.
-	
-	- At a high level, Turbo Frames are pieces of a webpage that can be updated independently, without impacting the rest of the content on the page.
-	- Links and forms within a frame will, by default, attempt to update only the content of the containing frame, whether the server sends a completely new HTML document or only a page fragment.
-	
-	
-- Example
+- Turbo Frames allow predefined parts of a page to be updated on request.
+- Any links and forms inside a frame are captured, and the frame contents automatically updated after receiving a response. 
+- Regardless of whether the server provides a full document, or just a fragment containing an updated version of the requested frame, only that particular frame will be extracted from the response to replace the existing content.
+- Frames are created by wrapping a segment of the page in a <turbo-frame> element.
 
-	<%= turbo_frame_tag @message, :data => {:controller => "message"}  do %>
+- At a high level, Turbo Frames are pieces of a webpage that can be updated independently, without impacting the rest of the content on the page.
+- Links and forms within a frame will, by default, attempt to update only the content of the containing frame, whether the server sends a completely new HTML document or only a page fragment.
 		
-		<%= render @message %>
-		
-        <%= link_to "Edit this message", edit_message_path(@message)  %> |
-        <%= link_to "Back to messages", messages_path, "data-turbo-frame": "_top" %> |
-        <%= button_to "Delete", @message, method: :delete, data: { :action => "click->message#delete", :turbo => false}  %>		
-	<% end %>
+- Overview
 
-	==
+		<%= turbo_frame_tag @message, :data => {:controller => "message"}  do %>
+			
+			<%= render @message %>
+			
+			<%= link_to "Edit this message", edit_message_path(@message)  %> |
+			<%= link_to "Back to messages", messages_path, "data-turbo-frame": "_top" %> |
+			<%= button_to "Delete", @message, method: :delete, data: { :action => "click->message#delete", :turbo => false }  %>	
+		<% end %>
 
-	<turbo-frame id="message_1" data-controller="message">
-		<!-- render messages/message -->
-		
-	</turbo-frame>
+	- Notice the click->message#delete is a stimulus controller call
 
-	- When src is supplied, the frame will be populated after the initial page load via a separate HTTP request to the frame’s
+		==
+
+		<turbo-frame id="message_1" data-controller="message">
+			<!-- render messages/message -->		
+		</turbo-frame>
+
+	- When src is supplied, the frame will be populated after the initial page load via a separate HTTP request to the frame’s 
 	
-	<%= turbo_frame_tag "comments", src: comments_path  do %>
-	<% end %>
+		<%= turbo_frame_tag "messages", src: messages_path  do %>
+		<% end %>
 
-	= 
-	
-	<turbo-frame id="comments">
-	  <!-- A list of comments, perhaps -->
-	</turbo-frame>
+		= 
+		
+		<turbo-frame id="messages">
+		  <!-- A list of messages, perhaps -->
+		</turbo-frame>
 
-- Navigating within frames
+
+*- Navigating within frames
 
 	- By default, links and forms within a Turbo Frame will perform the navigation within the frame, rather than performing a full page turn.
 	
-	<% @comments do |comment| %>
-	  <%= turbo_frame_tag comment do %>
-		<div>
-		  <%= link_to comment.body, edit_comment_path(comment) %>	--> this will load the edit form of this comment and replace it with original content
-		</div>
-	  <% end %>
-	<% end %>
+		<% @messages do |message| %>
+		  <%= turbo_frame_tag message do %>
+			<div>
+			  <%= link_to message.body, edit_message_path(message) %>	--> this will load the edit form of this comment and replace it with original content
+			</div>
+		  <% end %>
+		<% end %>
 
-	=
-	
-	<turbo-frame id="comment_1">
-	  <div>
-		<a href="/comments/1/edit">Comment 1</a>
-	  </div>
-	</turbo-frame>
+		=
+		
+		<turbo-frame id="message_1">
+		  <div>
+			<a href="/messages/1/edit">Message 1</a>
+		  </div>
+		</turbo-frame>
 
 	- The Turbo Frame request is a normal HTML request with an additional Turbo-Frame header included in the request, with a value that matches the id of the target Turbo Frame.
 	- You can identify if the request coming from a frame
 	
-	if turbo_frame_request?
-	  render partial: "some_turbo_frame_partial"
-	else
-	  render partial: "some_other_partial"
-	end
+		if turbo_frame_request?
+		  render partial: "some_turbo_frame_partial"
+		else
+		  render partial: "some_other_partial"
+		end
 
-	- But it';s better to use the turbo_stream . variant to detect if request coming from a frame
-	
-    respond_to do |format|
-      format.turbo_stream do |variant|
-        variant.turbo_frame {
-          redirect_to messages_url, notice: "Message was successfully destroyed."
-        }
-        variant.none {
-          redirect_to messages_url, notice: "Message was successfully destroyed."
-        }
-      end	
-	.......
+	- But it''s better to use the turbo_stream . variant to detect if request coming from a frame (dealing with turbo_streams) - see conditional template rendering using variants
 
-
+    # When receving response  
 	# Here Turbo Drive will do it's job and replaces the content of the target frame, leaving the rest of the page untouched.
 
-	- The edit view could contain something like this
-	- this will replace the frame tag of the related comment id 
-	- notice the request was a normal get to edit page request
+	- The edit view could contain something like this.
 	
-	<%= turbo_frame_tag @comment do %>
-	  <%= form_with(model: @comment) do |form| %>
-		............
-	  <% end %>
-	<% end %>	
+		<%= turbo_frame_tag @message do %>
+		  <%= form_with(model: @message) do |form| %>
+			............
+		  <% end %>
+		<% end %>	
 
-	- From the server, you might redirect the user to the show page of the comment in the example
+	- This will replace the frame tag of the related comment id 
+	- Notice the request was a normal get to edit page request
+	
+		  # GET /messages/1/edit
+		  def edit
+		  end
+
+	- From the server, you might redirect the user to the show page of the comment in the example (Create / POST)
 	- When the request occurs within a Turbo Frame, a “redirect” still occurs, but rather than redirecting the page in the browser, the redirect is followed, the new HTML content is sent from the server, and that HTML is used to update the frame.
 	
-		format.html { redirect_to @comment }
-		
+		  # POST /messages or /messages.json
+		  def create
+			@message = Message.new(message_params)
+			respond_to do |format|
+			  if @message.save
+				format.html { redirect_to message_url(@message), notice: "Message was successfully created." }
+				format.json { render :show, status: :created, location: @message }
+			  else
+				format.html { render :new, status: :unprocessable_entity }
+				format.json { render json: @message.errors, status: :unprocessable_entity }
+			  end
+			end
+		  end	
+	
 	- Therefor the view page will look like this
 	
-	<%= turbo_frame_tag @comment do %>
-	  <div>
-		<%= link_to @comment.body, edit_comment_path(@comment) %>
-	  </div>
-	<% end %>	
+		<%= turbo_frame_tag @comment do %>
+		  <div>
+			<%= link_to @comment.body, edit_comment_path(@comment) %>
+		  </div>
+		<% end %>
+		
 
-- Breaking out of a frame	
+- Breaking out of a frame
 	
 	<%= link_to comment.body, edit_comment_path(comment), data: { turbo_frame: "_top" } %>
 	
+	<%= turbo_frame_tag 'new_search', target: '_top' do %>
+		<!-- any link inside will break the frame -->
+	<% end %>
+		
 - Targeting a frame from the outside
 
 	<a href="user/1/favorites" data-turbo-frame="main">
@@ -966,11 +962,507 @@ Turbo
 
 	Also, it will add a new attribute 'busy' while frame is loading, and rem,oved after done
 
+- Refreshing Frames
 
+	- In ideal circumstances, a Turbo Stream broadcast automatically updates the contents of the frame without needing a manual refresh, we don’t always get to work in ideal circumstances.
+	- In this example
+	
+	<%# app/views/games/show.html.erb %>
+	<%= turbo_frame_tag @game do %>
+	  <div><%= @game.home_score %></div>
+	  <div><%= @game.away_score %></div>
+	  <%= link_to "Update score", game_path(@game) %>
+	<% end %>
+	
+	- When you click update, the turbo-frame will be updated with an src like this:
+	
+	<turbo-frame id="game_10" reloadable="" src="http://localhost:3000/games/10">
+
+
+- Conditional template rendering using variants
+
+	- Now we need to understand the following:
+		- Incoming links and form submites (GET, DELETE, POST). 
+		- Are they within turbo_frame tag ? is the link turbo_link enabled / not, which target ? "data-turbo-frame": "_top" ?
+		- What respond_to will be used for each link type: html, json, turbo_stream
+		- what is the expected response: html page render / partial, redirect, turbo_stream inline, turbo_stream page ?
+	
+		* Note that this approach only works with form submissions with a method of POST, PUT, PATCH, or DELETE. By design, Not GET
+	
+	- As you use Turbo Frames in Rails, you’ll eventually run into the desire to have a single controller action respond to both Turbo Frame requests and regular, full-page requests.
+	- A common example of this is rendering a /new page as both a standalone page and as frame content inside of a modal. 
+	- You could implement a conditional in your controller action to check for the Turbo Frame header, but that quickly starts to clutter up your controllers.
+	
+	- An alternative approach is to use variants to render different content based on the inbound request headers, to keep your controllers cleaner.
+	
+		class ApplicationController < ActionController::Base
+			before_action :turbo_frame_request_variant
+
+			def destroy
+			
+				// destroy code here !!!
+			
+				respond_to do |format|
+					format.turbo_stream do |variant|
+						variant.turbo_frame {
+							######################## Case 1
+							# This shall render the turbo frame variant (delete.turbo_stream.erb)
+							# Other wise, it will look into the html version
+							# or you can simply redirect (make sure the requester is a button)
+							# turbo-frame variant redirect
+							redirect_to messages_url, notice: "Message was successfully destroyed."
+						}
+						variant.none {
+							######################## Case 2
+							# default redirect
+							redirect_to messages_url, notice: "Message was successfully destroyed."
+						}
+					end	
+					format.html {
+						######################## Case 3
+						redirect_to messages_url, notice: "Message was successfully destroyed.", status: 303
+					}
+				end
+			end
+			
+		  private
+
+		  def turbo_frame_request_variant
+			request.variant = :turbo_frame if turbo_frame_request?
+		  end
+		end	
+	
+	* tables and Turbo Frames don’t play well together out of the box.
+
+	- When DELETE for example
+	
+		- Redirect to the list page of items
+		- Or, remove the item from the current table (list) using turbo_streams (each row in the table is actually attached to a trubo_frame)
+		- We Have 
+
+		# Usinf delete button (with form)
+        <%= button_to "Delete btn turbo", @message, method: :delete, data: { :turbo_method => :delete, :action => "click->message#delete" }  %>
+        
+			- ### CASE 1
+			- turbo_frame_request? = true			
+			- Button with delete method will go as POST, with a payload : _method: delete			
+			- From Show Page (With Turbo Frame)
+			
+				- Response will be a trubo stream here, Redirect to list page won't work cuz no id matching .. 
+				- Responses for such cases should use the the trubo_stream response .. 
+				
+					- Remove the line od redirect
+					
+					respond_to do |format|
+					  format.turbo_stream do |variant|
+						variant.turbo_frame {
+						  # redirect_to messages_url, notice: "Message was successfully destroyed.", status: 303
+						}
+					
+					- Create a page with: destroy.turbo_stream.erb
+					- Add the logic (based on trubo streams to make the proper chnage you want .. maybe deleting the item from the list .. 
+				
+				- To fix this case, add target: "_top" in the turbo_frame surrounding the link, this will lead to ####### CASE 2 in controller
+			
+					<%= turbo_frame_tag @message, :data => {:controller => "message"}, target: "_top"  do %>
+        
+				Or, add turbo_frame => "_top" to link
+			
+					<%= button_to "Delete 1", @message, method: :delete, data: { :turbo_method => :delete, :action => "click->message#delete", :turbo_frame => "_top" }  %>
+        			
+			- However, since we are talking about a trubo_stream variant here .. if we remove the redirect link from controller .. it will 
+        
+			- From List Page (with Turbo Frame)
+				
+				- ## CASE 1
+				- with redirect_to messages_url, notice: "Message was successfully destroyed.", status: 303
+				- Once you put the list page within turbo_frame, taking in consideration replacing the list of course				
+				<%= button_to "Delete 1", message, method: :delete, data: { :turbo_method => :delete, :action => "click->messages#delete" }  %>
+
+				- With turbo_stream
+				- Sourround the index page with turb_from "messages"
+				- Remove the redirect and make sure to reload the @messages = Message.all
+				
+
+				- ## CASE 2
+				<%= link_to "Delete 2", message, method: :delete, data: {:turbo_method => :delete, :turbo_confirm => "Are you sure ?", :turbo_frame => "_top"}  %>
+
+				- ## CASE 3
+				<%= button_to "Delete 3", message, method: :delete, data: { :action => "click->messages#delete", :turbo => false }  %>
+        
+			- From List Page (Without Turbo Frame)        
+				
+				- ## CASE 2
+				<%= button_to "Delete 1", message, method: :delete, data: { :turbo_method => :delete, :action => "click->messages#delete" }  %>
+				<%= link_to "Delete 2", message, method: :delete, data: {:turbo_method => :delete, :turbo_confirm => "Are you sure ?", :turbo_frame => "_top"}  %>
+
+				- ## CASE 3
+				<%= button_to "Delete 3", message, method: :delete, data: { :action => "click->messages#delete", :turbo => false }  %>
+			
+
+		# Using a link with turbo helpers for method & confirm
+		<%= link_to "Delete 2", @message, method: :delete, data: {:turbo_method => :delete, :turbo_confirm => "Are you sure ?", :turbo_frame => "_top"}  %>
+
+			- ## CASE 2
+			- turbo_frame_request? = false
+			- THis will go to ## CASE 2 of course
+			- The link is using turbo helpers for method & confirm message
+			- We are using :turbo_frame => "_top" so the whole page will refresh since we are redirecting back to the list page
+			- Again, without :turbo_frame => "_top" .. this will make it goes to ## CASE 1 .. and this might not work in the show page but in the list page
+
+		# Using button, but without a trubo .. 
+        <%= button_to "Delete 3", @message, method: :delete, data: { :action => "click->message#delete", :turbo => false }  %>
+
+			- ## CASE 3
+			- turbo_frame_request? = false
+			- This is the easiest scenario, a simple redirect will do the job .. 
+
+
+		** Remember again 
+		* Note that this approach only works with form submissions with a method of POST, PUT, PATCH, or DELETE. By design, 
+		* GET requests and streams don’t interact.
+
+		* turbo_stream formats only used to make changes in the page, replacing a listof items could be the option, but also consider removing / replacing a row in the list for such scnarios
+		
+
+	
+- Responding to a Turbo Frame request without a matching Turbo Frame
+
+	- This will cause empty results .. look into javascript console
+	
+- Updating page URL when navigating within frame
+
+	<%= form_with url: customers_path, method: :get, data: { turbo_frame: "customers", turbo_action: "advance" } do |form| %>
+		<%# Some form content goes here %>
+	<% end %>
+	
+	
 
 
 - Turbo Streams: Deliver live page changes
 -------------------------------------------------------------------------
+
+- What’s a Turbo Stream?
+
+	- Streams allow you to send snippets of HTML to the browser to make small changes to the DOM in response to events that happen on the server.
+	- structure of response
+	
+		<turbo-stream action="action_to_take" target="element_to_update">
+		  <template>
+			<div id="element_to_update">
+			  <!-- Some more html -->
+			</div>
+		  </template>
+		</turbo-stream>
+			
+	- The <turbo-stream> element always includes an action, from the following possibilities:
+
+		append
+		prepend
+		before
+		after
+		replace
+		update
+		remove
+
+	- Turbo’s JavaScript processes these HTML snippets by reading the action and target from the stream tag and inserting (or removing) the wrapped HTML as appropriate.
+	- Turbo Streams can be sent in response to a direct request from a browser (like submitting a form) or broadcast to subscribers over a WebSocket connection.
+
+- Example
+
+	# players_controller.rb
+	  def create
+		@player = Player.new(player_params)
+
+		respond_to do |format|
+		  if @player.save
+			format.html { redirect_to @player, notice: "Player was successfully created." }
+			format.turbo_stream
+		  else
+			format.html { render :new, status: :unprocessable_entity }
+		  end
+		end
+	  end
+
+	# app/views/players/create.turbo_stream.erb
+	<%= turbo_stream.replace "players_form" do %>
+	  <%= render partial: "new_player" %>
+	<% end %>
+	  
+	=
+	
+	<turbo-stream action="replace" target="players_form">
+	  <template>
+		<!-- Content of new_player.html.erb partial -->
+		<turbo-frame id="players_form">
+		  <a href="/players/new">New Player</a>
+		</turbo-frame>
+	  </template>
+	</turbo-stream>
+		
+* Note that this approach only works with form submissions with a method of POST, PUT, PATCH, or DELETE. By design, 
+* GET requests and streams don’t interact.
+
+- Rendering inline
+
+	format.turbo_stream { render turbo_stream: turbo_stream.replace('players_form', partial: 'new_player') }
+
+- Updating multiple elements at once
+
+	create.turbo_stream.erb:
+	
+		<%= turbo_stream.replace "players_form" do %>
+		  <%= render partial: "new_player" %>
+		<% end %>
+		<%= turbo_stream.append "players" do %>
+		  <%= render partial: "player", locals: { player: @player } %>
+		<% end %>
+  
+	- If you really dislike creating turbo_stream templates, you can also render multiple Streams inline in the controller like this:
+	
+		format.turbo_stream do
+		  # Pass an array of turbo_streams to the render call
+
+		  render turbo_stream: 
+			[
+			  turbo_stream.replace('players_form', partial: 'new_player'),
+			  turbo_stream.append('players', partial: 'player', locals: { player: @player })
+			]
+		end
+	
+	
+- @message with replies
+
+	- In the same page where we view the @messages .. we have also out of the turbo_frame of the @message
+	
+	  <div class="p-6 bg-white shadow rounded-lg mt-2 mb-2">
+		<div id="replies">
+		  <%= render @message.replies %>								# each reply will be inside a tag with id (reply_1 .. ) this will be used later with broadcast changes
+		  </div>
+		</div>
+
+	  <%#= link_to "New Reply", new_message_reply_path(@message) %>
+	  <%= turbo_frame_tag "new_reply", src: new_message_reply_path(@message)   %>
+	
+	- So, when ever we create a reply .. we have in the replies controller:
+	
+		format.turbo_stream
+		
+	- which will lead to create.turbo_stream.erb:
+	
+		<%= turbo_stream.append "replies", @reply %>					# this to append a reply view to replies div
+		<%= turbo_stream.update("replies_errors", "")  %>				# this will show any errors (in case we have errors block, see next secion (with errors))
+		<%= turbo_stream.replace "new_reply", template: "replies/new", locals: { reply: @message.replies.new} %>	# this will return back the new reply form but empty
+
+
+	- Notice, the state of replies are totally separate of the @message view which is displied within it's own turbo_frame
+	- Therefor @message can update on spot with affectin also the replies state 
+	
+- With errors
+	
+	- If the object is not saved due to error
+	
+		format.turbo_stream { render :replies_errors }						# 
+
+	replies_errors.turbo_stream.rb:
+	
+		<%= turbo_stream.update "replies_errors", partial: "replies/replies_errors" %>
+
+	replies/_replies_errors.html.erb
+	
+		<div class="p-6 bg-red-100 shadow rounded-lg mt-2 mb-2">
+		  <div style="color: red">
+		  <h2><%= pluralize(@reply.errors.count, "error") %> prohibited this message from being saved:</h2>
+		  <ul>
+			<% @reply.errors.each do |error| %>
+			  <li><%= error.full_message %></li>
+			<% end %>
+		  </ul>
+		</div>
+		</div>
+
+	- In the new section of the reply
+	
+	  <div id="replies_errors">
+      </div>
+  
+	- Or, you can render back the same new page
+	
+		format.turbo_stream { # route turbo validation errors
+          render turbo_stream: turbo_stream.replace(
+            "new_reply", template: "replies/new",
+            locals: { reply: @reply})
+        }
+
+		# this will replace the page with the same code along with error messages .. 
+	
+		<% if defined?(reply)
+		 @reply = reply
+		 end
+		%>
+		<%= turbo_frame_tag "new_reply" do %>
+		  <div class="p-6 bg-white shadow rounded-lg">
+			<div id="replies_errors">
+			</div>
+			<%= render 'replies/form', reply: @reply %>
+			<%#= link_to "Back", @reply.message %>
+		  </div>
+		<% end %>
+	
+  
+  
+
+- Broadcasting changes
+
+	- In the page where it hold the @messages and replies section (where it will be updated automatically)
+	
+	<%= turbo_stream_from @message %>
+	
+	=
+	
+	<turbo-cable-stream-source channel="Turbo::StreamsChannel" signed-stream-name="IloybGtPaTh2Y21GcGJITTNaUzlOWlhOellXZGxMekUzIg==--41b4285a77e09be30000329a49f07929641d128f8e0102af3613487719c29405"></turbo-cable-stream-source>
+	
+	- Now, where ever there is a new reply for this @message .. just broadcast the change from the reply model
+	
+		reply.rb:
+		
+			after_create_commit -> {broadcast_append_to message }		# message is the parent instance message of this reply
+	
+	- When you refresh the page, notice in networking the request: cable and see messages
+	
+		{
+			"type": "ping",
+			"message": 1646938077
+		}
+	
+		- So, if there is a new reply
+		
+		{
+			"identifier": "{\"channel\":\"Turbo::StreamsChannel\",\"signed_stream_name\":\"IloybGtPaTh2Y21GcGJITTNaUzlOWlhOellXZGxMekUzIg==--41b4285a77e09be30000329a49f07929641d128f8e0102af3613487719c29405\"}",
+			"message": "<turbo-stream action=\"append\" target=\"replies\"><template><p id=\"reply_139\">\n  <span class=\"px-2 py-1 rounded-lg mb-1 inline-block bg-gray-200\">10 Mar 18:49</span> ssdsdsd\n</p></template></turbo-stream>"
+		}
+	
+	- Once you have the cable ready .. you don't need to append the reply as a turbo_stream
+	
+		<%#= turbo_stream.append "replies", @reply %>
+	
+	- You can apply that also when you destroy a reply .. it will be removed also .. notice 
+	
+		after_create_commit -> { broadcast_append_to message }
+		after_destroy_commit -> { broadcast_remove_to message }
+		after_update_commit -> { broadcast_replace_to message }			
+		
+		# message here is the channel name, this could be a string
+		# To change the room name to a string, make sure to use the same string in 
+		# 	<%= turbo_stream_from "string" %>
+		# since this is inside reply model, the target will go to id="replies"
+		# And the partial replies/_reply will be used to render the results
+
+		- To change the target
+		
+		after_create_commit { broadcast_append_to(message, target: 'replies') }
+
+		- to change the partial to render
+		
+		after_create_commit { broadcast_append_to(message, partial: 'a_special_reply') }
+
+		# Try that from the console
+		> Message.find(17).replies.first.destroy
+		> Message.find(17).replies.first.update({:content => "ggggggggggggggggggggggggggggg"})
+
+	- In order to use the JobQueue for broadcasted messages
+	- broadcast_action_to vs. broadcast_action_later_to
+
+		after_create_commit -> { broadcast_append_later_to message }
+		
+		# All commits can be replaced by a single broadcast
+		# this will be queued by default
+		
+		broadcasts_to :message
+
+		# it's recommended to use creation as job, but not for deletion or updating .. 
+		
+		
+	- Broadcasting from a controller
+	
+		@reply.broadcast_append_later_to(@reply.message)
+		
+	- More magical methods
+	- If you are dealing with the same model and it's view page ... (not using scopes as message / replies example above)
+	
+		message.rb:
+		
+			after_update_commit { broadcast_replace }
+			Or
+			broadcasts_to ->(_) { 'messages' }
+
+		_message.html.erb:
+
+			<%= turbo_stream_from @message %>
+
+		- and there for .. If we’re using the model instance as the stream name
+
+		message.rb:
+		
+			broadcasts
+ 
+- Turbo streams don’t need turbo frames
+
+	- Be careful, streams don't care about frames
+
+
+
+
+
+
+- Turbo Events
+
+(Note that when using jQuery, the data on the event must be accessed as $event.originalEvent.detail.)
+
+    turbo:click fires when you click a Turbo-enabled link. The clicked element is the event target. Access the requested location with event.detail.url. Cancel this event to let the click fall through to the browser as normal navigation.
+
+    turbo:before-visit fires before visiting a location, except when navigating by history. Access the requested location with event.detail.url. Cancel this event to prevent navigation.
+
+    turbo:visit fires immediately after a visit starts. Access the requested location with event.detail.url and action with event.detail.action.
+
+    turbo:submit-start fires during a form submission. Access the FormSubmission object with event.detail.formSubmission.
+
+    turbo:before-fetch-request fires before Turbo issues a network request to fetch the page. Access the requested location with event.detail.url and the fetch options object with event.detail.fetchOptions. This event fires on the respective element (turbo-frame or form element) which triggers it and can be accessed with event.target property. Request can be canceled and continued with event.detail.resume (see Pausing Requests).
+
+    turbo:before-fetch-response fires after the network request completes. Access the fetch options object with event.detail. This event fires on the respective element (turbo-frame or form element) which triggers it and can be accessed with event.target property.
+
+    turbo:submit-end fires after the form submission-initiated network request completes. Access the FormSubmission object with event.detail.formSubmission along with FormSubmissionResult properties included within event.detail.
+
+    turbo:before-cache fires before Turbo saves the current page to cache.
+
+    turbo:before-render fires before rendering the page. Access the new <body> element with event.detail.newBody. Rendering can be canceled and continued with event.detail.resume (see Pausing Rendering).
+
+    turbo:before-stream-render fires before rendering a Turbo Stream page update.
+
+    turbo:render fires after Turbo renders the page. This event fires twice during an application visit to a cached location: once after rendering the cached version, and again after rendering the fresh version.
+
+    turbo:load fires once after the initial page load, and again after every Turbo visit. Access visit timing metrics with the event.detail.timing object.
+
+    turbo:frame-render fires right after <turbo-frame> element renders its view. The specific <turbo-frame> element is the event target. Access the FetchResponse object with event.detail.fetchResponse property.
+
+    turbo:frame-load fires when <turbo-frame> element is navigated and finishes loading (fires after turbo:frame-render). The specific <turbo-frame> element is the event target.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1240,3 +1732,13 @@ Which is rendered by calling:
 # https://primer.style/view-components/components/menu#url
 
 #* https://github.com/joshleblanc/view_component_reflex
+
+	
+
+
+
+
+
+
+
+

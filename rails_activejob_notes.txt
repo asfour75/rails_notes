@@ -23,6 +23,7 @@ Concepts
 	GuestsCleanupJob.perform_later(guest1, guest2, filter: 'some_filter')
 
 # Active Job has built-in adapters for multiple queuing backends:
+
 	- Sidekiq	# https://github.com/mperham/sidekiq/wiki/Active-Job
 	- Resque	# https://github.com/resque/resque/wiki/ActiveJob
 	- Sneakers	# https://github.com/jondot/sneakers/wiki/How-To:-Rails-Background-Jobs-with-ActiveJob

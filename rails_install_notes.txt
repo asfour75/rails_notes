@@ -292,7 +292,6 @@ try passing them all to `bundle update`
 
 
 
-
 Rails new 7 (esbuild) + Propshaft
 ===========================================================================================
 
@@ -312,6 +311,32 @@ Rails new 7 (esbuild) + Propshaft
 
 
 
+Github
+===========================================================================================
+- Prepare your account
+- create an access token (full) 	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
+- Install gh CLI from: https://docs.github.com/en/github-cli/github-cli/about-github-cli
 
+> gh auth login
+
+	- github.com
+	- pick SSH (make sure you have your public key on github) : https://github.com/settings/keys
 	
+
+> gh repo create
+
+	- new repo / or use local git ready ?
+	- .
+	- repo name
+	- public / private
+
+- Add the remote
+
+	- git remote add origin git@github.com:asfour75/rails7e.git
 	
+
+
+
+
+
+

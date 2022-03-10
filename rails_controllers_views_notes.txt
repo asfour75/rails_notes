@@ -879,6 +879,10 @@ Sending & Renders & Redirects & Templates & Layouts & Partials
 	<%= link_to 'Display a name', home_test_path(format: :js), local: false %>
 
 
+	- To render js.erb directly 
+	
+	<%= render :template => "classrooms/create_differently.js.erb", :layout => false, formats: :js, locals: { reply: "some" } %>
+
 
 - with layouts
 
@@ -1651,14 +1655,21 @@ Links
 
 - Error messages
 
+	<%= model.errors.any? %>	
 
-	  <div>
+	message.errors = #<ActiveModel::Errors [#<ActiveModel::Error attribute=message, type=blank, options={}>]>	
+
+	- check if certain fiel;d has error
+	
+	message.errors[:message]	= []	if empty ... check if [].empty? or [].size > 0
+
+	<div>
 		<%= form.label :title %><br>
 		<%= form.text_field :title %>
 		<% @article.errors.full_messages_for(:title).each do |message| %>
 		  <div><%= message %></div>
 		<% end %>
-	  </div>
+	</div>
 
 
 

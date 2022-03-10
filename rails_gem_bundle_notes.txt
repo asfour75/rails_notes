@@ -1,12 +1,369 @@
-Gem & Bundles
+Gem 
 ========================================================================
-	- Now, To Check the code of any gem, 
 
-		> bundle open jquery-rails
+# https://guides.rubygems.org/make-your-own-gem/
 
-	To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
+My First Gem
+------------------------------------------------------------------------
 
-		> bundle exec rake routes
+	> mkdir hola
+	> cd hola
+
+	> tree
+	.
+	├── hola.gemspec
+	└── lib
+		└── hola.rb
+
+	hola.rb:
+
+		class Hola
+		  def self.hi
+			puts "Hello world!"
+		  end
+		end
+
+	hola.gemspec:
+
+		Gem::Specification.new do |s|
+			s.name        = 'hola'
+			s.version     = '0.0.0'
+			s.summary     = "Hola!"
+			s.description = "A simple hello world gem"
+			s.authors     = ["Nick Quaranto"]
+			s.email       = 'nick@quaran.to'
+			s.files       = ["lib/hola.rb"]
+			s.homepage    = 'https://rubygems.org/gems/hola'
+			s.license     = 'MIT'
+		  
+			s.default_executable = "hola"
+			s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
+			s.date = %q{2010-04-03}
+			s.test_files = ["test/test_hola.rb"]
+			s.require_paths = ["lib"]
+			s.rubygems_version = %q{1.6.2}
+			
+			if s.respond_to? :specification_version then
+				s.specification_version = 3
+				if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
+				else
+				end
+			else
+			end
+		  
+		end
+
+	> gem build hola.gemspec
+
+	  Successfully built RubyGem
+	  Name: hola
+	  Version: 0.0.0
+	  File: hola-0.0.0.gem
+
+	> gem install ./hola-0.0.0.gem
+	> irb
+
+		> require 'hola'
+		> Hola.hi
+	
+- Publish your gem
+------------------------------------------------------------------------
+
+- Requiring more files
+------------------------------------------------------------------------
+
+	% tree
+	.
+	├── hola.gemspec
+	└── lib
+		├── hola
+		│   └── translator.rb
+		└── hola.rb	
+
+	> vim lib/hola.rb
+	
+		class Hola
+		  def self.hi(language = "english")
+			translator = Translator.new(language)
+			translator.hi
+		  end
+		end
+
+		require 'hola/translator'		
+
+	> vim lib/hola/translator.rb
+
+		class Hola::Translator
+		  def initialize(language)
+			@language = language
+		  end
+
+		  def hi
+			case @language
+			when "spanish"
+			  "hola mundo"
+			else
+			  "hello world"
+			end
+		  end
+		end
+
+	> vim hola.gemspec
+	
+		s.files       = ["lib/hola.rb", "lib/hola/translator.rb"]
+
+	> irb -Ilib -rhola			# -I : $LOAD_PATH
+	
+		> Hola.hi("english")
+
+		
+- Adding an executable
+------------------------------------------------------------------------
+
+	% mkdir bin
+	% touch bin/hola
+	% chmod a+x bin/hola
+
+	bin/hola:
+
+		#!/usr/bin/env ruby
+
+		require 'hola'
+		puts Hola.hi(ARGV[0])	
+
+	> ruby -Ilib ./bin/hola
+		
+		hello world
+
+	- Finally, to get Hola’s executable included when you push the gem, you’ll need to add it in the gemspec.
+	
+		s.version     = '0.0.1'
+		s.executables << 'hola'
+
+
+- Adding test
+------------------------------------------------------------------------
+- Using Minitest
+	
+	> vim Rakefile
+	
+		require 'rake/testtask'
+
+		Rake::TestTask.new do |t|
+		  t.libs << 'test'
+		end
+
+		desc "Run tests"
+		task :default => :test		
+	
+	> mkdir test
+	
+	> vim test/test_hola.rb
+
+		require 'minitest/autorun'
+		require 'hola'
+
+		class HolaTest < Minitest::Test
+		  def test_hello
+			assert_equal "Hello world!", Hola.hi
+		  end
+		end
+
+	> rake test
+	
+		Run options: --seed 37872
+
+		# Running:
+
+		.
+
+		Finished in 0.003306s, 302.4847 runs/s, 302.4847 assertions/s.
+
+		1 runs, 1 assertions, 0 failures, 0 errors, 0 skips
+	
+- Documentation
+	
+	# https://yardoc.org/
+	
+	- By default most gems use RDoc to generate docs.
+	
+	# The main Hola driver
+	class Hola
+	  # Say hi to the world!
+	  #
+	  # Example:
+	  #   >> Hola.hi("spanish")
+	  #   => hola mundo
+	  #
+	  # Arguments:
+	  #   language: (String)
+
+	  def self.hi(language = "english")
+		translator = Translator.new(language)
+		puts translator.hi
+	  end
+	end
+
+
+- Add external dependency
+
+	s.add_dependency "activesupport"
+
+
+
+
+
+Bundler
+========================================================================
+
+Bundler:
+
+	- Bundler is a dependency management tool available as a gem. 
+	
+		> gem install bundler
+		
+		- specify your dependencies in a Gemfile\
+		
+		source 'https://rubygems.org'
+		gem 'nokogiri'
+		gem 'rack', '~> 2.0.1'
+		gem 'rspec'
+
+		> bundle install
+		> git add Gemfile Gemfile.lock
+		
+		
+	
+	- You can install it through RubyGems which comes built-in from Ruby 1.9 with gem install bundler. 
+	- Bundler will read the Gemfile for the list of gems need to be installed, fetches metadata from the source provided, resolves the dependencies of each gem, installs them and requires them while booting. 
+	- Without bundler, we need to handle the installation and manage the dependencies manually.
+	
+
+Gemfile:
+
+	- Gemfile is a ruby file. 
+	- You can specify the gem dependencies of the project in Gemfile. 
+	- During the gem installation and while auto requiring the gems, bundler will search for the Gemfile under the directory mentioned by the environment variable BUNDLE_GEMFILE or at the root of the project directory.
+
+	- Bundler provides a utility called bundle init which creates a simple Gemfile on the current working directory with default source as RubyGems. 
+	- By default a new rails application ships with Gemfile along with the default gems.
+
+Gemfile.lock:
+
+	- Bundler will create a file called Gemfile.lock with the list of the gems installed along with versions of the installed gems. 
+	- Next time when you run bundle install, bundler will read the Gemfile.lock and install the exact same versions of the gems listed on Gemfile.lock. 
+	- This makes sure that the application runs with the same version of the gems in all the environments.
+
+Groups:
+
+	- By default, bundler will install the gems listed in all the groups. 
+	- You can override it by passing the option without. 
+	- It accepts the list of groups to exclude from the installation. 
+	- Please note that bundler will only skip the installation of the gems. 
+	- It will still download the gems to exactly resolve the dependencies of the gems listed in the Gemfile. 
+
+		group :development do     
+		   gem 'spring' 
+		end 
+
+		gem 'rails', '5.2.3'
+
+	- For example, bundle install –without test will exclude installing the gems from the test group. 
+	- It will create a file called config under the directory root of the app/.bundle to remember the option. 
+	- The next time when you bundle install without the without option, bundler will still remember the option from the config file.
+
+		.bundle/config
+
+		 ---
+		 BUNDLE_WITHOUT: "test"
+
+Versioning gems:
+
+	Patch – 0.0.X – Includes bug fixes, All the features worked on v0.0.1 will also work on v0.0.2
+	Minor – 0.X.0 – Includes additional features, All the features worked on v0.1.0 will also work on v0.2.0
+	Major – X.0.0 – Includes breaking changes, Some of the features worked on v1.0.0 may break on version v2.0.0
+
+	gem ‘factory_bot_rails‘, ‘>= 4.0‘ – Specifies any of the gems greater than or equal to version 4.0 can be installed.
+	gem ‘rails‘, ‘~> 4.2.0‘ allows installation of rails gem with version ‘>= 4.2.0‘ and ‘< 4.3.x‘.
+	
+require:
+
+	- The require method allows the file to be executed only once. 
+	- It works with the help of global variables $LOAD_PATH(simply $:) and $LOADED_FEATURES.
+	
+	$LOAD_PATH  => ["/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/gems/2.6.0/gems/did_you_mean-1.3.0/lib", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/site_ruby/2.6.0", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/site_ruby/2.6.0/x86_64-linux", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/site_ruby", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/vendor_ruby/2.6.0", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/vendor_ruby/2.6.0/x86_64-linux", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/vendor_ruby", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/2.6.0", "/home/isalem/.rvm/rubies/ruby-2.6.5/lib/ruby/2.6.0/x86_64-linux"]
+
+	- You can always push a new folder for searching 
+	
+		$LOAD_PATH << '/Users/gomathi/Documents/Projects/Project/TestApp/'
+
+	$LOADED_FEATURES => ["enumerator.so", "thread.rb", "rational.so", "complex.so" ....
+
+	test.rb:
+
+		p 'Hello World'
+	
+	> irb
+		> require './test'
+		"hello world"
+		=> true 
+
+		> $LOADED_FEATURES
+		$LOADED_FEATURES => ["enumerator.so", ........ , "/home/isalem/Projects/bookshelf/test.rb"]
+
+
+- Bundler uses the same process for requiring the gems. 
+- During the initialisation process of Rails app bundler loads boot.rb and application.rb.
+
+	boot.rb:
+	
+		require 'bundler/setup'	# adds the paths provided on require_paths option of the gemspec(which defaults to lib directory) of gems listed in the Gemfile to $LOAD_PATH.
+								# Hence the gem files can be required without the need for specifying the absolute path of each file. 
+								# 
+	
+	application.rb:
+	
+		Bundler.require(:default, Rails.env)
+
+	- The next step Bundler.require accepts an array of groups for auto requiring. 
+	It then requires the gems along with their dependencies on the specified groups using ruby’s built-in require method. 
+	It eliminates the need for manually requiring the gems.
+
+What does require: false do?
+
+	gem ‘rubocop’, require: false
+	
+	The require: false after the gem name instructs bundler to not to auto require the gem. Please note that the bundler will still add the gem to $LOAD_PATH. You can manually require the gem whenever required using require ‘gem_name’. 
+
+
+
+Create a gem via bunlder
+--------------------------------------------------------------------------------
+# https://bundler.io/v2.3/guides/creating_gem.html
+
+	> bundle gem foodie
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -29,4 +386,10 @@ Ops
 
 
 
+	- Now, To Check the code of any gem, 
 
+		> bundle open jquery-rails
+
+	To open a bundled gem, set $EDITOR or $BUNDLER_EDITOR
+
+		> bundle exec rake routes
