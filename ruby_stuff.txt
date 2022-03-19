@@ -186,7 +186,7 @@ Hashes & Arrays
 
 Arrays
 ------
-array = [1, 2, 3]
+	array = [1, 2, 3]
 
 	array.each { |item| print “-#{item}-” }
 	-1–2–3-
@@ -229,11 +229,17 @@ Creating An Array Of Symbols
 	
 Similar to the string version %w:
 
-	strings = %w(a b c)
+	strings = %w(a b c)	# also %w[a b c]
 	["a", "b", "c"]
 	
 	
+More array methods
+
+
+	[1,2,3].all? {|i| i>2}	# false
+	[1,2,3].all? {|i| i<4}	# true
 	
+	[1,2,3].any? {|i| i>2}	# true
 	
 	
 
@@ -480,7 +486,9 @@ OpenStruct
 
 Controls & Loops
 ========================================================================
+
 - loops
+
 - if / switches
 
 	tv_show = "Bob's Burgers"
@@ -517,7 +525,7 @@ Controls & Loops
 	 
 	# In this example, since the original value of boyfriend is set to nil which is nothing, Ruby assigns it a value of "Jimmy Jr." on the following line. Once boyfriend holds this real value, another reassignment is overlooked by Ruby and the previous value holds.
 
-- Ruby .push Method Alternative
+- Ruby .push Method Alternative (arrays, string)
 
 	array = [1, 2, 3]
 	array << 4
@@ -528,7 +536,6 @@ Controls & Loops
 	#Output => Hello, welcome to Codecademy.
 
 - Ruby “next” Keyword
-
 
 	for i in 1..10
 	  next if i % 2 == 0
@@ -542,7 +549,24 @@ Controls & Loops
 	5.times { puts ""Codecademy"" }
 
 - Ruby while Loop
+
+	a = 0
+	while a < 5 do
+		# do something
+		a += 1
+	end
+
 - Ruby Range
+
+	(-1..-5).to_a      #=> []
+	(-5..-1).to_a      #=> [-5, -4, -3, -2, -1]
+	('a'..'e').to_a    #=> ["a", "b", "c", "d", "e"]
+	('a'...'e').to_a   #=> ["a", "b", "c", "d"]
+
+
+
+
+
 - Ruby loop
 - Ruby until Loop
 - Ruby for Loop
@@ -797,10 +821,13 @@ Modules
 	Object.new.puts "hello world!" # NoMethodError
 
 
-include & extend
+(Mixins) include & extend
 ======================================================================================
 
-* In simple words, the difference between include and extend is that ‘include’ is for adding methods only to an instance of a class and ‘extend’ is for adding methods to the class but not to its instance.
+* In simple words, the difference between include and extend is that:
+
+	- ‘include’ is for adding methods only to an instance of a class
+	- ‘extend’ is for adding methods to the class but not to its instance.
 
 
 	# Creating a module contains a method
@@ -832,25 +859,26 @@ include & extend
 	# module consist 2 methods
 	module G
 		def g1
-	   end
-	   def g2
-	   end
+		end
+		def g2
+		end
 	end
 	  
 	# module consist 2 methods
 	module GFG
-	   def gfg1
-	   end
-	   def gfg2
-	   end
+		def gfg1
+		end
+		def gfg2
+		end
 	end
 	  
 	# Creating a class
 	class GeeksforGeeks
-	include G
-	include GFG
-	   def s1
-	   end
+		include G
+		include GFG
+		
+		def s1
+		end
 	end
 	  
 	# Creating object
@@ -867,6 +895,8 @@ include & extend
 
 	- Polymorphism using inheritance (class Car < Vehicle ... override same emthod)
 	- Polymorphism using Duck-Typing (pass class object to method --> delegate)
+
+
 
 - Variable Number of Parameters
 
@@ -929,7 +959,7 @@ include & extend
 	# if we extend instead of include, the go method will be part of the class, not object
 	# and then you can't use instant variables (v) .. 
 
-	B.go
+	B.go	--> doesn't work
 
 
 - letting the module once its included
@@ -968,6 +998,235 @@ include & extend
 	b.class_method	# 2 ....
 	B.class_method	# C : ....
 	B.class_method2 # 3...
+
+
+
+So, mixins or Inheritance ?
+------------------------------------------------------------------------
+- In fact, mixed-in modules effectively behave as superclasses."
+- In inheritance, parent class have no clue what are the child classes !!! unlike module mixins, you can sneak access to the includer, check for some functions, add function or override existing ones
+
+
+decorators (class_eval, prepend)
+========================================================================
+
+- decorator: Attach additional responsibilities to an object dynamically. 
+- Decorators provide a flexible alternative to subclassing for extending functionality.
+- But it's not inheritance :) cuz The problems with inheritance include:
+
+	- Choices are made statically.
+	- Clients can’t control how and when to decorate a component.
+	- Tight coupling.
+	- Changing the internals of the superclass means all subclasses must change.
+
+	* remember .. In Ruby, including a module is also inheritance
+
+- Four common implementations of decorators in Ruby:
+
+	- Module + Extend + Super decorator
+	- Plain Old Ruby Object decorator
+	- Class + Method Missing decorator
+	- SimpleDelegator + Super + Getobj decorator
+
+
+- Prepending is when we take a bit of code and we put it in front of the original:
+- A class_eval monkey-patching pattern with prepend
+
+- prepend
+
+	module Talkable
+	  def talk; "Hi there!" end
+	end
+
+	class Lemur
+	  # include Talkable
+	  prepend Talkable	<------ this will put talk method of Talkable first
+
+	  def talk; "I wasn't expecting you today" end	<-- will be called first without prepend
+	end
+
+	Lemur.new.talk
+	# => "Hi there!"
+
+- when using super !!
+
+	module Talkable
+	  def talk; "Hi there! #{super}" end	<----- call talk from Lemur
+	end
+
+	class Lemur
+	  prepend Talkable
+
+	  def talk; "I wasn't expecting you today" end
+	end
+
+	Lemur.new.talk
+	# => "Hi there! I wasn't expecting you today"
+
+
+
+- prepended self
+****************
+
+	# this is the original class ... it could be any core class in rails for example
+	
+	class Rubyist
+		attr_accessor :b
+		@@a = 1
+		def initialize
+			@b = 2
+		end
+		def self.set_a(x)
+			@@a = x
+		end
+		def self.get_a
+			return a
+		end
+		def method(number)
+			return number * @@a;
+		end
+	end
+
+	module A
+		module B
+			def method(number)
+				return number * super	# this will call 4 * super.method = 4 * 4 * 10
+			end
+			def self.prepended(base)
+				# notice here, only class method can be be used, or you can call or include other classes, scope, relations .. etc
+				base.set_a(10)	# will set @aa to 10
+				
+				# maybe this
+				base.class_eval do
+					include Bla	<--------- see this, we are including another module methods
+				end
+			end
+			
+			Rubyist.prepend self
+			# ::Spree::Order.prepend self	-- 
+		end
+	end
+
+	puts Rubyist.new.method(4) --> 160
+
+
+	
+
+- class_eval ?
+
+	# class_eval is used for adding methods and attributes to an existing class.
+
+	array_second = <<-RUBY
+	def second
+	  self[1]
+	end
+	RUBY
+	
+	Array.class_eval(array_second)	<--------
+	
+	String.class_eval do	<-------
+	  def /(delimiter)
+		split(delimiter)
+	  end
+	end
+	
+	$> [1,2,3].second
+	 => 2
+	$> "1,2,3" / ','
+	  => ["1", "2", "3"]
+
+- module_eval
+
+	# In effect, class_eval is an alias for module_eval.
+	# module_eval is the equivalent of Module#class_eval for modules
+
+	module Commentable
+	  def add_comment(comment)
+		self.comments << comment
+	  end
+	  def comments
+		@comments ||= []
+	  end
+	end
+
+	Commentable.module_eval do
+	  def comment_count
+		comments.count
+	  end
+	end
+
+	class Post
+	  include Commentable
+	end
+
+	$> post = Post.new
+	 => #<Post:0x00007fd9ac0238b0> 
+	$> post.add_comment("Very nice !")
+	 => ["Very nice !"] 
+	$> post.comment_count
+	 => 1
+
+- class_eval example (rails)
+
+	# there is a class Spree::Model
+	# then create a file spree/model_decorator.rb
+	
+		Spree::Model.class_eval do
+			include ... stuff
+			def method
+				# bla bla bla
+			end
+		end
+
+- Module + extend + super decorator
+
+	class Coffee
+	  def cost
+		2
+	  end
+	end
+
+	module Milk
+	  def cost
+		super + 0.4			# this will call the super (2) + 0.4
+	  end
+	end
+
+	coffee = Coffee.new
+	coffee.extend(Milk)
+	coffee.cost   # 2.4
+
+
+- The “Plain Old Ruby Object” (PORO) decorator
+
+	class Coffee
+	  def cost
+		2
+	  end
+	end
+
+	class Milk
+	  def initialize(component)
+		@component = component
+	  end
+
+	  def cost
+		@component.cost + 0.4
+	  end
+	end
+
+	coffee = Coffee.new
+	puts Milk.new(Milk.new(coffee)).cost  # 2.8
+
+
+
+
+
+
+
+
+
+
 
 
 Blocks
@@ -1266,207 +1525,6 @@ Meta Programming
 	
 
 
-decorators (class_eval, prepend)
-========================================================================
-
-- decorator: Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality.
-- But it's not inheritance :) cuz The problems with inheritance include:
-
-	- Choices are made statically.
-	- Clients can’t control how and when to decorate a component.
-	- Tight coupling.
-	- Changing the internals of the superclass means all subclasses must change.
-
-	* remember .. In Ruby, including a module is also inheritance
-
-- Four common implementations of decorators in Ruby:
-
-	- Module + Extend + Super decorator
-	- Plain Old Ruby Object decorator
-	- Class + Method Missing decorator
-	- SimpleDelegator + Super + Getobj decorator
-
-
-
-- Prepending is when we take a bit of code and we put it in front of the original:
-- A class_eval monkey-patching pattern with prepend
-
-- prepend
-
-	module Talkable
-	  def talk; "Hi there!" end
-	end
-
-	class Lemur
-	  # include Talkable
-	  prepend Talkable	<------ this will put talk method of Talkable first
-
-	  def talk; "I wasn't expecting you today" end	<-- will be called first without prepend
-	end
-
-	Lemur.new.talk
-	# => "Hi there!"
-
-- when using super !!
-
-	module Talkable
-	  def talk; "Hi there! #{super}" end	<----- call talk from Lemur
-	end
-
-	class Lemur
-	  prepend Talkable
-
-	  def talk; "I wasn't expecting you today" end
-	end
-
-	Lemur.new.talk
-	# => "Hi there! I wasn't expecting you today"
-
-
-- prepended
-
-	class Rubyist
-		attr_accessor :b
-		@@a = 1
-		def initialize
-			@b = 2
-		end
-		def self.set_a(x)
-			@@a = x
-		end
-		def self.get_a
-			return a
-		end
-		def method(number)
-			return number * @@a;
-		end
-	end
-
-	module A
-		module B
-			def method(number)
-				return number * super	# this will call 4 * super.method = 4 * 4 * 10
-			end
-			def self.prepended(base)
-				# notice here, only class method can be be used, or you can call or include other classes, scope, relations .. etc
-				base.set_a(10)	# will set @aa to 10
-				
-				# maybe this
-				base.class_eval do
-					include Bla	<--------- see this
-				end
-			end
-			Rubyist.prepend self
-		end
-	end
-
-	puts Rubyist.new.method(4) --> 160
-
-- class_eval ?
-
-	# class_eval is used for adding methods and attributes to an existing class.
-
-	array_second = <<-RUBY
-	def second
-	  self[1]
-	end
-	RUBY
-	
-	Array.class_eval(array_second)	<--------
-	
-	String.class_eval do	<-------
-	  def /(delimiter)
-		split(delimiter)
-	  end
-	end
-	
-	$> [1,2,3].second
-	 => 2
-	$> "1,2,3" / ','
-	  => ["1", "2", "3"]
-
-- module_eval
-
-	# In effect, class_eval is an alias formodule_eval.
-	# module_eval is the equivalent of Module#class_eval for modules
-
-	module Commentable
-	  def add_comment(comment)
-		self.comments << comment
-	  end
-	  def comments
-		@comments ||= []
-	  end
-	end
-
-	Commentable.module_eval do
-	  def comment_count
-		comments.count
-	  end
-	end
-
-	class Post
-	  include Commentable
-	end
-
-	$> post = Post.new
-	 => #<Post:0x00007fd9ac0238b0> 
-	$> post.add_comment("Very nice !")
-	 => ["Very nice !"] 
-	$> post.comment_count
-	 => 1
-
-- class_eval example (rails)
-
-	# there is a class Spree::Model
-	# then create a file spree/model_decorator.rb
-	
-		Spree::Model.class_eval do
-			include ... stuff
-			def method
-				# bla bla bla
-			end
-		end
-
-- Module + extend + super decorator
-
-	class Coffee
-	  def cost
-		2
-	  end
-	end
-
-	module Milk
-	  def cost
-		super + 0.4			# this will call the super (2) + 0.4
-	  end
-	end
-
-	coffee = Coffee.new
-	coffee.extend(Milk)
-	coffee.cost   # 2.4
-
-
-- The “Plain Old Ruby Object” (PORO) decorator
-
-	class Coffee
-	  def cost
-		2
-	  end
-	end
-
-	class Milk
-	  def initialize(component)
-		@component = component
-	  end
-
-	  def cost
-		@component.cost + 0.4
-	  end
-	end
-
-	coffee = Coffee.new
-	puts Milk.new(Milk.new(coffee)).cost  # 2.8
 
 
 Check forem and other proc gem managers !!!!

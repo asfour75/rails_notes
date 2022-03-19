@@ -1,1 +1,411 @@
+==========================================================================================
+# https://guides.rubyonrails.org/active_storage_overview.html
+
+- Active Storage facilitates uploading files to a cloud storage service like Amazon S3, Google Cloud Storage, or Microsoft Azure Storage and attaching those files to Active Record objects. 
+- It comes with a local disk-based service for development and testing and supports mirroring files to subordinate services for backups and migrations.
+
+Setup
+---------------------------------------------------------------------------------------------------
+
+- Requirements
+
+	
+    libvips v8.6+ or ImageMagick for image analysis and transformations
+    ffmpeg v3.4+ for video previews and ffprobe for video/audio analysis
+    poppler or muPDF for PDF previews
+
+- Image analysis and transformations also require the image_processing gem. Uncomment it in your Gemfile, or add it if necessary:
+
+	gem "image_processing", ">= 1.2"
+	
+- Compared to libvips, ImageMagick is better known and more widely available. 
+- However, libvips can be up to 10x faster and consume 1/10 the memory. 
+- For JPEG files, this can be further improved by replacing libjpeg-dev with libjpeg-turbo-dev, which is 2-7x faster.
+
+- Setup
+
+	config/storage.yml:
+	
+		local:
+		  service: Disk
+		  root: <%= Rails.root.join("storage") %>
+
+		test:
+		  service: Disk
+		  root: <%= Rails.root.join("tmp/storage") %>
+
+		amazon:
+		  service: S3
+		  access_key_id: ""
+		  secret_access_key: ""
+		  bucket: ""
+		  region: "" # e.g. 'us-east-1'
+
+	- In environments files: config/environments/development.rb:
+	
+		config.active_storage.service = :local
+
+- For amazon
+
+	gem "aws-sdk-s3", require: false
+
+- options for amazon
+
+	amazon:
+	  service: S3
+	  access_key_id: ""
+	  secret_access_key: ""
+	  region: ""
+	  bucket: ""
+	  http_open_timeout: 0
+	  http_read_timeout: 0
+	  retry_limit: 0
+	  upload:
+		server_side_encryption: "" # 'aws:kms' or 'AES256'
+
+- To connect to an S3-compatible object storage API such as DigitalOcean Spaces, provide the endpoint:
+
+	digitalocean:
+	  service: S3
+	  endpoint: https://nyc3.digitaloceanspaces.com
+	  access_key_id: ...
+	  secret_access_key: ...
+	  # ...and other options
+
+
+
+Attaching Files to Records
+---------------------------------------------------------------------------------------------------
+
+	> bin/rails generate model User avatar:attachment
+
+	class User < ApplicationRecord
+	  has_one_attached :avatar			# avatar doesn;t have to be in table
+	end
+
+	<%= form.file_field :avatar %>
+
+	class SignupController < ApplicationController
+	  def create
+		user = User.create!(user_params)
+		session[:user_id] = user.id
+		redirect_to root_path
+	  end
+
+	  private
+		def user_params
+		  params.require(:user).permit(:email_address, :password, :avatar)
+		end
+	end
+
+- To add avatar to an existing user
+
+	user.avatar.attach(params[:avatar])
+
+	user.avatar.attached?
+
+- You can override exsting configuration and picka different service
+
+	class User < ApplicationRecord
+	  has_one_attached :avatar, service: :s3
+	end
+
+- Adding different variants
+
+	class User < ApplicationRecord
+	  has_one_attached :avatar do |attachable|
+		attachable.variant :thumb, resize_to_limit: [100, 100]
+	  end
+	end
+
+	- then call
+	
+	<%= image_tag user.avatar.variant(:thumb) %>
+
+- Many attachments ?
+
+	> bin/rails generate model Message images:attachments
+
+	class Message < ApplicationRecord
+	  has_many_attached :images
+	end
+
+	class MessagesController < ApplicationController
+	  def create
+		message = Message.create!(message_params)
+		redirect_to message
+	  end
+
+	  private
+		def message_params
+		  params.require(:message).permit(:title, :content, images: [])	<------ notice this
+		end
+	end
+	
+	<%= form.file_field :attachments, multiple: true, direct_upload: true %>
+
+	Or
+	
+	<input type=file data-direct-upload-url="<%= rails_direct_uploads_url %>" />
+
+
+	- updating the images
+	
+		@message.images.attach(params[:images])
+
+	- @message.images.attached?
+	
+	- different service
+	
+		class Message < ApplicationRecord
+		  has_many_attached :images, service: :s3
+		end
+
+	- variants
+	
+		class Message < ApplicationRecord
+		  has_many_attached :images do |attachable|
+			attachable.variant :thumb, resize_to_limit: [100, 100]
+		  end
+		end
+		
+	- display
+	
+		<% item.attachments.each do |a| %>
+			<%= image_tag url_for(a) %>
+		<% end %>
+
+	- display variants
+	
+		<% item.attachments.with_all_variant_records.each do |file| %>
+			<%= image_tag url_for(file) %>
+			<%= image_tag url_for(file.representation(resize_to_limit: [100, 100]).processed) %>
+		<% end %>
+		
+	- 
+
+
+		
+		
+
+- Removing Files
+
+	# Synchronously destroy the avatar and actual resource files.
+	user.avatar.purge
+
+	# Destroy the associated models and actual resource files async, via Active Job.
+	user.avatar.purge_later
+
+- Serving Files
+
+	url_for(user.avatar)
+	# => /rails/active_storage/blobs/:signed_id/my-avatar.png
+
+	- to create a download link
+	rails_blob_path(user.avatar, disposition: "attachment")
+	
+	- If you need to create a link from outside of controller/view context (Background jobs, Cronjobs, etc.), you can access the rails_blob_path like this:
+	Rails.application.routes.url_helpers.rails_blob_path(user.avatar, only_path: true)
+
+- Proxy mode
+
+	# config/initializers/active_storage.rb
+	Rails.application.config.active_storage.resolve_model_to_route = :rails_storage_proxy
+	Or
+	<%= image_tag rails_storage_proxy_path(@user.avatar) %>
+	
+
+
+- Putting a CDN in front of Active Storage
+
+	# config/routes.rb
+	direct :cdn_image do |model, options|
+	  if model.respond_to?(:signed_id)
+		route_for(
+		  :rails_service_blob_proxy,
+		  model.signed_id,
+		  model.filename,
+		  options.merge(host: ENV['CDN_HOST'])
+		)
+	  else
+		signed_blob_id = model.blob.signed_id
+		variation_key  = model.variation.key
+		filename       = model.blob.filename
+
+		route_for(
+		  :rails_blob_representation_proxy,
+		  signed_blob_id,
+		  variation_key,
+		  filename,
+		  options.merge(host: ENV['CDN_HOST'])
+		)
+	  end
+	end
+
+	<%= cdn_image_url(user.avatar.variant(resize_to_limit: [128, 128])) %>
+
+
+
+
+- To prevent N+1 queries
+
+	Gallery.where(user: Current.user).with_attached_photos
+
+- In Action Text
+
+	Message.all.with_rich_text_content # Preload the body without attachments.
+	Message.all.with_rich_text_content_and_embeds # Preload both body and attachments.
+
+
+
+
+
+Attaching File/IO Objects
+--------------------------------------------------------------------------------------
+
+	@message.images.attach(
+	  io: File.open('/path/to/file'),
+	  filename: 'file.pdf',
+	  content_type: 'application/pdf',
+	  identify: false	<--- You can bypass the content type inference from the data
+	)
+
+
+
+Action Text
+========================================================================================
+
+# https://guides.rubyonrails.org/action_text_overview.html
+# https://github.com/basecamp/bc3-api/blob/master/sections/rich_text.md
+
+- basic
+
+	// application.js
+	import "trix"
+	import "@rails/actiontext"
+
+	--
+
+	# app/models/message.rb
+	class Message < ApplicationRecord
+	  has_rich_text :content			--> remember, content is not a field in message table
+	end
+
+	Or
+
+	bin/rails generate model Message content:rich_text
+
+	--
+	
+	<%# app/views/messages/_form.html.erb %>
+	<%= form_with model: message do |form| %>
+	  <div class="field">
+		<%= form.label :content %>
+		<%= form.rich_text_area :content %>
+	  </div>
+	<% end %>
+
+	--
+	
+	<%= @message.content %>
+
+	--
+
+	message = Message.create! params.require(:message).permit(:title, :content)
+    
+- Rendering rich text content
+
+	- Action Text will sanitize and render rich content on your behalf.
+	- If you want to change these defaults, remove the // require "actiontext.scss" line from your application.scss to omit the contents of that file.
+	- This partial is used to render contents
+	
+		<%# app/views/layouts/action_text/contents/_content.html.erb %>
+		<div class="trix-content">
+		  <%= yield %>
+		</div>
+	
+	- You can also style the HTML used for embedded images and other attachments (known as blobs). On installation, Action Text will copy over a partial to app/views/active_storage/blobs/_blob.html.erb, which you can specialize.
+	
+		
+		# app/views/active_storage/blobs/_blob.html.erb
+		
+		<figure class="attachment attachment--<%= blob.representable? ? "preview" : "file" %> attachment--<%= blob.filename.extension %>">
+		  <% if blob.representable? %>
+			<%= image_tag blob.representation(resize_to_limit: local_assigns[:in_gallery] ? [ 800, 600 ] : [ 1024, 768 ]) %>
+		  <% end %>
+
+		  <figcaption class="attachment__caption">
+			<% if caption = blob.try(:caption) %>
+			  <%= caption %>
+			<% else %>
+			  <span class="attachment__name"><%= blob.filename %></span>
+			  <span class="attachment__size"><%= number_to_human_size blob.byte_size %></span>
+			<% end %>
+		  </figcaption>
+		</figure>
+
+- Rendering attachments
+
+	- In addition to attachments uploaded through Active Storage, Action Text can `embed` anything that can be resolved by a Signed GlobalID. ??
+	
+	
+	
+	
+- Avoid N + 1
+
+	Message.all.with_rich_text_content # Preload the body without attachments.
+	Message.all.with_rich_text_content_and_embeds # Preload both body and attachments.
+
+
+
+
+
+
+
+
+
+
+
+
+Trix.config.blockAttributes.heading = {
+    tagName: "h2",
+    terminal: true,
+    breakOnReturn: true,
+    group: false
+}
+
+Trix.config.blockAttributes.subHeading = {
+    tagName: "h3",
+    terminal: true,
+    breakOnReturn: true,
+    group: false
+}
+
+// app/javascript/controllers/trix_toolbar_post_controller.js
+import { Controller } from "stimulus"
+
+export default class extends Controller {
+
+    connect() {
+
+        // Grab a reference to the toolbar(s) on the page.
+        const toolbar = this.element.previousSibling
+        // HTML for our buttons
+        const h2ButtonHTML = '<button type="button" class="trix-button" data-trix-attribute="heading" title="Subheading">H2</button>'
+        const h3ButtonHTML = '<button type="button" class="trix-button" data-trix-attribute="subHeading" title="Subheading">H3</button>'
+        // Only apply event listeners once to the toolbars
+        const once = {
+            once: true
+        }
+
+        addEventListener("trix-initialize", function(event) {
+            const sibling1 = toolbar.querySelector(".trix-button--icon-increase-nesting-level")
+            sibling1.insertAdjacentHTML("afterend", h2ButtonHTML)
+            const sibling2 = toolbar.querySelector("[data-trix-attribute='heading']")
+            sibling2.insertAdjacentHTML("afterend", h3ButtonHTML)
+        }, once)
+    }
+}
+
+<%= f.rich_text_area :content, data: { controller: 'trix-toolbar-post' } %>
 

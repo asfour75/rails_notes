@@ -661,6 +661,7 @@ Now, remember tailwind is not scss compiler but you still can use @import with c
 
 - If you want to customize any component
 
+# https://github.com/unlight/tailwind-components
 # https://tailwindcss.com/docs/configuration
 # https://tailwindcss.com/docs/using-with-preprocessors#build-time-imports
 
@@ -703,6 +704,7 @@ https://github.com/aniftyco/awesome-tailwindcss#ui-libraries-components--templat
 
 Svelte + ESBuild
 =============================================================================
+https://anonoz.github.io/tech/2021/12/11/rails-tailwindcss-svelte.html
 
 - Setup
 
@@ -756,21 +758,6 @@ Svelte + ESBuild
 		<div data-svelte-component="Demo"></div>
 
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	
 	
 EsBuild With React

@@ -480,6 +480,7 @@ Stimulus
 
 - Targets
 	
+	# Targets let you reference important elements by name.
 	# https://www.npmjs.com/package/stimulus-data-bindings
 
 	<input type="text" data-search-target="query">
@@ -516,8 +517,36 @@ Stimulus
 
 		# Inside the checkbox controller, this.inputTargets returns an array with both checkboxes.
 
+
+	# Optional
+	
+		if (this.hasResultsTarget) {
+		  this.resultsTarget.innerHTML = "…"
+		}
+
+	﹟Connected and Disconnected Callbacks
+	
+		# Target element callbacks let you respond whenever a target element is added or removed within the controller’s element.
+		
+		export default class extends Controller {
+		  static targets = [ "item" ]
+
+		  itemTargetConnected(element) {
+			this.sortElements(this.itemTargets)
+		  }
+
+		  itemTargetDisconnected(element) {
+			this.sortElements(this.itemTargets)
+		  }
+
+		  // Private
+		  sortElements(itemTargets) { /* ... */ }
+		}
+	
+
 - Values
 
+	# You can read and write HTML data attributes on controller elements as typed values using special controller properties.
 	# Example
 
 		<div id="1" data-id="1" data-demo-url-value="/messages" data-controller="demo">

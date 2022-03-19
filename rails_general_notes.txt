@@ -308,46 +308,7 @@ application.rb
 
 
 
-
-
-
-File Uploading
---------------
-- activestorage
-
-Cocoon (nested forms)
----------------------
-
-Tags & Categories
------------------
-
-HTML Editors
-------------
-
-Image Editors
--------------
-
-Using Mongo, Redis, Neo4j, Postgres
------------------------------------
-
-Refinery
-------------
-
-* Apartments and sweetness of postgress multi schemas 
------------------------------------------------------
-
-
-Discussion Platform
--------------------
-https://github.com/discourse/discourse
---------------------------------------
-
-
-
-
 # https://codeburst.io/ruby-on-rails-concepts-explained-with-real-world-use-cases-588dc85d8e96
-
-
 
 trailblazer
 ====================================================================================
@@ -375,37 +336,6 @@ References
 ==========
 - https://github.com/markets/awesome-ruby
 
-
-
-
-
-
-
-Mailer
-========================================================================
-
-Sending E-mails
-===============
-- Check this 
-	http://localhost:3000/rails/mailers/	
-	http://localhost:3000/rails/mailers/spree/mailer_previews/order/confirm
-
-	To change any of the templates
-	
-	- https://github.com/solidusio/solidus/blob/master/core/app/views/spree/order_mailer/confirm_email.html.erb
-
-
-	Copy files form core/app/views/spree/*_mailers + whatever you need to your local project 
-	directory respecting the relative paths.
-
-	
-
-Review emails
--------------
-- https://dev.mikamai.com/2017/03/30/setting-an-environment-for-previewing-email-in-rails/
-/rails/mailers/spree/mailer_preview/order/confirm.html?locale=en
-
-* check mailcatcher 
 
 
 

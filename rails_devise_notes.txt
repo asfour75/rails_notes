@@ -354,19 +354,19 @@ user.rb
 > rails g migration add_roles_to_users
 
 
-class AddRoleToUsers < ActiveRecord::Migration[6.0]
-  def change
-    add_column :users, :role, :integer
-  end
-end
+	class AddRoleToUsers < ActiveRecord::Migration[6.0]
+	  def change
+		add_column :users, :role, :integer
+	  end
+	end
 
-# get back to seeds.rb to add the :confirmed_at => DateTime.now
+	# get back to seeds.rb to add the :confirmed_at => DateTime.now
 
 
 To check the role .. 
 
-<%= current_user.user? %>
-<%= current_user.admin? %>
+	<%= current_user.user? %>
+	<%= current_user.admin? %>
 
 Add helper functions : :authenticate_admin_user
 
@@ -393,7 +393,8 @@ application_controller.rb:
 	# to be used by active admin
 	def authenticate_admin_user!
 
-	authenticate_user!
+	authenticate_admin_user!
+	    authenticate_user!
 		unless current_user.admin?
 		  flash[:alert] = "This area is restricted to administrators only."
 		  redirect_to root_path
@@ -404,6 +405,7 @@ application_controller.rb:
 		return nil if user_signed_in? && !current_user.admin?
 		current_user
 	end
+
 
 	# In Rails 4.2 and above
 	def verified_request?

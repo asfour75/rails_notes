@@ -523,7 +523,7 @@ Rails Routes
 	
 
 
-	- You can also add to whcih controller for example
+	- You can also add to which controller for example
 	
 		scope :admin, controller: :messages do
 			get '/', action: :index

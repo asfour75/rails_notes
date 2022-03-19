@@ -32,6 +32,86 @@ RVM
 	> \curl -sSL https://get.rvm.io | bash -s stable --ruby
 	> \curl -sSL https://get.rvm.io | bash -s stable --rails
 
+- upgrade
+
+	> rvm get stable
+	> rvm get stable --auto-dotfiles
+
+		Downloading https://get.rvm.io
+		Could not download rvm-installer, get some help at #rvm IRC channel at freenode servers. Mmmmmmmmmmmmm !!!!
+		
+	> \curl -sSL https://get.rvm.io | bash -s stable
+	
+		curl: (60) SSL certificate problem: certificate has expired
+		More details here: http://curl.haxx.se/docs/sslcerts.html
+
+		curl performs SSL certificate verification by default, using a "bundle"
+		 of Certificate Authority (CA) public keys (CA certs). If the default
+		 bundle file isn't adequate, you can specify an alternate file
+		 using the --cacert option.
+
+		> sudo update-ca-certificates
+
+		didbn't work ?
+		
+		# https://www.openssl.org/blog/blog/2021/09/13/LetsEncryptRootCertExpire/
+		
+		> sudo dpkg-reconfigure ca-certificates
+		> \curl -sSL https://get.rvm.io | bash -s stable		
+		> rvm reload
+		> rvm get stable
+		
+		> rvm reinstall ruby-3.1.0
+		
+
+- ruby compilation & SSL
+
+	Could not load OpenSSL.
+	You must recompile Ruby with OpenSSL support or change the sources in your Gemfile from 'https' to 'http'. Instructions for compiling with OpenSSL using RVM are available at
+	rvm.io/packages/openssl.
+
+	> rvm autolibs rvm_pkg 		# not imporant
+	
+	> sudo apt-get install libssl-dev libreadline-dev libgdbm-dev	
+	> sudo apt-get install openssl --reinstall
+	
+	- let's add openssl to rvm
+	
+	> rvm pkg install openssl
+	
+		Beware, 'rvm pkg ...' is deprecated, read about the new autolibs feature: 'rvm help autolibs'.
+
+	> rvm reinstall all --force
+
+	- didn;t work ?
+	- maybe I'm using old ubuntu 14.04
+	
+	> sudo apt purge libssl-dev && sudo apt install libssl1.0.0
+	> rvm autolibs fail	# to get further instructions
+	
+	> rvm autolibs enable
+	> rvm reinstall 3.1.0 --with-openssl-dir=$HOME/.rvm/usr
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+
+
+	
+	
+	> rvm reinstall --disable-binary 3.1.0		# rebuild ruby 
+
+
+
+
 Ubuntu --- security issues ?
 ----------------------------
 
@@ -338,5 +418,199 @@ Github
 
 
 
+
+Production
+=================================================================================================
+
+	# rails requires redis to be installed
+
+
+	> bin/rails log:clear tmp:clear
+
+	* in production.rb make sure from where assets should be loaded
+
+	  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+
+	> rails assets:clean
+	> rails assets:precompile
+
+	> RAILS_ENV=production rails db:reset	? This is forbidden in production since it will destroy and create the db
+	
+	ActiveRecord::ProtectedEnvironmentError: You are attempting to run a destructive action against your 'production' database.
+	
+	Instead 
+
+	> RAILS_ENV=production rails db:setup	# running again won't make any difference .. 
+	Or
+	> RAILS_ENV=production rails db:prepare	# create db if not exist, or runs migration if db exists
+
+# https://guides.rubyonrails.org/active_record_encryption.html
+
+	> bin/rails db:encryption:init
+
+active_record_encryption:
+  primary_key: iRZzTHQc3pKnDchzSeXNsRbB6Jjx8Xz6
+  deterministic_key: KMNi4vXhJ9cpoiEngG5Glyq2jAB5E642
+  key_derivation_salt: 8DD4CLTdX8vXfZDWDePGAC3KEhoELjI7
+
+
+`validate_secret_key_base': Missing `secret_key_base` for 'production' environment, set this string with `bin/rails credentials:edit` (ArgumentError)
+
+	> bin/rails credentials:edit
+	> EDITOR="mate --wait" bin/rails credentials:edit
+
+	Remove config/master.key if you had to
+
+	> RAILS_ENV=production rails db:setup
+	> RAILS_ENV=production rails feeds:quran
+
+** Notice
+------------------------------------------------------------------------
+Rails 7.0.1 has some issues with attachments (token) fixed in 7.0.2.X
+
+in ffi_lib': Could not open library 'vips.so.42': vips.so.42: cannot open shared object file: No such file or directory. (LoadError)
+
+	> sudo apt install libvips
+
+
+Cerrtificate with Let's Encrypt it
+------------------------------------------------------------------------------------------------------------
+
+> sudo snap install --classic certbot
+> sudo ln -s /snap/bin/certbot /usr/bin/certbot
+> sudo certbot --nginx
+
+
+
+Using Puma
+-------------------------------------------------------------------------------------------------------------
+- Rails 7, using puma by default
+
+	> rails s -p 3001 -e production
+
+
+
+With nginx 
+------------------------------------------------------------------------------------------------------------
+
+- You run production
+
+
+
+http {
+	...
+
+	server {
+		...
+
+        location / {
+
+			proxy_pass http://127.0.0.1:3004;
+			proxy_http_version  1.1;
+			proxy_cache_bypass  $http_upgrade;
+
+			proxy_set_header Upgrade           $http_upgrade;
+			proxy_set_header Connection        "upgrade";
+			proxy_set_header Host              $host;
+			proxy_set_header X-Real-IP         $remote_addr;
+			proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+			proxy_set_header X-Forwarded-Proto $scheme;
+			proxy_set_header X-Forwarded-Host  $host;
+			proxy_set_header X-Forwarded-Port  $server_port;
+		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 1979  bundle add dotenv-rails
+ 1980  bundle install
+ 1981  bin/setup-no-docker 
+ 1982  rails db:seed
+ 1983  bundle exec rake spree_sample:load
+ 1984  bin/setup-no-docker 
+ 1985  cd vue-storefront-spree/
+ 1986  yarn dev
+ 1987  nvm use 14
+ 1988  yarn dev
+ 1989  sudo service 
+ 1990  sudo service postgresql start
+ 1991  sudo service postgresql status
+ 1992  sudo service redis-server status
+ 1993  history 
+ 1994  export BACKEND_URL=http://localhost:4000
+ 1995  yarn dev
+ 1996  dpkg -h
+ 1997  dpkg --h
+ 1998  dpkg --help
+ 1999  dpkg -i google-chrome-stable_current_amd64.deb 
+ 2000  sudo dpkg -i google-chrome-stable_current_amd64.deb 
+ 2001  cd Projects/rails7e
+ 2002  bin/dev 
+ 2003  ruby -v
+ 2004  rvm list
+ 2005  rvm use ruby-3.1.0@rails7e --create
+ 2006  vim .rvmrc 
+ 2007  vim Gemfile
+ 2008  vim .rvmrc 
+ 2009  bundle install
+ 2010  bin/dev 
+ 2011  rails asstes:precompile
+ 2012  rails asste:precompile
+ 2013  rails assets:precompile
+ 2014  rails s -e production
+ 2015  rails g motor:install && rake db:migrate
+ 2016  rails s -e production
+ 2017  rails tmp:clear
+ 2018  RAILS_ENV=production rails db:setup
+ 2019  RAILS_ENV=production rails db:migrate
+ 2020  RAILS_ENV=production rails db:seed
+ 2021  RAILS_ENV=production rails db:seeds
+ 2022* RAILS_ENV=production rails db:
+ 2023  RAILS_ENV=production rails db:seed --trace
+ 2024  RAILS_ENV=production rails db:migrate
+ 2025  rails s -e production
+ 2026  RAILS_ENV=production rails asstes:precompile
+ 2027  RAILS_ENV=production rails assets:precompile
+ 2028  rails tmp:clear
+ 2029  rails assets:tmp:clear
+ 2030  rails assets:clear
+ 2031  rails assets:tmp:clean
+ 2032  rails assets:clean
+ 2033  RAILS_ENV=production rails assets:precompile
+ 2034  bundle
+ 2035  RAILS_ENV=production rails assets:precompile
+ 2036  raila assets:clean
+ 2037  rails assets:clean
+ 2038  rails assets:tmp:clean
+ 2039  rails assets:clean
+ 2040  rails tmp:clean
+ 2041  rails tmp:clear
+ 2042  RAILS_ENV=production rails assets:precompile
+ 2043  vim /home/isalem/.rvm/gems/ruby-3.1.0@rails7e/bundler/gems/rails_admin-9196932a3ea5/vendor/assets/javascripts/rails_admin/popper.js
+ 2044  bin/dev
+ 2045  bundle
+ 2046  RAILS_ENV=production rails assets:precompile
+ 2047  rails s -e production
+ 2048  vim log/production.log 
+ 2049  rails s -e production
+ 2050  RAILS_ENV=production rails assets:clean
+ 2051  RAILS_ENV=production rails assets:precompile
+ 2052  rails s -e production
+ 2053  export RAILS_SERVE_STATIC_FILES=true
+ 2054  rails s -e production
+ 2055  history
 
 
