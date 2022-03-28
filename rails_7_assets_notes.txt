@@ -607,6 +607,34 @@ Now, remember tailwind is not scss compiler but you still can use @import with c
 	
 		<%= stylesheet_link_tag "landing", "data-turbo-track": "reload" %>
 
+- what if I want to use some sass stuff ??? easy
+
+	- remove the sass-rails gem and rely on postcss now. 
+	- Using require('tailwindcss/nesting') is included in the default tailwind package.
+
+		PostCSS has plugins to replace the missing Sass behaviour.
+
+		// postcss.config.js
+		module.exports = {
+		  plugins: [
+			require('postcss-import'),
+			require('tailwindcss/nesting'),
+			require('tailwindcss'),
+			require('autoprefixer'),
+		  ]
+		}
+
+
+
+
+
+
+
+
+
+
+
+
 - @import, @apply
 
 	application.tailwind.css:

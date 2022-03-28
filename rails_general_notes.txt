@@ -141,26 +141,407 @@ ActiveSupport
 - Active Support is the Ruby on Rails component responsible for providing Ruby language extensions, utilities, and other transversal stuff.
 # https://guides.rubyonrails.org/v3.2/active_support_core_extensions.html
 
-	require 'active_support'
+	require 'active_support/all'
+	require "active_support/core_ext/hash/indifferent_access"
+	require "active_support/core_ext/hash"
 	
+	# permits access to the keys as either strings or symbols.
+	{a: 1}.with_indifferent_access["a"] # => 1
+	
+	
+	# 
 	blank? and present?
-	try
-	duplicable?
-	singleton_class
-	class_eval(*args, &block)
-	acts_like?(duck)
 	
+	    nil and false,
+		strings composed only of whitespace (see note below),
+		empty arrays and hashes, and
+		any other object that responds to empty? and is empty.
+
+	host = config[:host].presence || 'localhost'
+	
+	"foo".dup           # => "foo"
+	"".dup              # => ""
+	Rational(1).dup     # => (1/1)
+	Complex(0).dup      # => (0+0i)
+	1.method(:+).dup    # => TypeError (allocator undefined for Method)
+
+	"foo".duplicable?           # => true
+	"".duplicable?              # => true
+	Rational(1).duplicable?     # => true
+	Complex(1).duplicable?      # => true
+	1.method(:+).duplicable?    # => false
+
+	array.deep_dup	# including other objects (strings) unlike dup
+	
+	@number.try(:next)
+	
+	
+	@person.try { |p| "#{p.first_name} #{p.last_name}" }
+	@number.try(:nest)  # => nil
+	@number.try!(:nest) # NoMethodError: undefined method `nest' for 1:Integer
+
+	
+	class_eval(*args, &block)
+	
+	some_klass.acts_like?(:string)
+	
+	
+	7.to_param # => "7"
+	"Tom & Jerry".to_param # => "Tom & Jerry"
 	[0, true, String].to_param # => "0/true/String"
+	
+	
+	class User
+	  def to_param
+		"#{id}-#{name.parameterize}"
+	  end
+	end
+	
+	user_path(@user) # => "/users/357-john-smith"
+	
+	current_user.to_query('user') # => "user=357-john-smith"
 	
 	account.to_query('company[name]')
 	# => "company%5Bname%5D=Johnson+%26+Johnson"
 
+	[3.4, -45.6].to_query('sample')
+	# => "sample%5B%5D=3.4&sample%5B%5D=-45.6"
+
+	{c: 3, b: 2, a: 1}.to_query # => "a=1&b=2&c=3"
+	
+	{id: 89, name: "John Smith"}.to_query('user')
+	# => "user%5Bid%5D=89&user%5Bname%5D=John+Smith"
+
+	class Account < ApplicationRecord
+	  with_options dependent: :destroy do |assoc|
+		assoc.has_many :customers
+		assoc.has_many :products
+		assoc.has_many :invoices
+		assoc.has_many :expenses
+	  end
+	end
+
+	I18n.with_options locale: user.locale, scope: "newsletter" do |i18n|
+	  subject i18n.t :subject
+	  body    i18n.t :body, user_name: user.name
+	end
+
+-	JSON support
+
+- INstance variables
+	
+	class C
+	  def initialize(x, y)
+		@x, @y = x, y
+	  end
+	end
+
+	C.new(0, 1).instance_values # => {"x" => 0, "y" => 1}
+	C.new(0, 1).instance_variable_names # => ["@x", "@y"]
+
+- Slience Warning
+	
+	silence_warnings { Object.const_set "RAILS_DEFAULT_LOGGER", logger }
+	
+	# If the user is locked, the increment is lost, no big deal.
+	suppress(ActiveRecord::StaleObjectError) do
+	  current_user.increment! :visits
+	end
+
+- In?
+
+	1.in?([1,2])        # => true
+	"lo".in?("hello")   # => true
+	25.in?(30..50)      # => false
+	1.in?(1)            # => ArgumentError
 
 
+- Alias
+	
+	class User < ApplicationRecord
+	  # You can refer to the email column as "login".
+	  # This can be meaningful for authentication code.
+	  alias_attribute :login, :email
+	end
+
+- internal Attr
+
+	# library
+	class ThirdPartyLibrary::Crawler
+	  attr_internal :log_level
+	end
+
+- Class Attrs
+	
+	class A
+	  class_attribute :x
+	end
+
+	class B < A; end
+
+	class C < B; end
+
+	A.x = :a
+	B.x # => :a
+	C.x # => :a
+
+	B.x = :b
+	A.x # => :a
+	C.x # => :b
+
+- subclasses (one level) & descendants ( all levels) 
+
+	class C; end
+	C.subclasses # => []
+
+	class B < C; end
+	C.subclasses # => [B]
+
+- String
+
+	"".html_safe? # => false
+	<%= @review.title %> <%# fine, escaped if needed %>
+	<%= raw @cms.current_template %> <%# inserts @cms.current_template as is %>	<%== @cms.current_template %> <%# inserts @cms.current_template as is %>
+	"Hello World".remove(/Hello /) # => "World"
+	" \n  foo\n\r \t bar \n".squish # => "foo bar"
+	"Oh dear! Oh dear! I shall be late!".truncate(20)
+	"Oh dear! Oh dear! I shall be late!".truncate(20, omission: '&hellip;')
+	"Oh dear! Oh dear! I shall be late!".truncate(18, separator: ' ')
+	"👍👍👍👍".truncate_bytes(15)
+	"👍👍👍👍".truncate_bytes(15, omission: "🖖")
+	"Oh dear! Oh dear! I shall be late!".truncate_words(4)
+	"Oh dear! Oh dear! I shall be late!".truncate_words(4, omission: '&hellip;')
+	"production".inquiry.production? # => true
+	"active".inquiry.inactive?       # => false
+	"foo".starts_with?("f") # => true
+	"foo".ends_with?("o")   # => true
+
+	# skip indetnations
+	if options[:usage]
+	  puts <<-USAGE.strip_heredoc
+		This command does such and such.
+
+		Supported options are:
+		  -h         This message
+		  ...
+	  USAGE
+	end
+	
+	# or add identiation
+	<<EOS.indent(2)
+		def some_method
+		  some_code
+		end
+	EOS
+
+	"  foo".indent(2)        # => "    foo"
+	
+	"hello".at(4)  # => "o"
+	"hello".from(2)  # => "llo"
+	"hello".to(-2) # => "hell"
+	"hello".first	# h
+	"hello".last	# o
+
+	"table".pluralize     # => "tables"
+	"equipment".pluralize # => "equipment"
+
+	"dude".pluralize(1) # => "dude"
+	"dude".pluralize(2) # => "dudes"
+
+	# active_record/model_schema.rb
+	def undecorated_table_name(model_name)
+	  table_name = model_name.to_s.demodulize.underscore
+	  pluralize_table_names ? table_name.pluralize : table_name
+	end
+
+	"tables".singularize    # => "table"
+
+	# active_record/reflection.rb
+	def derive_class_name
+	  class_name = name.to_s.camelize
+	  class_name = class_name.singularize if collection?
+	  class_name
+	end
+
+	"backoffice/session".camelize # => "Backoffice::Session"
+	"visual_effect".camelize(:lower) # => "visualEffect"
+
+	"AdminUser".underscore # => "admin_user"
+	"SomeController".delete_suffix("Controller").underscore				# some
+	"BigSomeController".delete_suffix("Controller").underscore			# big_some
+	
+	"alice in wonderland".titleize # => "Alice In Wonderland"
+	
+	"contact_data".dasherize # => "contact-data"
+	
+	"Admin::Hotel::ReservationUtils".demodulize # => "ReservationUtils"
+	"Backoffice::UsersController".deconstantize    # => "Backoffice"
+	"Admin::Hotel::ReservationUtils".deconstantize # => "Admin::Hotel"
+	
+	"Kurt Gödel".parameterize # => "kurt-godel"
+	"John Smith".parameterize(preserve_case: true) # => "John-Smith"
+	"John Smith".parameterize(separator: "_") # => "john\_smith"
+	"InvoiceLine".tableize # => "invoice_lines"
+	"invoice_lines".classify # => "InvoiceLine"
+	"highrise_production.companies".classify # => "Company"
+	
+	# Constant name resolution by constantize starts always at the top-level Object even if there is no leading "::".
+	"Integer".constantize # => Integer
+
+	module M
+	  X = 1
+	end
+	"M::X".constantize # => 1
+
+	
+	"author_id".humanize(capitalize: false) # => "author"
+	"comments_count".humanize               # => "Comments count"
+	"author_id".humanize                    # => "Author"
+	
+	"User".foreign_key
+	"Admin::Session".foreign_key # => "session_id"
+	"InvoiceLine".foreign_key    # => "invoice_line_id"
+	
+	"User".foreign_key(false) # => "userid"
+	
+- Conversions
+
+	"2010-07-27".to_date              # => Tue, 27 Jul 2010
+	"2010-07-27 23:37:00".to_time     # => 2010-07-27 23:37:00 +0200
+	"2010-07-27 23:37:00".to_datetime # => Tue, 27 Jul 2010 23:37:00 +0000
+
+	"2010-07-27 23:42:00".to_time(:utc)   # => 2010-07-27 23:42:00 UTC
+	"2010-07-27 23:42:00".to_time(:local) # => 2010-07-27 23:42:00 +0200
+
+	:foo.starts_with?("f") # => true
+	:foo.ends_with?("o")   # => true
+
+- Numeric
+
+	2.kilobytes   # => 2048
+	3.megabytes   # => 3145728
+	3.5.gigabytes # => 3758096384
+	-4.exabytes   # => -4611686018427387904
+
+- Time
+
+	# equivalent to Time.current.advance(days: 1)
+	1.day.from_now
+
+	# equivalent to Time.current.advance(weeks: 2)
+	2.weeks.from_now
+
+	# equivalent to Time.current.advance(days: 4, weeks: 5)
+	(4.days + 5.weeks).from_now
+
+	# equivalent to Time.current.advance(months: 1)
+	1.month.from_now
+
+	# equivalent to Time.current.advance(years: 2)
+	2.years.from_now
+
+	# equivalent to Time.current.advance(months: 4, years: 5)
+	(4.months + 5.years).from_now
 
 
+- phone
+
+	5551234.to_fs(:phone)
+	# => 555-1234
+	1235551234.to_fs(:phone)
+	# => 123-555-1234
+	1235551234.to_fs(:phone, area_code: true)
+	# => (123) 555-1234
+	1235551234.to_fs(:phone, delimiter: " ")
+	# => 123 555 1234
+	1235551234.to_fs(:phone, area_code: true, extension: 555)
+	# => (123) 555-1234 x 555
+	1235551234.to_fs(:phone, country_code: 1)
+	# => +1-123-555-1234
+
+- currency
+
+	1234567890.50.to_fs(:currency)                 # => $1,234,567,890.50
+	1234567890.506.to_fs(:currency)                # => $1,234,567,890.51
+	1234567890.506.to_fs(:currency, precision: 3)  # => $1,234,567,890.506
 
 
+	
+	2.multiple_of?(1) # => true
+	
+	1.ordinal    # => "st"
+	2.ordinal    # => "nd"
+	53.ordinal   # => "rd"
+	2009.ordinal # => "th"
+	-21.ordinal  # => "st"
+	-134.ordinal # => "th"
+
+	1.ordinalize    # => "1st"
+	2.ordinalize    # => "2nd"
+	53.ordinalize   # => "53rd"
+	2009.ordinalize # => "2009th"
+	-21.ordinalize  # => "-21st"
+	-134.ordinalize # => "-134th"
+
+	
+	BigDecimal(5.00, 6).to_s       # => "5.0"
+	BigDecimal(5.00, 6).to_s("e")  # => "0.5E1"
+	
+	
+	[1, 2, 3].sum # => 6
+	(1..100).sum  # => 5050
+	(1..5).sum {|n| n * 2 } # => 30
+	
+	[[1, 2], [2, 3], [3, 4]].sum    # => [1, 2, 2, 3, 3, 4]
+	%w(foo bar baz).sum             # => "foobarbaz"
+	{a: 1, b: 2, c: 3}.sum          # => [:a, 1, :b, 2, :c, 3]
+		
+	- index_with
+	
+	invoices.index_by(&:number)	# => {'2009-032' => <Invoice ...>, '2009-008' => <Invoice ...>, ...}
+	
+	%i( title body ).index_with { |attr_name| post.public_send(attr_name) }
+	# => { title: "hey there", body: "what's up?" }
+	
+	WEEKDAYS.index_with(Interval.all_day)
+	# => { monday: [ 0, 1440 ], … }
+	
+- many
+	
+	<% if pages.many? %>
+	  <%= pagination_links %>
+	<% end %>
+
+	
+	to_visit << node if visited.exclude?(node)
+	
+	[ 1, 2, 3 ].including(4, 5)                    # => [ 1, 2, 3, 4, 5 ]
+	["David", "Rafael"].including %w[ Aaron Todd ] # => ["David", "Rafael", "Aaron", "Todd"]
+
+	["David", "Rafael", "Aaron", "Todd"].excluding("Aaron", "Todd") # => ["David", "Rafael"]
+
+	
+	[{ name: "David" }, { name: "Rafael" }, { name: "Aaron" }].pluck(:name) # => ["David", "Rafael", "Aaron"]
+	[{ id: 1, name: "David" }, { id: 2, name: "Rafael" }].pluck(:id, :name) # => [[1, "David"], [2, "Rafael"]]
+
+	[{ name: "David" }, { name: "Rafael" }, { name: "Aaron" }].pick(:name) # => "David"
+	[{ id: 1, name: "David" }, { id: 2, name: "Rafael" }].pick(:id, :name) # => [1, "David"]
+
+- Arrays
+
+	%w(a b c d).to(2) # => ["a", "b", "c"]
+	[].to(7)          # => []
+
+	%w(a b c d).from(2)  # => ["c", "d"]
+	%w(a b c d).from(10) # => []
+	[].from(0)           # => []
+
+	[ 1, 2, 3 ].including(4, 5)          # => [ 1, 2, 3, 4, 5 ]
+	[ [ 0, 1 ] ].including([ [ 1, 0 ] ]) # => [ [ 0, 1 ], [ 1, 0 ] ]
+
+	["David", "Rafael", "Aaron", "Todd"].excluding("Aaron", "Todd") # => ["David", "Rafael"]
+	[ [ 0, 1 ], [ 1, 0 ] ].excluding([ [ 1, 0 ] ])      
+		
 
 actionmailbox (7.0.1)
 actionmailer (7.0.1)

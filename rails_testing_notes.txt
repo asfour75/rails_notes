@@ -1,10 +1,173 @@
 Testing
 
-textTest (default)
+MiniTest (test_unit) (default)
 ========================================================================
 
 # https://guides.rubyonrails.org/testing.html
 # https://guides.rubyonrails.org/generators.html
+
+
+- Whenever you use generator to create controller, models they will create test classes as well with skeleton
+
+- model testing
+
+	> bin/rails generate test_unit:model message email:string full_name:string message:text
+	
+		--> test/models/message_test.rb
+		--> test/fixtures/messages.yml
+		
+	fill now messages.yml:
+	
+		one:
+		  full_name: MyString
+		  email: MyString@a.b
+		  message: MyText sdfsdf sdf
+		  active: false
+
+		two:
+		  full_name: MyString
+		  email: MyString@a.b
+		  message: MyText sdfsdf
+		  active: false
+	
+	message_test.rb:
+
+		require "test_helper"
+
+		class MessageTest < ActiveSupport::TestCase							# inherits ActiveSupport::TestCase	
+		  # test "the truth" do
+		  #   assert true
+		  # end
+		end
+
+	it includes the following modules
+		
+		ActiveSupport::Testing::SetupAndTeardown
+		ActiveSupport::Testing::Assertions								# this will provide all functions to perform asset testing functions
+		ActiveSupport::Testing::TimeHelpers
+		ActiveSupport::Testing::FileFixtures
+		ActiveRecord::TestFixtures
+
+	let's add first test 
+	
+		test "valid message" do
+			# assert true
+			msg_hash = messages(:one).as_json	--> create a hash taken from the fixture to be used to submit
+			msg = Message.new(msg_hash)			--> you can of course use your own hash filling here based on what data to test
+			assert msg.valid?
+
+			msg_hash.delete("full_name")
+			msg = Message.new(msg_hash)
+
+			assert !msg.valid?
+		end
+
+
+- controller testing (devise)
+
+	- If not generated yet, 
+	> bin/rails generate test_unit:controller messages
+
+	
+	- since this controller is using devise to authenticate .. 
+	- users fixtures: fixtures/users.yml
+	
+		user_001:
+		  id: 1
+		  role: 0
+		  email: "admin1@d1g.com"
+		  encrypted_password: <%= User.new.send(:password_digest, '1234567890') %>
+		  confirmed_at: <%= Time.zone.now - 1.hour %>
+		  confirmation_sent_at: <%= Time.zone.now - 2.hours %>
+
+	- also we need to add the following to test_helper.rb
+	
+		include Devise::Test::IntegrationHelpers
+
+	- messages_controler_test.rb:
+
+		require "test_helper"
+
+		class MessagesControllerTest < ActionDispatch::IntegrationTest
+
+			# setup to be executed for each test
+			setup do
+				@message = messages(:one)
+				# get "/users/sign_in"
+				# sign_in users(:one)
+				# post  user_session_url
+				# @admin_user = create(:one)
+			end
+
+			test "should get index" do
+				@user = users(:user_001)							# taken from textures
+				sign_in @user										# this function taken from included Devise::Test::IntegrationHelpers
+
+				get messages_url
+				assert_response :success							# test the same without sign_in, but check for redirect
+																	# assert_redirected_to root_url
+			end	
+			........
+	
+	- You can use get, post, patch and delete
+	
+		assert_difference("Message.count") do
+			post messages_url, params: { message: { :email => "a@b.com", :full_name => "sdf sdf", :message => "hohojojojojo sddf sdf" } }
+			# remember, you can take the hash from the existing fixtures
+		end
+		assert_redirected_to root_path #message_url(Message.last)
+	
+		get new_message_url
+		get message_url(@message)										# @message defined in setup 
+		get edit_message_url(@message)
+		
+		patch message_url(@message), params: { message: { :email => "a@b.com", :full_name => "sdf sdf", :message => "hohojojojojo sddf sdf" } }
+		assert_redirected_to message_url(@message)
+		
+		assert_difference("Message.count", -1) do
+			delete message_url(@message)
+		end
+		assert_redirected_to messages_url
+
+- system testing
+
+	- This will use the application_system_test_case.rb:
+	
+		require "test_helper"
+
+		class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+		  driven_by :selenium, using: :chrome, screen_size: [1400, 1400]
+		end
+
+	- Example
+	
+		require "application_system_test_case"
+
+		class MessagesTest < ApplicationSystemTestCase
+		  setup do
+			@message = messages(:one)
+		  end
+
+		  test "visiting the index" do
+			sign_in users(:user_001)
+			visit messages_url
+			assert_selector "h1", text: "Messages"						# Normal
+		  end
+
+		  test "should create message" do
+			sign_in users(:user_001)
+			visit messages_url
+			click_on "New message"										# The actual text of the button
+
+			fill_in "Full name", with: "my name"						# you can use message_full_name
+			fill_in "message_email", with: "a@b.com"
+			fill_in "message_message", with: "my name sdsdf sdfs sdfsdf"
+
+			click_on "Send Message"
+
+			assert_text "Message was successfully created"				# in final page, check this message
+			# click_on "Back"
+		  end
 
 - Emails Previews
 
@@ -21,6 +184,9 @@ textTest (default)
 	
 		config.action_mailer.preview_path = "#{Rails.root}/test/mailers/previews"
 		
+		# comment he above line or set it : "#{Rails.root}/spec/mailers/previews"
+		- this could be also inside: spec/mailers/previews/user_mailer_preview.rb
+		
 	* Remember, if you have two versions of emails (text, html)
 	
 		mail(to: @user.email, subject: 'Welcome to My Awesome Site') do |format|
@@ -33,15 +199,36 @@ textTest (default)
 		- to send the email as text, remove the option format.html
 		- you can use conditions as: format.html if something?
 
-- To ensure which generator for tests to use (minitest, rspec)
+	- To ensure which generator for tests to use (minitest, rspec)
 
-	config/initializers/generators.rb:
+		config/initializers/generators.rb:
 
-		Rails.application.config.generators do |g|
-		  g.test_framework  :test_unit, fixture: true #, model: false, 
-		end
+			Rails.application.config.generators do |g|
+			  g.test_framework  :test_unit, fixture: true #, model: false, 
+			end
 
-	
+	- browse
+
+		/rails/mailers	
+			welcome_email	<---
+
+
+- Check all generators
+
+	> rails g | grep test
+
+	  integration_test
+	  system_test
+	  test_unit:channel
+	  test_unit:component
+	  test_unit:generator
+	  test_unit:install
+	  test_unit:mailbox
+	  test_unit:plugin
+	  test_unit:policy
+
+
+
 
 
 
@@ -63,8 +250,12 @@ RSpec and BDD
 	end
 	
 	Or
+
+
+	capybara #https://github.com/teamcapybara/capybara#using-capybara-with-rspec
 	
 	group :development, :test do
+		gem 'database_cleaner'
 		gem 'rspec-rails'
 		gem 'factory_bot_rails'
 		gem 'ffaker'
@@ -83,6 +274,711 @@ Or
 	└── spec_helper.rb
 
 	.rspec
+
+# Default: Run all spec files (i.e., those matching spec/**/*_spec.rb)
+
+	> bundle exec rspec
+	> rails spec
+
+# Run all spec files in a single directory (recursively)
+
+	> bundle exec rspec spec/models
+
+# Run a single spec file
+
+	> bundle exec rspec spec/controllers/accounts_controller_spec.rb
+
+# Run a single example from a spec file (by line number)
+
+	> bundle exec rspec spec/controllers/accounts_controller_spec.rb:8
+
+# See all options for running specs
+
+	> bundle exec rspec --help
+
+
+
+# Simply navigate to the /spec directory and create a folder called /controllers. It should look like this: /spec/controllers.
+
+	rspec
+
+	Traceback (most recent call last):
+		2: from /home/isalem/.rvm/gems/ruby-2.7.2@app/bin/rspec:23:in `<main>'
+		1: from /home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:300:in `activate_bin_path'
+	/home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:281:in `find_spec_for_exe': can't find gem rspec-core (>= 0.a) with executable rspec (Gem::GemNotFoundException)
+
+
+	gem update --system
+	bundle install
+	rm Gemfile.lock 
+	bundle install
+
+	rspec .... great
+
+Configurate it 
+----------------------------------------------------------------------------
+to generate test with rails ..
+
+config/initializers/generators.rb:
+
+	Rails.application.config.generators do |g|
+	  g.test_framework :rspec
+	end
+
+To remain on default testing (after installing rspec)
+
+	g.test_framework  :test_unit, fixture: true
+
+	> rails g model Article title:string body:text
+	> rails db:migrate
+
+
+# to generate test for article model
+
+	- See all generators
+	
+	  rspec:channel
+	  rspec:component
+	  rspec:controller
+	  rspec:feature
+	  rspec:generator
+	  rspec:helper
+	  rspec:install
+	  rspec:integration
+	  rspec:job
+	  rspec:mailbox
+	  rspec:mailer
+	  rspec:model
+	  rspec:policy
+	  rspec:request
+	  rspec:scaffold
+	  rspec:system
+	  rspec:view
+
+	> rails g rspec:controller ControllerName
+	> rails generate rspec:model message
+	
+		create  spec/models/message_spec.rb
+		invoke  factory_bot
+		create    spec/factories/messages.rb
+
+# Models
+
+	message_spec.rb:
+	
+		require 'rails_helper'
+		
+		RSpec.describe Message, type: :model do			
+			# pending "add some examples to (or delete) #{__FILE__}"	# this line used to skip testing
+			# lets add some tests
+			
+			# prepare some data
+			# user = FactoryBot.create(:user)							# see next section on how to prepare them
+			# message = FactoryBot.create(:message)						# of course you can create them inside it functions and manipulate the data to fit the case
+
+			message = FactoryBot.build(:message)						# don't create it .. just build it
+
+			it 'normal message'
+				expect(message).to be_valid
+				
+				# Or
+				# you can create the object as:
+				
+				subject { described_class.new }
+				
+				subject.full_name = FFaker::Name.first_name
+				subject.email = FFaker::Internet.email
+				subject.message = FFaker::Tweet.body(300)
+				
+				expect(subject).to be_valid
+				
+			end
+		end
+
+	spec/factories/messages.rb:
+	
+		FactoryBot.define do
+		  factory :message do
+			email { FFaker::Internet.email }
+			full_name {FFaker::Name.first_name}
+			message {FFaker::Tweet.body}				
+		  end
+		end
+		
+	# notice we used FFAKER to inject fake data --> gems: faker, ffaker (different implementation for faker / faster)
+		
+	> rails generate rspec:model user									# we are using devise
+
+	spec/factories/user.rb
+
+		FactoryBot.define do
+		  factory :user do
+			email { FFaker::Internet.email }
+			role  { User.roles[:admin] }
+
+			pwd = FFaker::Internet.password
+
+			password  { pwd }
+			password_confirmation  { pwd }
+			
+			confirmed_at { Time.zone.now - 1.hour }
+			confirmation_sent_at { Time.zone.now - 2.hours }
+			
+		  end
+		end
+
+	user_spec.rb ......
+	
+	- factories With association (item.rb)
+
+		FactoryBot.define do
+		  factory :item do
+			title { Faker::Quote.famous_last_words }
+			body { FFaker::Tweet.body(500) }
+			#user_id { 1 }
+			association :user	# this will create a user before it adds its id to user_id
+		  end
+		end
+			
+
+	- Full example
+
+	spec/models/article_spec.rb
+
+		RSpec.describe Article, type: :model do
+
+			# We prefer using factories but this is to show its possible
+			current_user = User.first_or_create!(email: 'test@some.com', password: 'test123', password_confirmation: 'test123')
+
+			it 'has a title' do
+				post = Article.new(
+				  title: '',
+				  body: 'A Valid Body',
+				  user: current_user
+				)
+				expect(post).to_not be_valid
+
+				post.title = 'Has a title'
+				expect(post).to be_valid
+			end
+
+			it 'has a body' do
+				post = Article.new(
+				  title: 'A Valid Title',
+				  body: '',
+				  user: current_user
+				)
+				expect(post).to_not be_valid
+
+				post.body = 'Has a title'
+				expect(post).to be_valid
+			end
+
+			it 'has a title at least 2 characters long' do
+				post = Article.new(
+				  title: '1',
+				  body: 'A Valid Body',
+				  user: current_user
+				)
+				expect(post).to_not be_valid
+
+				post.title = '12'
+				expect(post).to be_valid
+			end
+
+			it 'has a body between 5 and 100 characters' do
+				post = Article.new(
+				  title: '12',
+				  body: '1234',
+				  user: current_user
+				)
+				expect(post).to_not be_valid
+
+				post.body = '12345'
+				expect(post).to be_valid
+
+				hundred_char_string = 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean m'
+				post.body = hundred_char_string
+				expect(post).to be_valid
+
+				post.body = hundred_char_string + '1'
+				expect(post).to_not be_valid
+			end
+
+			# pending "add some examples to (or delete) #{__FILE__}"
+		end
+
+
+Controllers . Requests
+-------------------------------------------------------------------------------------
+
+“For new Rails apps: we don’t recommend adding the rails-controller-testing gem to your application. The official recommendation of the Rails team and the RSpec core team is to write request specs instead.”
+
+- requests is very similar to controllers in minitest
+
+- Generate
+
+	> rails generate rspec:request	messages	--> messages_spec.rb
+
+		require 'rails_helper'
+
+		RSpec.describe "Messages", type: :request do
+		  describe "GET /messages" do
+			it "works! (now write some real specs)" do
+			  get messages_index_path									# we have messages_path
+			  expect(response).to have_http_status(200)
+			end
+		  end
+		end
+
+- Let's add devise
+
+	- Well, /messages will require the user to be logged in ... 
+	- let's create a directory support with the following files:
+	
+		devise.rb:
+		
+			require_relative './request_macros'
+			
+			RSpec.configure do |config|
+			  config.include Devise::Test::IntegrationHelpers, type: :request
+			  config.extend RequestMacros, :type => :request
+			end
+	
+		requests_macros.rb:
+		
+			module RequestMacros
+			  def login_admin
+				before(:each) do
+				  admin = FactoryBot.create(:admin)						# create in factories admin with admin role
+				  sign_in admin
+				end
+			  end
+
+			  def login_user
+				before(:each) do
+				  admin = FactoryBot.create(:user)						# create in factories admin with user role
+				  sign_in user
+				end
+			  end
+			end
+	
+	- in rails_helper.rb, uncomment the following line
+	
+		Dir[Rails.root.join('spec/support/**/*.rb')].sort.each { |f| require f }
+
+	- back to messages_spec.rb
+	
+		require 'rails_helper'
+		RSpec.describe "Messages", type: :request do
+		  describe "GET /messages" do
+			
+			let(:message) { FactoryBot.create :message }
+			
+			login_admin		<------ put it here .. 
+
+			it "works! (now write some real specs)" do
+			  get messages_path
+			  expect(response).to have_http_status(200)
+			end
+			
+		  end
+		end
+
+	
+- Integrate Factory methods
+
+	- To use FactoryBot method directly, create a file inside support -> factory_bot.rb
+	
+		RSpec.configure do |config|
+		  config.include FactoryBot::Syntax::Methods
+		end
+		
+		# and use methods directly as
+		
+			FactoryBot.create :message	--> create :message
+	
+		# other methods for fatorybot
+		
+			FactoryBot.create_list(:message, 3)
+
+- Context
+
+	- you can add more than one "it" inside a context
+	
+	....
+	context "full test for admin user" do
+		it "list messages" do
+		  get messages_path
+		  expect(response).to have_http_status(200)
+		end		
+		
+		it "create message" do
+		  # count = Message.count 
+		  expect {			# expect uses body here .. 
+			post	messages_path, params: { message: FactoryBot.build(:message).as_json}
+		  }.to change(Message, :count).by(1)
+		end
+	end
+
+- Let
+
+	# you might need to define your own attributes to be used as valid_attributes and invalid .. 
+		
+	let(:message) { create :message }	# or build, then you can use message object later .. 
+
+	let(:valid_message) {
+		{
+			:full_name {  Faker::Lorem.characters(number: 10) },
+			:email { Faker::Internet.email },
+			:message { FFaker::Tweet.body },				
+			#:description => Faker::Lorem.characters(number: 200),
+			#:employer_id => employer.id,	# those maybe define from previous let .. 
+			#:category_id => category.id,
+		}
+	}
+
+	let(:invalid_message) {
+		{
+			:full_name {  Faker::Lorem.characters(number: 10) },
+			:email { Faker::Internet.email },
+			:message { Faker::Lorem.characters(number: 10) },			# the vlidation needs more than 15 char for example		
+		}
+	}
+
+	- then inside your it .. 
+	
+		message = Message.create! valid_message						# or create!
+		get message_url(message)
+		expect(response).to be_successful
+
+
+	- to create
+	
+		post messages_url, params: { message: invalid_attributes }
+		expect(response).not_to be_successful
+
+- destroy
+
+	login_admin	# called before it
+	
+    it "destroys the requested message / count" do
+      message = Message.create! valid_attributes
+      expect {
+        delete message_url(message)
+      }.to change(Message, :count).by(-1)
+    end
+		
+    it "redirects to the messages list" do
+      message = Message.create! valid_attributes
+      delete message_url(message)
+      expect(response).to redirect_to(messages_url)
+    end
+
+
+- JSON
+
+	  FactoryBot.create_list(:message, 3)
+
+      headers = { "ACCEPT" => "application/json" }
+      get "/messages.json", :params => {}, :headers => headers
+
+      expect(response.content_type).to include("application/json")
+      expect(response).to have_http_status(:success)
+	
+- Render
+
+	login_admin	# called before it
+
+	....
+
+	FactoryBot.create_list(:message, 3)
+
+	get messages_url
+	expect(response).to be_successful
+	expect(response).to render_template(:index)
+	expect(response.body).to include("Messages")
+	
+- What other expects ?
+	
+	expect(response).to redirect_to(job_ad_url(JobAd.last))			# same as minitest, response is always there .. 
+	expect(response).not_to be_successful
+	expect(response).to be_successful								# expect(response).to have_http_status(200)
+
+	message = FactoryBot.build(:message)
+	# message.as_json	--> hash 
+	# message = Message.new({.....})	# you can use the hash .. :)
+	expect(message).to be_valid
+	
+
+- FactoryBot Stuff
+
+	- Singular factory execution
+
+		# basic use case
+		build(:completed_order)
+
+		# factory yielding its result to a block
+		create(:post) do |post|
+		  create(:comment, post: post)
+		end
+
+		# factory with attribute override
+		attributes_for(:post, title: "I love Ruby!")
+
+		# factory with traits and attribute override
+		build_stubbed(:user, :admin, :male, name: "John Doe")
+
+	- Multiple factory execution
+
+		# basic use case
+		build_list(:completed_order, 2)
+		create_list(:completed_order, 2)
+
+		# factory with attribute override
+		attributes_for_list(:post, 4, title: "I love Ruby!")
+
+		# factory with traits and attribute override
+		build_stubbed_list(:user, 15, :admin, :male, name: "John Doe")
+
+
+
+
+
+
+
+Routing 
+------------------------------------------------------------------------------
+
+spec/routing/messages_routing_spec.rb
+
+	require "rails_helper"
+	RSpec.describe MessagesController, type: :routing do
+	  describe "routing" do
+		it "routes to #index" do
+		  expect(get: "/messages").to route_to("messages#index")
+		end
+
+		it "2 routes to #index" do
+		  expect(get: "/messages").to route_to(:controller => "messages", :action => "index")
+		end
+
+		it "show messages" do
+		  m = Message.last
+		  expect(get: "/messages/#{m.id}").to route_to(:controller => "messages", :action => "show", :id => m.id.to_s)
+		end
+
+		it "show messages" do
+		  m = Message.last
+		  expect(get: "/messages/#{m.id}").to route_to("messages#show", :id => m.id.to_s)
+		end
+	  end
+	end
+	
+	- Also
+	
+		expect(post: "/job_ads").to route_to("job_ads#create")
+		expect(put: "/job_ads/1").to route_to("job_ads#update", id: "1")
+		expect(patch: "/job_ads/1").to route_to("job_ads#update", id: "1")
+		expect(delete: "/job_ads/1").to route_to("job_ads#destroy", id: "1")
+	
+
+		
+- Views
+--------------------------------------------------------------------------------------
+
+	> rails g rspec:view messages index view
+	
+	spec/views/messages/index.html.erb_spec.rb:
+	
+		require 'rails_helper'
+
+		RSpec.describe "messages/index", type: :view do
+
+		  let(:user) { FactoryBot.create(:user) }						--> create a user object 
+
+		  before(:each) do |each|
+			allow(view).to receive(:current_user).and_return(user)		--> dallow a function to be used inside the view: current_user
+			allow(view).to receive(:signed_in?).and_return(user)		--> allow a function to be used inside the view: signed_in?
+
+			assign(:messages, FactoryBot.create_list(:message, 4))		--> assign messages array (@messages)
+		  end
+
+		  describe "GET /messages" do
+			it "list messages" do
+			  render
+			  expect(rendered).to match "Messages"
+			end
+		  end
+		end
+	
+	- for forms
+	
+		let(:assoc) { FactoryBot.create(:assoc, :some => "value") }
+		let(:message) { FactoryBot.create(:message, :full_name => "Salem", :assoc => assoc) }
+
+		before(:each) do
+			...
+			assign(:assoc, assoc)										# some association object
+			assign(:message, Message.new())
+			
+			# if edit
+			assign(:message, message)
+			
+		end
+	
+		....
+		
+		# if new
+	    assert_select "form[action=?][method=?]", messages_path, "post" do
+		end
+	
+		# if edit
+		assert_select "form[action=?][method=?]", message_path(message), "post" do
+		end
+
+	
+
+Systems & Features
+----------------------------------------------------------------------------------------------------
+
+- Features are usually those tests which simulate a user behavior, visitng pages, filling forms .. etc
+- Features are usually not fully detailed !! high level
+- That's why we have models, requests and view tests for further complexities (low level) .. (models are the most important).
+	
+- According to the RSpec docs, “System specs are RSpec’s wrapper around Rails’ own system tests. (minitests) ”  
+- This means that it’s no longer required to explicitly include the Capybara gem, and because system tests are already run inside a transaction, you don’t need Database Cleaner.
+	
+	
+Feature with Rspec + Capybara
+------------------------------
+
+Some good gems
+
+    - the launchy gem gives you access to a handy debugging method save_and_open_page. Just insert this inside any spec and your browser will open a page at that moment of execution.
+    - the Rails console uses irb by default, by including gem ‘pry-rails, pry will become the default runtime developer console.
+    - shoulda-matchers is a handy gem that you can use to streamline the syntax for validation and relationship testing in your Models.
+
+	gem 'launchy'
+	gem 'pry-rails'
+	gem 'shoulda-matchers'
+	
+	
+> rails g rspec:feature messages
+
+	require 'rails_helper'
+
+	RSpec.feature "Messages", type: :feature do
+	  # pending "add some scenarios (or delete) #{__FILE__}"
+	  scenario "with correct details", js: true do
+		user = FactoryBot.create(:user, :email => "admin@d1g.com", :password => "something", :password_confirmation => "something")
+		visit "/"
+
+		message = FactoryBot.create(:message, :message => "hello world")
+
+		click_link "Login / Register"
+		expect(page).to have_css("h1", text: "Sign in")
+		expect(current_path).to eq(new_user_session_path)
+
+		login user.email, "something"
+
+		visit "/messages"
+
+		expect(page).to have_css("a", text: "hello world")
+
+		# expect(current_path).to eq "/"
+		# expect(page).to have_content "Signed in successfully"
+		# click_link "Logout"
+		# expect(current_path).to eq "/"
+		# expect(page).to have_content "Signed out successfully"
+		# expect(page).not_to have_content "Logout"
+
+	  end
+	  
+	  private
+
+	  def login(email, password)
+		fill_in "Email", with: email
+		fill_in "Password", with: password
+		click_button "Log in"
+	  end
+
+	end
+
+- What else ?
+
+	first('a', :text => 'Apply Now').click
+	expect(page).to have_text("New Job Application")
+	fill_in "job_application[name]", :with => "SameerTest"
+	find('#job_application_education option', :text => 'University Degree').click
+    fill_in "job_application[birth_date]", :with => "2021-07-08"
+    expect(JobApplication.where({:name => "SameerTest"}).count).to eq(1)
+
+	....
+
+
+
+
+Let's have a Database cleaner (not needed for )
+---------------------------------------------------------------------------------
+# https://github.com/DatabaseCleaner/database_cleaner
+- Database Cleaner is a set of gems containing strategies for cleaning your database in Ruby.
+
+	gem 'database_cleaner'
+
+- support/database_cleaner.rb
+
+	RSpec.configure do |config|
+	  config.before(:suite) do
+		DatabaseCleaner.clean_with :truncation, except: %w(ar_internal_metadata)
+	  end
+
+	  config.before(:each) do
+		DatabaseCleaner.strategy = :transaction
+	  end
+
+
+	  config.before(:each, type: :feature) do
+		# :rack_test driver's Rack app under test shares database connection
+		# with the specs, so continue to use transaction strategy for speed.
+		driver_shares_db_connection_with_specs = Capybara.current_driver == :rack_test
+
+		unless driver_shares_db_connection_with_specs
+		  # Driver is probably for an external browser with an app
+		  # under test that does *not* share a database connection with the
+		  # specs, so use truncation strategy.
+		  DatabaseCleaner.strategy = :truncation
+		end
+	  end
+
+	  config.before(:each) do
+		DatabaseCleaner.start
+	  end
+
+	  config.after(:each) do
+		DatabaseCleaner.clean
+	  end
+	end
+
+- But since we are using selenium-webdriver no need for database_cleaner
+
+	- in file rails_helper.rb
+		
+		config.use_transactional_fixtures = true
+
+	- If you are using Devise for auth, in your rails_helper file, set 
+	
+		config.include Devise::Test::IntegrationHelpers, type: :system
+
+	- Replace RSpec.feature throughout with RSpec.describe
+
+
+
+
+
+
+
+-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.
 
 - add devise:
 
@@ -119,153 +1015,6 @@ Or
 	- add def index to controller
 
 		before_action :authenticate_user!
-
-# Simply navigate to the /spec directory and create a folder called /controllers. It should look like this: /spec/controllers.
-
-rspec
-
-Traceback (most recent call last):
-	2: from /home/isalem/.rvm/gems/ruby-2.7.2@app/bin/rspec:23:in `<main>'
-	1: from /home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:300:in `activate_bin_path'
-/home/isalem/.rvm/rubies/ruby-2.7.2/lib/ruby/site_ruby/2.7.0/rubygems.rb:281:in `find_spec_for_exe': can't find gem rspec-core (>= 0.a) with executable rspec (Gem::GemNotFoundException)
-
-
-gem update --system
-bundle install
-rm Gemfile.lock 
-bundle install
-
-rspec .... great
-
-Now 
-----------
-
-to generate test with rails ..
-
-config/initializers/generators.rb:
-
-	Rails.application.config.generators do |g|
-	  g.test_framework :rspec
-	end
-
-To remain on default testing (after installing rspec)
-
-	g.test_framework  :test_unit, fixture: true
-
-	> rails g model Article title:string body:text
-	> rails db:migrate
-
-# to generate test for article model
-
-	> rails generate rspec:model article
-	> rails g rspec:controller ControllerName
-
-# Default: Run all spec files (i.e., those matching spec/**/*_spec.rb)
-
-	> bundle exec rspec
-
-# Run all spec files in a single directory (recursively)
-
-	> bundle exec rspec spec/models
-
-# Run a single spec file
-
-	> bundle exec rspec spec/controllers/accounts_controller_spec.rb
-
-# Run a single example from a spec file (by line number)
-
-	> bundle exec rspec spec/controllers/accounts_controller_spec.rb:8
-
-# See all options for running specs
-
-	> bundle exec rspec --help
-
-for spec/models/article_spec.rb
-
-
-RSpec.describe Article, type: :model do
-
-  current_user = User.first_or_create!(email: 'test@some.com', password: 'test123', password_confirmation: 'test123')
-  
-  it 'has a title' do
-    post = Article.new(
-      title: '',
-      body: 'A Valid Body',
-      user: current_user
-    )
-    expect(post).to_not be_valid
-
-    post.title = 'Has a title'
-    expect(post).to be_valid
-  end
-
-  it 'has a body' do
-    post = Article.new(
-      title: 'A Valid Title',
-      body: '',
-      user: current_user
-    )
-    expect(post).to_not be_valid
-
-    post.body = 'Has a title'
-    expect(post).to be_valid
-  end
-
-  it 'has a title at least 2 characters long' do
-    post = Article.new(
-      title: '1',
-      body: 'A Valid Body',
-      user: current_user
-    )
-    expect(post).to_not be_valid
-
-    post.title = '12'
-    expect(post).to be_valid
-  end
-
-  it 'has a body between 5 and 100 characters' do
-    post = Article.new(
-      title: '12',
-      body: '1234',
-      user: current_user
-    )
-    expect(post).to_not be_valid
-
-    post.body = '12345'
-    expect(post).to be_valid
-
-    hundred_char_string = 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean m'
-    post.body = hundred_char_string
-    expect(post).to be_valid
-
-    post.body = hundred_char_string + '1'
-    expect(post).to_not be_valid
-  end
-
-
-
-  # pending "add some examples to (or delete) #{__FILE__}"
-end
-
--.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.--.
-
-
-
-
-
-Good Gems for testing
-
-gem 'factory_bot_rails'
-gem 'ffaker'
-gem 'database_cleaner'
-gem 'faker'
-
-	capybara #https://github.com/teamcapybara/capybara#using-capybara-with-rspec
-
-
-
-
-
 
 
 

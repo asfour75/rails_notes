@@ -113,6 +113,9 @@ room_channel.js:
 Stimulus
 ========================================================================
 
+# # https://www.stimulus-components.com/docs/stimulus-lightbox/
+
+
 # After setting up your rails with stimulus (Rails 7 by defualt)
 - You need to know that Turbolinks and UJS Replaced by Turbo and Stimulus
 

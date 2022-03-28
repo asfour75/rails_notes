@@ -359,7 +359,12 @@ Create a gem via bunlder
 
 
 
+Stuff
+------------------------------------------------------------------------
 
+rails:freeze:gems	(don't update gems)
+
+ bundle package # This locks and then caches the gems into ./vendor/cache.
 
 
 

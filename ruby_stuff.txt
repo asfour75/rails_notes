@@ -181,6 +181,14 @@ str.count("b")
 
 
 
+Time
+========================================================================
+Time.now.to_i		Time in milli seconds
+Time.now.to_i / 1000 = seconds
+
+
+
+
 Hashes & Arrays
 ========================================================================
 
@@ -534,6 +542,14 @@ Controls & Loops
 	 
 	puts "Hello," << " welcome to Codecademy."
 	#Output => Hello, welcome to Codecademy.
+
+
+	array.pop		--> [1,2] return 3
+	array.push(3)	--> [1,2,3]
+	Or
+	array.unshift(3) --> [3,1,2]
+
+
 
 - Ruby “next” Keyword
 
@@ -1523,11 +1539,67 @@ Meta Programming
 	=> 366
 	
 	
-
-
-
-
 Check forem and other proc gem managers !!!!
+
+
+Hooks
+------------------------------------------------------------------------------------
+
+Example:
+
+	module Hooks
+	  
+	  def before(*method_names)
+		to_prepend = Module.new do
+		  method_names.each do |name| 
+			define_method(name) do |*args, &block|
+			  puts "before #{name}"
+			  super(*args,&block)
+			end
+		  end
+		end
+		prepend to_prepend
+	  end
+	end
+
+
+	class Example
+	  extend Hooks
+	  before :foo, :bar
+
+	  def foo
+		puts "in foo"
+	  end
+	  def bar
+		puts "in bar"
+	  end
+	end
+
+
+*, &
+---------------------------------------------------------------------------------
+
+# infalte .. args will be converted to array so whatever .. if you pass 4 --> [4]
+
+	def method(*args)	
+
+# & you can call a method whout to worry if the object nil or not
+
+	@person&.som&.name		# otherwise return nil
+
+- check also missing_method
+
+	def method_missing(m, *args, &block)	--> block could be there, could be not .. args will be always an array
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1546,5 +1618,198 @@ Ruby 3
 
 - IRB
 ------
+
+
+
+
+
+
+Focus on
+================================================================================
+
+class def
+
+	class B
+	  attr_accessor :a, :b, :c
+	  CONSTANT = 6
+	  @@CV = 88
+
+	  def initialize(a, b, c)
+		@a, @b, @c = a, b, c
+	  end
+	  
+	  def to_s
+		return "#{a} #{b} #{c}"
+	  end
+
+	  def some
+		puts "*****************"
+	  end
+	end
+
+
+
+module
+
+	module A
+	  def some
+		puts "inside A #{self.class}"
+	  end
+	end
+
+	class B
+		include A
+		
+	b = B.new(1,2,3)
+	b.some	-->	"*****************"
+
+	class B
+		prepend A
+
+	b.some	-->	"inside A B"
+
+---
+
+	class Animal
+		
+		include Comparable	<--
+		
+		attr_reader	:legs
+		...
+		
+		def <=>(other)
+			legs <=> other.legs
+		end
+
+	end
+	
+	so you can use class inctances ... a < b ? >, >=, bewteen, sort .. etc
+	
+	
+	
+@a, @@a, CONSTANT
+
+send, respond_to and try
+
+	responsed_to check if method exist
+	send .. call the method (coul dbe dynmic
+
+prepend, include and class_eval
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Questions
+================================================================================
+
+fib
+------------------------------------------------------------------------
+
+def fib(n)
+	return 0 if (0..1).include?(n)
+	(fib(n-1) + fib(n-2))
+end
+
+(0..10).each do |i|
+	puts fib(i)
+end
+
+
+
+
+
+Array shift
+------------------------------------------------------------------------
+[1,2,3,4]			n = length = 4
+
+shift to left 1 	d
+
+reverse 0, d-1	==> 0..0 of array	1,2,3,4
+reverse d, n-1	==> 1..3 of array 	1,4,3,2
+reverse 0, n-1	==> 0..3 of array 	2,3,4,1
+
+Do the opposite (1,2) to shifto to right 
+
+3,2,1,4
+4,1,2,3
+
+if d > n	d %= n
+
+
+Check if array has two pairs sum = number x
+------------------------------------------------------------------------
+[1,2,3,6,8,9]	for x = 5, l = 6
+
+map = Hash.new()
+
+loop from 0...l				(we used ... to count to len-1)
+
+	t = x-array[i]			# get the sub of array value from X ( to check later if value + array[i] == x)
+	if map[t]
+		flag = true
+		break
+	end
+	map[array[i]] = 1
+	
+
+then check flag
+
+1	--> 5-1 = 4 ... is 4 in hash .. no ... put 1 in the hash
+2	--> 5-2 = 3 ... is 3 in hash .. no ... put 2 in the hash
+3   --> 5-3 = 2 ... is 2 in hash .. yes	   flag = true .. so break    (cuz 3 + 2 = 5)
+
+- Using array
+
+	[1,2,3,6,8,9] sort! .. same
+	
+	9 + 1	== 5 ? no
+	9 + 1 > 5	right -= 1	yes
+	else	left  += 1
+	
+	8 + 1	== 5 ? no	8+1 > 5 ... right -= 1
+	6 + 1   == 5 ? no   6+1 > 5 ... right -= 1
+	3 + 1   == 5 ? no   3+1 < 5 ... left += 1
+	3 + 2   == 5 ? yes ... Done
+	
+
+
+Note:
+
+[1,2,3].pop		 --> [1,2] return 3
+[1,2].unshift(3) --> [3,1,2]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

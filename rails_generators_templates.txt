@@ -1,0 +1,597 @@
+Creating and Customizing Rails Generators & Templates
+
+	# https://guides.rubyonrails.org/v5.1/generators.html
+	# https://guides.rubyonrails.org/v5.1/rails_application_templates.html
+
+
+
+- Application Templates
+======================================================================================================
+	- Usage
+
+		> rails new blog -m ~/template.rb									# this will create a rails app then wiill apply the template
+		> rails new blog -m http://example.com/template.rb
+
+	- You can use the app:template Rake task to apply templates to an existing Rails application.
+
+		> bin/rails app:template LOCATION=~/template.rb
+		> bin/rails app:template LOCATION=http://example.com/template.rb
+		
+	- template.rb
+	
+		generate(:scaffold, "person name:string")
+		route "root to: 'people#index'"
+		rails_command("db:migrate")
+		 
+		after_bundle do
+		  git :init
+		  git add: "."
+		  git commit: %Q{ -m 'Initial commit' }
+		end	
+	
+	> rails app:template LOCATION=template.rb
+	
+    generate  scaffold
+       rails  generate scaffold person name:string
+      invoke  active_record
+      create    db/migrate/20220322151219_create_people.rb
+      create    app/models/person.rb
+      invoke    test_unit
+      create      test/models/person_test.rb
+      create      test/fixtures/people.yml
+      invoke  resource_route
+       route    resources :people
+      invoke  scaffold_controller
+      create    app/controllers/people_controller.rb
+      invoke    erb
+      create      app/views/people
+      create      app/views/people/index.html.erb
+      create      app/views/people/edit.html.erb
+      create      app/views/people/show.html.erb
+      create      app/views/people/new.html.erb
+      create      app/views/people/_form.html.erb
+      create      app/views/people/_person.html.erb
+      invoke    resource_route
+      invoke    test_unit
+      create      test/controllers/people_controller_test.rb
+      create      test/system/people_test.rb
+      invoke    helper
+      create      app/helpers/people_helper.rb
+      invoke      test_unit
+      invoke    jbuilder
+      create      app/views/people/index.json.jbuilder
+      create      app/views/people/show.json.jbuilder
+      create      app/views/people/_person.json.jbuilder
+       route  root to: 'people#index'
+       rails  db:migrate
+== 20220322151219 CreatePeople: migrating =====================================
+-- create_table(:people)
+   -> 0.0010s
+== 20220322151219 CreatePeople: migrated (0.0010s) ============================
+
+	- Adding a gem
+		
+		gem "bj"
+		gem "nokogiri"
+	
+		gem_group :development, :test do
+		  gem "rspec-rails"
+		end
+	
+	- Adding a source
+	
+		add_source "http://code.whytheluckystiff.net"
+		
+		add_source "http://gems.github.com/" do
+		  gem "rspec-rails"
+		end
+		
+	- environment/application(data=nil, options={}, &block) # Adds a line inside the Application class for config/application.rb.
+	
+		environment 'config.action_mailer.default_url_options = {host: "http://yourwebsite.example.com"}', env: 'production'
+		
+	- Adds an initializer to the generated application's config/initializers directory.
+	
+		initializer 'bloatlol.rb', <<-CODE			# you can use lib
+		  class Object
+			def not_nil?
+			  !nil?
+			end
+		 
+			def not_blank?
+			  !blank?
+			end
+		  end
+		CODE
+		
+	- There is even file(), which accepts a relative path from Rails.root and creates all the directories/files needed:
+	
+		file 'app/components/foo.rb', <<-CODE
+		  class Foo
+		  end
+		CODE
+		
+	- rakefile(filename, data = nil, &block)
+	
+		rakefile("bootstrap.rake") do
+		  <<-TASK
+			namespace :boot do
+			  task :strap do
+				puts "i like boots!"
+			  end
+			end
+		  TASK
+		end
+
+	- generate(what, *args) # Runs the supplied rails generator with given arguments.
+	
+		generate(:scaffold, "person", "name:string", "address:text", "age:number")
+		
+	- run(command)
+		
+		Executes an arbitrary command. Just like the backticks. Let's say you want to remove the README.rdoc file:
+		
+		run "rm README.rdoc"
+		
+	- rails_command(command, options = {})
+	
+		rails_command "db:migrate"
+		rails_command "db:migrate", env: 'production'
+		rails_command "log:clear", sudo: true
+		
+	- route(routing_code)
+	
+		route "root to: 'person#index'"
+		
+	- inside(dir)	# Enables you to run a command from the given directory.
+	
+		inside('vendor') do
+		  run "ln -s ~/commit-rails/rails rails"
+		end
+
+	- ask(question)
+	
+		lib_name = ask("What do you want to call the shiny library ?")
+		lib_name << ".rb" unless lib_name.index(".rb")
+		 
+		lib lib_name, <<-CODE
+		  class Shiny
+		  end
+		CODE
+
+	- yes?(question) or no?(question)
+
+		rails_command("rails:freeze:gems") if yes?("Freeze rails gems?")
+		# no?(question) acts just the opposite.
+
+	-  git(:command)
+	
+		git :init
+		git add: "."
+		git commit: "-a -m 'Initial commit'"
+
+	- after_bundle(&block)	# Registers a callback to be executed after the gems are bundled and binstubs are generated. Useful for all generated files to version control:
+	
+		after_bundle do
+		  git :init
+		  git add: '.'
+		  git commit: "-a -m 'Initial commit'"
+		end
+
+
+
+
+
+Generators
+======================================================================================================
+
+List all generators
+------------------------------------------------------------------------
+
+> bin/rails generate
+
+Usage: rails generate GENERATOR [args] [options]
+
+General options:
+  -h, [--help]     # Print generator's options and usage
+  -p, [--pretend]  # Run but do not make any changes
+  -f, [--force]    # Overwrite files that already exist
+  -s, [--skip]     # Skip files that already exist
+  -q, [--quiet]    # Suppress status output
+
+Please choose a generator below.
+
+Rails:
+  application_record
+  benchmark
+  channel
+  component
+  controller
+  generator
+  helper
+  integration_test
+  jbuilder
+  job
+  mailbox
+  mailer
+  migration
+  model
+  resource
+  responders_controller
+  scaffold
+  scaffold_controller
+  system_test
+  task
+
+ActiveRecord:
+  active_record:application_record
+  active_record:devise
+  active_record:multi_db
+
+Anycable:
+  anycable:download
+  anycable:setup
+
+Anyway:
+  anyway:app_config
+  anyway:config
+  anyway:install
+
+Audited:
+  audited:install
+  audited:upgrade
+
+Cancan:
+  cancan:ability
+
+Devise:
+  devise
+  devise:controllers
+  devise:install
+  devise:views
+
+Erb:
+  erb:component
+
+FactoryBot:
+  factory_bot:model
+
+Haml:
+  haml:component
+
+Locale:
+  locale:component
+
+Mongoid:
+  mongoid:devise
+
+Motor:
+  motor:install
+  motor:upgrade
+
+Preview:
+  preview:component
+
+Pundit:
+  pundit:install
+  pundit:policy
+
+Responders:
+  responders:install
+
+Rspec:
+  rspec:channel
+  rspec:component
+  rspec:controller
+  rspec:feature
+  rspec:generator
+  rspec:helper
+  rspec:install
+  rspec:integration
+  rspec:job
+  rspec:mailbox
+  rspec:mailer
+  rspec:model
+  rspec:policy
+  rspec:request
+  rspec:scaffold
+  rspec:system
+  rspec:view
+
+Slim:
+  slim:component
+
+Stimulus:
+  stimulus
+  stimulus:component
+
+Tailwindcss:
+  tailwindcss:component
+
+TestUnit:
+  test_unit:channel
+  test_unit:component
+  test_unit:generator
+  test_unit:install
+  test_unit:mailbox
+  test_unit:plugin
+  test_unit:policy
+
+
+- Check help of certain generator ?
+-------------------------------------------------------------------------
+
+rails g test_unit:channel -h
+Usage:
+  rails generate test_unit:channel NAME [options]
+
+Options:
+  [--skip-namespace], [--no-skip-namespace]              # Skip namespace (affects only isolated engines)
+  [--skip-collision-check], [--no-skip-collision-check]  # Skip collision check
+
+Runtime options:
+  -f, [--force]                    # Overwrite files that already exist
+  -p, [--pretend], [--no-pretend]  # Run but do not make any changes
+  -q, [--quiet], [--no-quiet]      # Suppress status output
+  -s, [--skip], [--no-skip]        # Skip files that already exist
+
+Description:
+    Create test unit files for channel generator.
+
+
+- further helper
+------------------------------------------------------------------------
+
+> bin/rails generate helper --help
+
+Usage:
+  rails generate helper NAME [options]
+
+Options:
+      [--skip-namespace], [--no-skip-namespace]              # Skip namespace (affects only isolated engines)
+      [--skip-collision-check], [--no-skip-collision-check]  # Skip collision check
+  -t, [--test-framework=NAME]                                # Test framework to be invoked
+                                                             # Default: test_unit
+
+Runtime options:
+  -f, [--force]                    # Overwrite files that already exist
+  -p, [--pretend], [--no-pretend]  # Run but do not make any changes
+  -q, [--quiet], [--no-quiet]      # Suppress status output
+  -s, [--skip], [--no-skip]        # Skip files that already exist
+
+Description:
+    Generates a new helper. Pass the helper name, either CamelCased
+    or under_scored.
+
+    To create a helper within a module, specify the helper name as a
+    path like 'parent_module/helper_name'.
+
+Example:
+    `bin/rails generate helper CreditCard`
+
+    Credit card helper.
+        Helper:     app/helpers/credit_card_helper.rb
+
+
+
+- Overview
+
+	lib/generators/initializer_generator.rb:
+	
+	class InitializerGenerator < Rails::Generators::Base
+		desc "This generator creates an initializer file at config/initializers"
+		def create_initializer_file
+			create_file "config/initializers/initializer.rb", "# Add initialization content here"
+		end
+	end
+
+	> bin/rails generate initializer
+	> bin/rails generate initializer --help
+	
+	Usage:
+		rails generate initializer [options]
+	...
+		
+- you can create a generator using the generator
+		
+	> bin/rails generate generator initializer
+
+	  create  lib/generators/initializer
+	  create  lib/generators/initializer/initializer_generator.rb	# main class as above
+	  create  lib/generators/initializer/USAGE						# Example how to use teh generator
+	  create  lib/generators/initializer/templates					# folder for templates
+	  invoke  test_unit
+	  create    test/lib/generators/initializer_generator_test.rb	# test
+
+	- Notice the lib/generators/initializer/initializer_generator.rb inherits Rails::Generators::NamedBase
+	* This is namedspace
+
+	> bin/rails generate initializer --help							# notice, Usage, Description and Example
+
+	Usage:
+		rails generate initializer NAME [options]					<-- see here ?
+	...
+
+	Add the file: lib/generators/initializer/templates/initializer.rb
+	
+		# Nothing here		
+	
+	Let's add to : lib/generators/initializer/initializer_generator.rb
+	
+		def copy_initializer_file
+			copy_file "initializer.rb", "config/initializers/#{file_name}.rb"	# will read initializer.rb from the templates
+		end
+
+	Then 
+	
+		> bin/rails generate initializer core_extensions			# core_extensions is the file_name
+		
+		  create  config/initializers/core_extensions.rb
+
+	- Also notice bin/rails generate initializer will run all the functions inside the generator
+	
+- Lookup
+	
+	- When you run rails generate initializer core_extensions Rails requires these files in turn until one is found:
+	
+		rails/generators/initializer/initializer_generator.rb
+		generators/initializer/initializer_generator.rb
+		rails/generators/initializer_generator.rb
+		generators/initializer_generator.rb
+
+- Customizing Your Workflow
+
+	- Rails own generators are flexible enough to let you customize scaffolding. They can be configured in config/application.rb, these are some defaults:
+	
+	config.generators do |g|
+		g.orm             :active_record
+		g.template_engine :erb
+		g.test_framework  :test_unit, fixture: true
+	  
+		g.scaffold_stylesheet false
+		g.stylesheets     false
+		g.javascripts     false
+	end
+
+- Let's do something wild
+
+	> bin/rails generate generator rails/my_helper
+	
+	Add to # lib/generators/rails/my_helper/my_helper_generator.rb
+		
+		# lib/generators/rails/my_helper/my_helper_generator.rb
+		class Rails::MyHelperGenerator < Rails::Generators::NamedBase
+		  def create_helper_file
+			create_file "app/helpers/#{file_name}_helper.rb", <<-FILE
+		module #{class_name}Helper
+		  attr_reader :#{plural_name}, :#{plural_name.singularize}
+		end
+			FILE
+		  end
+		end
+	
+	> bin/rails generate my_helper products
+	
+		- See file app/helpers/products_helper.rb
+		
+		module ProductsHelper
+		  attr_reader :products, :product
+		end
+	
+	- Tell the scaffold generaotr to use your helper generator
+	
+		g.helper          :my_helper
+	
+		- So this bin/rails generate scaffold Article body:text --> create      app/helpers/articles_helper.rb
+		
+	- to generate tests
+	
+		hook_for :test_framework, as: :helper
+
+	
+- Application Templates
+
+	* See templates above
+	Now that you've seen how generators can be used inside an application, 
+	They can also be used to generate applications too? This kind of generator is referred as a "template".
+	
+	template.rb:
+	
+		gem "rspec-rails", group: "test"
+		gem "cucumber-rails", group: "test"
+		 
+		if yes?("Would you like to install Devise?")
+		  gem "devise"
+		  generate "devise:install"
+		  model_name = ask("What would you like the user model to be called? [user]")
+		  model_name = "user" if model_name.blank?
+		  generate "devise", model_name
+		end
+	
+- Adding Command Line Arguments.
+
+	class InitializerGenerator < Rails::Generators::NamedBase
+		source_root File.expand_path("templates", __dir__)
+		class_option :scope, type: :string, default: 'read_products'
+
+		def copy_initializer_file
+			@scope = options['scope']
+			puts @scope
+		end
+	end	
+	
+
+	> bin/rails generate initializer go --scope loop
+	
+- Generator methods (available for both templates, and generators)
+
+	gem "rspec", group: "test", version: "2.1.0"
+	gem "devise", "1.1.5"
+	gem "devise", git: "git://github.com/plataformatec/devise", branch: "master"
+	
+	gem_group :development, :test do
+	  gem "rspec-rails"
+	end
+	
+	add_source "http://gems.github.com"
+	add_source "http://gems.github.com" do
+	  gem "rspec-rails"
+	end
+	
+	inject_into_file 'name_of_file.rb', after: "#The code goes below this line. Don't forget the Line break at the end\n" do <<-'RUBY'
+	  puts "Hello World"
+	RUBY
+	end
+
+	gsub_file 'name_of_file.rb', 'method.to_be_replaced', 'method.the_replacing_code'
+	
+	application "config.asset_host = 'http://example.com'"
+	application do
+	  "config.asset_host = 'http://example.com'"
+	end
+	
+	application(nil, env: "development") do
+	  "config.asset_host = 'http://localhost:3000'"
+	end
+	
+	git :init
+	git add: "."
+	git commit: "-m First commit!"
+	git add: "onefile.rb", rm: "badfile.cxx"
+
+	vendor "sekrit.rb", '#top secret stuff'
+	vendor "seeds.rb" do
+	  "puts 'in your app, seeding your database'"
+	end
+	
+	lib "special.rb", "p Rails.root"
+	lib "super_special.rb" do
+	  puts "Super special!"
+	end
+	
+	rakefile "test.rake", "hello there"
+	
+	rakefile "test.rake" do
+	  %Q{
+		task rock: :environment do
+		  puts "Rockin'"
+		end
+	  }
+	end
+
+	initializer "begin.rb", "puts 'this is the beginning'"
+	initializer "begin.rb" do
+	  "puts 'this is the beginning'"
+	end
+	
+	generate "scaffold", "forums title:string description:text"
+	
+	rake "db:migrate"
+	
+	capify!	# Runs the capify command from Capistrano at the root of the application which generates Capistrano configuration.
+	
+	route "resources :people"
+	
+	readme "README"
+	
+	

@@ -146,7 +146,72 @@ ActionText
 	# https://guides.rubyonrails.org/action_text_overview.html
 
 
+Security
+-------------------------------------------------------------------------------------------
 
+	- As announced in Rails 5.2.0 release candidate, Rails 5.2 will go out with a brand new credentials API that will eventually replace the current config/secrets.yml and config/secrets.yml.enc.
+
+	- Two files
+	
+		config/credentials.yml.enc		# store all your private credentials, only decryoted via master.key	
+		config/master.key				# RAILS_MASTER_KEY, this file won;t be onl github, but will be generated via 
+											
+											> EDITOR=vim rails credentials:edit --environment production
+											> RAILS_ENV=production EDITOR=vim rails credentials:edit
+											
+										# both files will be generated if they are not exist
+
+	- So, after running 
+
+		aws:
+		  access_key_id: 123
+		  secret_access_key: 345
+		secret_key_base: 2fdea1259c6660852864f9726616df64c8cd
+
+		# Then, you should be able to access the configuration programmatically like this:
+		
+		Rails.application.credentials.config	# {:aws=>{:access_key_id=>"123", :secret_access_key=>"345"} }}
+		Rails.application.credentials.aws[:access_key_id]
+		
+		Rails.application.credentials.aws[:access_key_id]     # => "123"
+		Rails.application.credentials.aws[:secret_access_key] # => "345"
+		Rails.application.credentials.secret_key_base         # => "2fdea...
+
+		# you can also
+		
+		development:
+		  aws:
+			access_key_id: 123
+			secret_access_key: 345
+		  secret_key_base: 2fdea1259c6660852864f9726616df64c8cd
+		
+		production:
+		  aws:
+			access_key_id: 321
+			secret_access_key: 543
+		  secret_key_base: hu23ih41iu23h4123u4h23iu4h2323j412i3
+
+		# so per enviroment
+		Rails.application.credentials[Rails.env.to_sym][:aws][:access_key_id]
+		
+	- Deploying master key
+
+		- When you move your code to a server, you need to make sure that your config/credentials.yml.enc file can be decrypted. 
+		- That means that somehow you’ll need to provide Rails with your master key, given that it is not checked into version control. aha !!
+		- There are two ways of doing that:
+			
+			- Option 1: Place the config/master.key file in the server. 
+				You’ll normally want to symlink this file to a shared folder in the server filesystem. 
+				Again, do not version your config/master.key file.
+			- Option 2: create a RAILS_MASTER_KEY ENV variable. 
+				Rails will detect it and use it as your master key, e.g. in heroku: heroku config:set RAILS_MASTER_KEY=<your-master-key-here>.
+		
+				# Setting master key on Heroku 
+				heroku config:set RAILS_MASTER_KEY=`cat config/credentials/production.key`
+		
+	- in production.rb
+	
+		config.require_master_key = true
 
 
 

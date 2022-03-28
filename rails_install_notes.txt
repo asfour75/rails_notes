@@ -91,21 +91,7 @@ RVM
 	
 	> rvm autolibs enable
 	> rvm reinstall 3.1.0 --with-openssl-dir=$HOME/.rvm/usr
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 
-
-
-
-	
 	
 	> rvm reinstall --disable-binary 3.1.0		# rebuild ruby 
 
@@ -368,21 +354,174 @@ try passing them all to `bundle update`
 .. bundle install
 
 
+Configurations
+=========================================================================================
+
+
+actioncable
+-------------------------------------------------------------------------
+# rails requires redis to be installed
+
+	- used by actioncable	
+	
+
+active job
+-------------------------------------------------------------------------
+# for activejob .. it's in memory, if you used delayed_job then it's in database, if sidekiq .. redis
+
+
+- activestorage 
+------------------------------------------------------------------------
+	production.rb:
+	
+		config.active_storage.service = :local
+
+
+
+- Assets / For minifyng css & javascript .. (esbuild)
+------------------------------------------------------------
+
+- compile
+
+	> bin/rails log:clear tmp:clear
+
+	* in production.rb make sure from where assets should be loaded
+
+	  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
+
+	> rails tmp:clear						# remove tmp/cache
+	> rails assets:clean[keep]                 # Remove old compiled assets
+	> rails assets:precompile                  # Compile all the assets named in config.assets.precompile	
+	> rails assets:clobber                     # Remove compiled assets	(and app/assets/build)
+
+	rails assets:environment                 # Load asset compile environment
+	rails cache_digests:dependencies         # Lookup first-level dependencies for TEMPLATE (like messages/show or comments/_comment.html)
+	rails cache_digests:nested_dependencies  # Lookup nested dependencies for TEMPLATE (like messages/show or comments/_comment.html)
+	rails css:build                          # Build your CSS bundle
+	rails css:clobber                        # Remove CSS builds
+
+
+Rails.application.config.assets.compress = true
+
+# SassC::SyntaxError: Error: Function hsla is missing argument $saturation.
+
+	> Remove the sassc-rails gem.
+
+	In file postcss.config.js
+	
+	module.exports = {
+		plugins: [
+			require('postcss-import'),
+			require('tailwindcss/nesting'),	<---- this will do the job of sassc
+			require('tailwindcss'),
+			require('autoprefixer'),
+		]
+	}
+
+	but first 
+	
+	yarn install -D postcss-nesting
+
+
+
+- database preparations
+-------------------------
+
+	> RAILS_ENV=production rails db:reset	? This is forbidden in production since it will destroy and create the db
+	
+	ActiveRecord::ProtectedEnvironmentError: You are attempting to run a destructive action against your 'production' database.
+	
+	Instead 
+
+	> RAILS_ENV=production rails db:setup	# running again won't make any difference .. 
+	Or
+	> RAILS_ENV=production rails db:prepare	# create db if not exist, or runs migration if db exists
+
+	> RAILS_ENV=production rails db:setup
+	> RAILS_ENV=production rails feeds:quran							# This is a task that loads sql file into the database
+												
+																		# rails db < #{path}/sqlite_quran.sql
+
+
+	# https://guides.rubyonrails.org/active_record_encryption.html
+
+		> bin/rails db:encryption:init
+
+		active_record_encryption:
+		  primary_key: iRZzTHQc3pKnDchzSeXNsRbB6Jjx8Xz6
+		  deterministic_key: KMNi4vXhJ9cpoiEngG5Glyq2jAB5E642
+		  key_derivation_salt: 8DD4CLTdX8vXfZDWDePGAC3KEhoELjI7
+
+
+
+- Setup Keys
+-------------
+
+`validate_secret_key_base': Missing `secret_key_base` for 'production' environment, set this string with `bin/rails credentials:edit` (ArgumentError)
+
+	> bin/rails credentials:edit
+	> EDITOR="mate --wait" bin/rails credentials:edit
+
+	No,
+	
+	EDITOR=vim rails credentials:edit
+
+	Remove config/master.key if you had to ... (changed key)
+	
+		rm config/master.key
+		rm config/credentials.yml.enc
+		
+	EDITOR=vim rails credentials:edit
+	
+	- add  secret_key_base: <%= ENV["SECRET_KEY_BASE"] %>				# take the key 
+	- .bash_profile
+	
+		export SECRET_KEY_BASE="a720feb188850db37612fad94b21e71fb869e9843c6b4da34803f65097b8f0cb30e1b46190ea0838d10dd9860bac3329937981787da4dd20827c95efcaa01ac5"
+
+	EDITOR=vim rails credentials:edit
+
+
+
+- cache store & active job
+------------------------------------------------------------------------
+
+  # Use a different cache store in production.
+  # config.cache_store = :mem_cache_store
+
+  # Use a real queuing backend for Active Job (and separate queues per environment).
+  # config.active_job.queue_adapter     = :resque
+  # config.active_job.queue_name_prefix = "rails7e_production"
 
 
 
 
-Rails new 7 (esbuild) + Propshaft
-===========================================================================================
-
-	> ruby 3 / rails 7
-	> rails new rails7b -js esbuild --css bootstrap	
-	# https://www.driftingruby.com/episodes/esbuild-for-rails
-
+  # Specifies the header that your server uses for sending files.
+  # config.action_dispatch.x_sendfile_header = "X-Sendfile" # for Apache
+  # config.action_dispatch.x_sendfile_header = "X-Accel-Redirect" # for NGINX
+  
+  
 
 
 
 
+
+
+
+
+
+
+	
+- Optimize images
+------------------------------------------------------------------------
+
+sudo apt install jpegoptim
+  152  sudo apt install optipng
+  153  ls -l public/assets/
+  154  optipng public/assets/*.png
+  155  jpegoptim public/assets/jpg
+  156  jpegoptim public/assets/*.jpg
+  157  jpegoptim -m70 public/assets/jpg
+  158  jpegoptim -m70 public/assets/*.jpg
 
 
 
@@ -413,64 +552,14 @@ Github
 - Add the remote
 
 	- git remote add origin git@github.com:asfour75/rails7e.git
-	
 
 
 
 
 
-Production
-=================================================================================================
-
-	# rails requires redis to be installed
 
 
-	> bin/rails log:clear tmp:clear
 
-	* in production.rb make sure from where assets should be loaded
-
-	  config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
-
-	> rails assets:clean
-	> rails assets:precompile
-
-	> RAILS_ENV=production rails db:reset	? This is forbidden in production since it will destroy and create the db
-	
-	ActiveRecord::ProtectedEnvironmentError: You are attempting to run a destructive action against your 'production' database.
-	
-	Instead 
-
-	> RAILS_ENV=production rails db:setup	# running again won't make any difference .. 
-	Or
-	> RAILS_ENV=production rails db:prepare	# create db if not exist, or runs migration if db exists
-
-# https://guides.rubyonrails.org/active_record_encryption.html
-
-	> bin/rails db:encryption:init
-
-active_record_encryption:
-  primary_key: iRZzTHQc3pKnDchzSeXNsRbB6Jjx8Xz6
-  deterministic_key: KMNi4vXhJ9cpoiEngG5Glyq2jAB5E642
-  key_derivation_salt: 8DD4CLTdX8vXfZDWDePGAC3KEhoELjI7
-
-
-`validate_secret_key_base': Missing `secret_key_base` for 'production' environment, set this string with `bin/rails credentials:edit` (ArgumentError)
-
-	> bin/rails credentials:edit
-	> EDITOR="mate --wait" bin/rails credentials:edit
-
-	Remove config/master.key if you had to
-
-	> RAILS_ENV=production rails db:setup
-	> RAILS_ENV=production rails feeds:quran
-
-** Notice
-------------------------------------------------------------------------
-Rails 7.0.1 has some issues with attachments (token) fixed in 7.0.2.X
-
-in ffi_lib': Could not open library 'vips.so.42': vips.so.42: cannot open shared object file: No such file or directory. (LoadError)
-
-	> sudo apt install libvips
 
 
 Cerrtificate with Let's Encrypt it
@@ -520,10 +609,44 @@ http {
 		}
 
 
+		proxy_http_version 1.1 	- Defines the HTTP protocol version for proxying, by default it it set to 1.0. For Websockets and keepalive connections you need to use the version 1.1.
+		proxy_cache_bypass $http_upgrade - Sets conditions under which the response will not be taken from a cache.
+		Upgrade $http_upgrade and Connection "upgrade" - These header fields are required if your application is using Websockets.
+		Host $host - The $host variable in the following order of precedence contains: hostname from the request line, or hostname from the Host request header field, or the server name matching a request.
+		X-Real-IP $remote_addr - Forwards the real visitor remote IP address to the proxied server.
+		X-Forwarded-For $proxy_add_x_forwarded_for - A list containing the IP addresses of every server the client has been proxied through.
+		X-Forwarded-Proto $scheme - When used inside an HTTPS server block, each HTTP response from the proxied server is rewritten to HTTPS.
+		X-Forwarded-Host $host - Defines the original host requested by the client.
+		X-Forwarded-Port $server_port - Defines the original port requested by the client.
 
 
 
 
+
+
+
+
+
+
+
+** Notice
+------------------------------------------------------------------------
+Rails 7.0.1 has some issues with attachments (token) fixed in 7.0.2.X
+
+in ffi_lib': Could not open library 'vips.so.42': vips.so.42: cannot open shared object file: No such file or directory. (LoadError)
+
+	> sudo apt install libvips
+
+
+
+
+
+Rails new 7 (esbuild) + Propshaft
+===========================================================================================
+
+	> ruby 3 / rails 7
+	> rails new rails7b -js esbuild --css bootstrap	
+	# https://www.driftingruby.com/episodes/esbuild-for-rails
 
 
 

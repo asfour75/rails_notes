@@ -2073,8 +2073,10 @@ Or
 	User::update_all	No						Yes					No				No			No					No
 
 
-- Check existing values
+- Changes
+----------------------------------------------------------------------------------------
 
+- Check existing values
 
 	before_save	do
 	
@@ -2084,10 +2086,9 @@ Or
 	
 	end
 	
-
 	before_validation :normalize_name, on: :create
 	
-- Check saved changes
+- Check saved changes (same as previous changes)
 
 	m = Message.find(1)
 	m.message = "something different"
@@ -2095,12 +2096,19 @@ Or
 	
 	m.saved_changes  -->  {"message"=>["hello there", "something different"], "updated_at"=>[Wed, 02 Mar 2022 19:40:58.097660000 UTC +00:00, Wed, 02 Mar 2022 21:42:18.602833000 UTC +00:00]}
 
+- changes
 
+	m = Message.find(1)
+	m.message = "something different"
+	
+	m.changes	--> {"message"=>["hello there", "something different"]}
 
-
-
-
-
+- changed?
+ 
+	m = Message.find(1)
+	m.message = "something different"
+ 
+	m.changed? --> true
 
 
 
